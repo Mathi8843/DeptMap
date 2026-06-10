@@ -1,0 +1,362 @@
+"use client";
+import React, { useState } from "react";
+import { useApp } from "@/lib/AppContext";
+import { Check, X, Shield, CreditCard, Bell, HelpCircle, AlertCircle, Zap } from "lucide-react";
+import clsx from "clsx";
+import { PLAN_LIMITS } from "@/lib/mock-data";
+
+const plans = [
+  {
+    key: "free" as const,
+    name: "Free",
+    price: "₹0",
+    per: "/month",
+    description: "Indie hackers and student builders",
+    features: [
+      { label: "1 repository limit", included: true },
+      { label: "Weekly automated scan", included: true },
+      { label: "Health score indexing", included: true },
+      { label: "AI fix suggestions", included: false },
+      { label: "Slopsquatting detection", included: false },
+      { label: "One-click GitHub PR", included: false },
+      { label: "SOC 2 readiness mapping", included: false },
+    ],
+  },
+  {
+    key: "pro" as const,
+    name: "Pro",
+    price: "₹4,000",
+    per: "/month",
+    description: "Solo founders with active paying users",
+    featured: true,
+    features: [
+      { label: "Unlimited repositories", included: true },
+      { label: "Real-time scanning on push", included: true },
+      { label: "AI explanation descriptions", included: true },
+      { label: "AI-generated fix patches", included: true },
+      { label: "One-click GitHub PR fix", included: true },
+      { label: "Slopsquatting audit", included: true },
+      { label: "SOC 2 readiness mapping", included: false },
+    ],
+  },
+  {
+    key: "team" as const,
+    name: "Team",
+    price: "₹16,000",
+    per: "/month",
+    description: "Pre-Series A teams chasing compliance",
+    features: [
+      { label: "Everything in Pro plan", included: true },
+      { label: "PR-level automated scanning", included: true },
+      { label: "Team sharing dashboards", included: true },
+      { label: "SOC 2 compliance report", included: true },
+      { label: "Shareable security report links", included: true },
+      { label: "Slack alert channels", included: true },
+    ],
+  },
+  {
+    key: "enterprise" as const,
+    name: "Enterprise",
+    price: "₹1.6L+",
+    per: "/year",
+    description: "Agencies and compliance-heavy companies",
+    features: [
+      { label: "Everything in Team plan", included: true },
+      { label: "White-label reports mapping", included: true },
+      { label: "Custom scanning parameters", included: true },
+      { label: "Dedicated support engineer", included: true },
+      { label: "SSO / SAML authentication", included: true },
+      { label: "Annual compliance audits", included: true },
+    ],
+  },
+];
+
+export default function SettingsPage() {
+  const { user, upgradePlan, showToast } = useApp();
+  const [selectedPlanKey, setSelectedPlanKey] = useState<typeof user.plan | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  
+  const [notifications, setNotifications] = useState({
+    emailCritical: true,
+    emailHigh: true,
+    weeklyReport: true,
+    slackCritical: false,
+  });
+
+  const handleToggle = (key: keyof typeof notifications) => {
+    if (key === "emailHigh" && !PLAN_LIMITS[user.plan].email_alerts) {
+      showToast("Upgrade to Pro or Team to enable High severity alerts", "warning");
+      return;
+    }
+    if (key === "slackCritical" && !PLAN_LIMITS[user.plan].slack_alerts) {
+      showToast("Upgrade to Team plan to enable Slack alert channels", "warning");
+      return;
+    }
+
+    setNotifications((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+    showToast("Notification settings updated successfully.", "success");
+  };
+
+  const openCheckout = (planKey: typeof user.plan) => {
+    setSelectedPlanKey(planKey);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleCheckoutComplete = () => {
+    if (selectedPlanKey) {
+      upgradePlan(selectedPlanKey);
+      setIsCheckoutOpen(false);
+    }
+  };
+
+  const activePlanDetails = plans.find((p) => p.key === selectedPlanKey);
+
+  return (
+    <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="font-display font-extrabold text-3xl text-text-main tracking-wide">
+          Settings & Billing
+        </h1>
+        <p className="text-sm text-text-sub">
+          Manage workspace plan limits, audit notifications, and accounts
+        </p>
+      </div>
+
+      {/* Account Info and Notifications */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <div className="glass-card rounded-2xl p-6 space-y-5 flex flex-col justify-between">
+          <div className="space-y-4">
+            <h3 className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
+              Account Workspace
+            </h3>
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-display font-extrabold text-base text-indigo-500 dark:text-indigo-400">
+                {user.name[0]}
+              </div>
+              <div className="min-w-0 space-y-0.5">
+                <div className="text-sm font-bold text-text-main truncate">{user.name}</div>
+                <div className="text-xs text-text-muted truncate">{user.email}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center pt-3 border-t border-border-subtle">
+            <span className="text-xs text-text-sub font-mono">Current Tier</span>
+            <span className="font-mono text-[9px] font-bold uppercase tracking-[1.5px] px-3 py-1 rounded bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+              {user.plan} Active
+            </span>
+          </div>
+        </div>
+
+        {/* Notifications Config Toggles */}
+        <div className="lg:col-span-2 glass-card rounded-2xl p-6 space-y-5">
+          <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold flex items-center gap-1.5">
+            <Bell size={12} className="text-indigo-500" /> Alert Notifications
+          </h3>
+          
+          <div className="space-y-4">
+            {/* Email Critical */}
+            <div className="flex items-center justify-between gap-5">
+              <div className="space-y-0.5">
+                <div className="text-sm font-semibold text-text-main">Email alerts on Critical vulnerabilities</div>
+                <div className="text-xs text-text-muted">Instant notification when a zero-day route is detected</div>
+              </div>
+              <button
+                onClick={() => handleToggle("emailCritical")}
+                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                  notifications.emailCritical ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
+                }`}
+              >
+                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.emailCritical ? "translate-x-4.5" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            {/* Email High */}
+            <div className="flex items-center justify-between gap-5">
+              <div className="space-y-0.5">
+                <div className="text-sm font-semibold text-text-main flex items-center gap-1.5">
+                  Email alerts on High issues
+                  {!PLAN_LIMITS[user.plan].email_alerts && <Zap size={11} className="text-indigo-400" />}
+                </div>
+                <div className="text-xs text-text-muted">Weekly resolution timeline reminders (requires Pro)</div>
+              </div>
+              <button
+                onClick={() => handleToggle("emailHigh")}
+                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                  notifications.emailHigh && PLAN_LIMITS[user.plan].email_alerts ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
+                }`}
+              >
+                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.emailHigh && PLAN_LIMITS[user.plan].email_alerts ? "translate-x-4.5" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            {/* Weekly report */}
+            <div className="flex items-center justify-between gap-5">
+              <div className="space-y-0.5">
+                <div className="text-sm font-semibold text-text-main">Weekly code health report card</div>
+                <div className="text-xs text-text-muted">Summary metrics of connected workspaces and packages</div>
+              </div>
+              <button
+                onClick={() => handleToggle("weeklyReport")}
+                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                  notifications.weeklyReport ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
+                }`}
+              >
+                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.weeklyReport ? "translate-x-4.5" : "translate-x-0"}`} />
+              </button>
+            </div>
+
+            {/* Slack alerts */}
+            <div className="flex items-center justify-between gap-5">
+              <div className="space-y-0.5">
+                <div className="text-sm font-semibold text-text-main flex items-center gap-1.5">
+                  Slack Alert Channel Integration
+                  {!PLAN_LIMITS[user.plan].slack_alerts && <Zap size={11} className="text-purple-500" />}
+                </div>
+                <div className="text-xs text-text-muted">Webhooks to project group feeds on scanners alerts (requires Team)</div>
+              </div>
+              <button
+                onClick={() => handleToggle("slackCritical")}
+                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                  notifications.slackCritical && PLAN_LIMITS[user.plan].slack_alerts ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
+                }`}
+              >
+                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.slackCritical && PLAN_LIMITS[user.plan].slack_alerts ? "translate-x-4.5" : "translate-x-0"}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Plans Pricing Selection Section */}
+      <div className="space-y-4">
+        <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">
+          Billing Workspace Plans
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {plans.map((plan) => {
+            const isCurrent = user.plan === plan.key;
+            return (
+              <div
+                key={plan.key}
+                className={clsx(
+                  "glass-card rounded-2xl p-6 border flex flex-col justify-between space-y-5 hover:scale-[1.01]",
+                  plan.featured ? "border-indigo-500/20 bg-indigo-500/[0.01]" : "border-border-subtle",
+                  isCurrent && "border-indigo-500/40 ring-1 ring-indigo-500/20"
+                )}
+              >
+                <div className="space-y-3.5">
+                  {/* Plan title */}
+                  <div className="flex justify-between items-start">
+                    <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">{plan.name}</span>
+                    {isCurrent && (
+                      <span className="font-mono text-[9px] font-bold text-indigo-500 dark:text-indigo-400 uppercase">CURRENT</span>
+                    )}
+                  </div>
+                  
+                  {/* Price */}
+                  <div>
+                    <span className="font-display font-extrabold text-3xl text-text-main">{plan.price}</span>
+                    <span className="text-xs text-text-muted">{plan.per}</span>
+                  </div>
+
+                  <p className="text-xs text-text-sub leading-normal">{plan.description}</p>
+                  
+                  {/* Features */}
+                  <ul className="space-y-2.5 pt-2">
+                    {plan.features.map((feat, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-xs">
+                        {feat.included ? (
+                          <Check size={13} className="text-indigo-500 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <X size={13} className="text-text-muted mt-0.5 flex-shrink-0" />
+                        )}
+                        <span className={feat.included ? "text-text-sub font-semibold" : "text-text-muted"}>{feat.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Sub Action */}
+                <div>
+                  {isCurrent ? (
+                    <div className="w-full text-center font-mono text-[10px] uppercase tracking-[1px] font-bold py-3 rounded-xl border border-indigo-500/20 text-indigo-500 dark:text-indigo-400 bg-indigo-500/5 select-none">
+                      Active Account
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => openCheckout(plan.key)}
+                      className={clsx(
+                        "w-full py-3 rounded-xl font-mono text-[10px] uppercase tracking-[1px] font-bold transition-all cursor-pointer",
+                        plan.featured
+                          ? "bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/10"
+                          : "border border-border-subtle hover:border-border-glow text-text-sub hover:text-text-main bg-bg-deep/40"
+                      )}
+                    >
+                      {plan.key === "enterprise" ? "Contact Sales" : "Upgrade Plan"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Simulated Billing Checkout Modal Popup */}
+      {isCheckoutOpen && activePlanDetails && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setIsCheckoutOpen(false)} />
+          <div className="relative w-full max-w-sm glass-card rounded-2xl p-6 border border-white/10 shadow-2xl z-10 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <CreditCard size={18} className="text-indigo-400" />
+                <span className="text-xs font-mono font-bold text-white">CHECKOUT SIMULATOR</span>
+              </div>
+              <button onClick={() => setIsCheckoutOpen(false)} className="text-slate-500 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <div className="text-[10px] text-slate-500 uppercase font-mono">Plan Selected</div>
+                <div className="text-xs font-bold text-white">DebtMap {activePlanDetails.name} Plan</div>
+                <div className="text-[11px] text-indigo-400 font-mono">
+                  {activePlanDetails.price} {activePlanDetails.per}
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="text-[10px] text-slate-500 uppercase font-mono">Card Details</div>
+                <input
+                  type="text"
+                  disabled
+                  value="••••  ••••  ••••  4242"
+                  className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-400"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" disabled value="12/29" className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400" />
+                  <input type="text" disabled value="•••" className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400" />
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleCheckoutComplete}
+              className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[9px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-[0.98]"
+            >
+              Authorize Payment (Simulated)
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DebtMap — Market Research & Product Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070710;
+  --bg2: #0d0d1a;
+  --bg3: #121220;
+  --bg4: #181828;
+  --border: #1f1f35;
+  --border2: #2e2e50;
+  --text: #eeeeff;
+  --text2: #8888bb;
+  --text3: #44446a;
+  --lime: #b8ff57;
+  --lime2: #d4ff8a;
+  --red: #ff5757;
+  --amber: #ffaa33;
+  --blue: #5599ff;
+  --purple: #aa77ff;
+  --teal: #33ddbb;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+/* ─── NAV ─── */
+.topnav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(7,7,16,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0;
+  padding: 0 2rem; overflow-x: auto; scrollbar-width: none;
+}
+.topnav::-webkit-scrollbar { display: none; }
+.nav-logo {
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800;
+  color: var(--lime); padding: 1rem 1.5rem 1rem 0;
+  border-right: 1px solid var(--border); margin-right: 1rem;
+  white-space: nowrap; flex-shrink: 0;
+}
+.nav-logo span { color: var(--text3); }
+.nav-link {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text3); text-decoration: none;
+  padding: 1rem 1rem; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+}
+.nav-link:hover { color: var(--text2); }
+.nav-link.active { color: var(--lime); border-bottom-color: var(--lime); }
+
+/* ─── HERO ─── */
+.hero {
+  padding: 5rem 2rem 4rem;
+  max-width: 1100px; margin: 0 auto;
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lime), transparent);
+  opacity: .3;
+}
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--lime); margin-bottom: 1.5rem;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero-eyebrow::before {
+  content: ''; width: 40px; height: 1px; background: var(--lime); opacity: .5;
+}
+.hero h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 800; line-height: 1.0; margin-bottom: 1.5rem;
+  letter-spacing: -1px;
+}
+.hero h1 .highlight { color: var(--lime); }
+.hero h1 .dim { color: var(--text3); }
+.hero-sub {
+  font-size: 16px; color: var(--text2); max-width: 620px;
+  line-height: 1.75; margin-bottom: 2.5rem;
+}
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); max-width: 700px;
+}
+.hero-stat {
+  background: var(--bg2); padding: 1.25rem 1.5rem;
+}
+.hs-val {
+  font-family: 'Syne', sans-serif; font-size: 1.9rem;
+  font-weight: 800; color: var(--lime); display: block; line-height: 1;
+}
+.hs-label { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* ─── SECTION ─── */
+.section {
+  max-width: 1100px; margin: 0 auto;
+  padding: 4rem 2rem;
+  border-top: 1px solid var(--border);
+}
+.section-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 6px;
+}
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 800; margin-bottom: 1.5rem; line-height: 1.1;
+}
+.section-title .accent { color: var(--lime); }
+.section-intro {
+  font-size: 14px; color: var(--text2); line-height: 1.75;
+  max-width: 700px; margin-bottom: 2rem;
+}
+
+/* ─── CRISIS NUMBERS ─── */
+.crisis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+.crisis-card {
+  background: var(--bg2); padding: 1.5rem;
+  position: relative; overflow: hidden;
+}
+.crisis-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.cc-lime::before { background: var(--lime); }
+.cc-red::before { background: var(--red); }
+.cc-amber::before { background: var(--amber); }
+.cc-blue::before { background: var(--blue); }
+.cc-purple::before { background: var(--purple); }
+.cc-teal::before { background: var(--teal); }
+.crisis-num {
+  font-family: 'Syne', sans-serif; font-size: 2.4rem;
+  font-weight: 800; line-height: 1; margin-bottom: 8px;
+}
+.cn-lime { color: var(--lime); }
+.cn-red { color: var(--red); }
+.cn-amber { color: var(--amber); }
+.cn-blue { color: var(--blue); }
+.cn-purple { color: var(--purple); }
+.cn-teal { color: var(--teal); }
+.crisis-label { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.crisis-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text3); margin-top: 8px;
+}
+
+/* ─── COMPETITOR TABLE ─── */
+.comp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.comp-table th {
+  text-align: left; font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.comp-table td {
+  padding: 12px; border-bottom: 1px solid var(--border);
+  color: var(--text2); vertical-align: top; line-height: 1.5;
+}
+.comp-table td:first-child { font-weight: 600; color: var(--text); }
+.comp-table tr:last-child td { border: none; }
+.comp-table tr:hover td { background: var(--bg2); }
+.gap-badge {
+  display: inline-block; font-size: 10px; padding: 2px 8px;
+  background: rgba(184,255,87,0.1); color: var(--lime);
+  border: 1px solid rgba(184,255,87,0.3); border-radius: 3px;
+}
+.nope {
+  color: var(--red); font-family: 'JetBrains Mono', monospace; font-size: 11px;
+}
+.yes {
+  color: var(--teal); font-family: 'JetBrains Mono', monospace; font-size: 11px;
+}
+
+/* ─── MARKET SIZE BARS ─── */
+.market-bars { display: flex; flex-direction: column; gap: 12px; margin: 1.5rem 0; }
+.mbar-row { display: flex; align-items: center; gap: 12px; }
+.mbar-label { font-size: 12px; color: var(--text2); width: 180px; flex-shrink: 0; }
+.mbar-track {
+  flex: 1; height: 6px; background: var(--border);
+  border-radius: 3px; overflow: hidden;
+}
+.mbar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+.mbar-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text2); width: 60px; text-align: right;
+}
+
+/* ─── ICP CARDS ─── */
+.icp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+}
+.icp-card { background: var(--bg2); padding: 1.5rem; }
+.icp-tier {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 8px;
+}
+.icp-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.icp-desc { font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 10px; }
+.icp-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--lime);
+}
+
+/* ─── PRODUCT SCREENS ─── */
+
+/* SCREEN SHELL */
+.product-screen {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  box-shadow: 0 0 60px rgba(184,255,87,0.04);
+}
+.screen-titlebar {
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.screen-dots { display: flex; gap: 5px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.screen-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text3); flex: 1; text-align: center;
+}
+
+/* DASHBOARD LAYOUT */
+.dash-shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 480px;
+}
+.dash-sidebar {
+  background: var(--bg4);
+  border-right: 1px solid var(--border);
+  padding: 1rem 0;
+}
+.sidebar-brand {
+  padding: 0.5rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.75rem;
+}
+.sidebar-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 800; color: var(--lime);
+  display: flex; align-items: center; gap: 6px;
+}
+.sidebar-logo .logo-icon {
+  width: 18px; height: 18px; background: var(--lime);
+  border-radius: 4px; display: flex; align-items: center;
+  justify-content: center; font-size: 10px; color: #000;
+}
+.sb-section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); padding: 0 1.25rem 6px;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 1.25rem; font-size: 12px; color: var(--text2);
+  cursor: pointer; transition: all .1s;
+}
+.sb-item:hover, .sb-item.active { background: var(--bg3); color: var(--text); }
+.sb-item.active { border-left: 2px solid var(--lime); color: var(--lime); }
+.sb-icon { width: 14px; text-align: center; font-size: 11px; opacity: .6; }
+.sb-badge {
+  margin-left: auto; font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; padding: 1px 6px;
+  background: rgba(255,87,87,.15); color: var(--red);
+  border-radius: 10px;
+}
+.sb-badge.ok { background: rgba(51,221,187,.1); color: var(--teal); }
+
+.dash-main { padding: 1.5rem; overflow: hidden; }
+
+/* TOP BAR */
+.dash-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px;
+}
+.dash-topbar-left { }
+.dash-pagetitle {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+}
+.dash-pagesub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.dash-actions { display: flex; gap: 6px; }
+.btn-primary {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 6px 14px; background: var(--lime); color: #000;
+  border: none; border-radius: 3px; cursor: pointer; font-weight: 500;
+}
+.btn-secondary {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 6px 14px; background: transparent; color: var(--text2);
+  border: 1px solid var(--border2); border-radius: 3px; cursor: pointer;
+}
+
+/* SCORE CARDS */
+.score-cards {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  margin-bottom: 1.25rem;
+}
+.sc-card {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 4px; padding: 10px 12px;
+}
+.sc-card-val {
+  font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800;
+  line-height: 1; margin-bottom: 4px;
+}
+.sc-card-label { font-size: 10px; color: var(--text3); }
+.sc-card-delta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; margin-top: 4px;
+}
+.delta-bad { color: var(--red); }
+.delta-ok { color: var(--teal); }
+
+/* HEALTH GAUGE */
+.health-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-bottom: 1rem;
+}
+.health-gauge {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 4px; padding: 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.gauge-ring {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800;
+  flex-shrink: 0; position: relative;
+}
+.gauge-ring::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 50%; border: 3px solid var(--border);
+}
+.gauge-ring.score-low { color: var(--red); }
+.gauge-ring.score-low::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--red) 0% 34%, transparent 34%);
+  -webkit-mask: radial-gradient(50% 50%, transparent 66%, black 66%);
+  mask: radial-gradient(50% 50%, transparent 66%, black 66%);
+}
+.gauge-ring.score-mid { color: var(--amber); }
+.gauge-ring.score-mid::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--amber) 0% 62%, transparent 62%);
+  -webkit-mask: radial-gradient(50% 50%, transparent 66%, black 66%);
+  mask: radial-gradient(50% 50%, transparent 66%, black 66%);
+}
+.gauge-ring.score-ok { color: var(--teal); }
+.gauge-ring.score-ok::after {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--teal) 0% 78%, transparent 78%);
+  -webkit-mask: radial-gradient(50% 50%, transparent 66%, black 66%);
+  mask: radial-gradient(50% 50%, transparent 66%, black 66%);
+}
+.gauge-info { flex: 1; }
+.gauge-repo { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.gauge-sub { font-size: 10px; color: var(--text3); }
+.gauge-issues { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+.issue-dot {
+  font-size: 9px; padding: 1px 6px;
+  border-radius: 2px; font-family: 'JetBrains Mono', monospace;
+}
+.id-crit { background: rgba(255,87,87,.15); color: var(--red); }
+.id-high { background: rgba(255,170,51,.15); color: var(--amber); }
+.id-med { background: rgba(85,153,255,.15); color: var(--blue); }
+
+/* ISSUE LIST */
+.issue-list { }
+.issue-list-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.issue-list-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3);
+}
+.issue-filter { display: flex; gap: 4px; }
+.filter-pill {
+  font-size: 9px; padding: 2px 8px; border-radius: 10px;
+  border: 1px solid var(--border2); color: var(--text3); cursor: pointer;
+}
+.filter-pill.active { border-color: var(--lime); color: var(--lime); background: rgba(184,255,87,.08); }
+
+.issue-item {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 4px; padding: 10px 12px; margin-bottom: 6px;
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 10px; align-items: start;
+}
+.issue-sev {
+  width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
+}
+.sev-crit { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.sev-high { background: var(--amber); }
+.sev-med { background: var(--blue); }
+.sev-low { background: var(--text3); }
+.issue-body { }
+.issue-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.issue-plain { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.issue-location {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text3); margin-top: 4px;
+}
+.issue-actions { display: flex; gap: 4px; }
+.fix-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; padding: 3px 8px;
+  background: var(--lime); color: #000;
+  border: none; border-radius: 2px; cursor: pointer; font-weight: 600;
+}
+.view-btn {
+  font-size: 9px; padding: 3px 8px;
+  background: transparent; color: var(--text3);
+  border: 1px solid var(--border2); border-radius: 2px; cursor: pointer;
+}
+
+/* TREND CHART */
+.trend-area {
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 4px; padding: 12px; margin-bottom: 8px;
+}
+.trend-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.trend-title { font-size: 11px; color: var(--text2); }
+.trend-val {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+  color: var(--red);
+}
+.chart-svg { width: 100%; height: 80px; display: block; }
+
+/* ONBOARDING SCREEN */
+.onboard-shell {
+  padding: 3rem; display: flex; flex-direction: column;
+  align-items: center; text-align: center;
+}
+.onboard-steps {
+  display: flex; gap: 0; width: 100%; max-width: 600px; margin: 2rem 0;
+}
+.onboard-step {
+  flex: 1; padding: 1rem 0.5rem;
+  border-top: 2px solid var(--border);
+  text-align: center;
+}
+.onboard-step.done { border-top-color: var(--lime); }
+.onboard-step.active { border-top-color: var(--lime); }
+.os-num {
+  font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800;
+  margin-bottom: 4px;
+}
+.os-num.done { color: var(--lime); }
+.os-num.active { color: var(--lime); }
+.os-num.upcoming { color: var(--border2); }
+.os-label { font-size: 10px; color: var(--text3); }
+
+/* ALERT BANNER */
+.alert-banner {
+  background: rgba(255,87,87,0.07);
+  border: 1px solid rgba(255,87,87,0.2);
+  border-left: 3px solid var(--red);
+  border-radius: 4px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.alert-banner.warn {
+  background: rgba(255,170,51,0.07);
+  border-color: rgba(255,170,51,0.2);
+  border-left-color: var(--amber);
+}
+.alert-icon { font-size: 14px; flex-shrink: 0; }
+.alert-text { font-size: 12px; color: var(--text2); line-height: 1.4; }
+.alert-text strong { color: var(--text); }
+.alert-action {
+  margin-left: auto; font-size: 10px;
+  color: var(--lime); white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace; cursor: pointer;
+}
+
+/* SLOP SCREEN */
+.slop-list { }
+.slop-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 4px; margin-bottom: 6px;
+}
+.slop-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text);
+}
+.slop-status { margin-left: auto; }
+.slop-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block; margin-right: 4px;
+}
+.slop-ok { color: var(--teal); font-size: 10px; }
+.slop-ok .slop-dot { background: var(--teal); }
+.slop-bad { color: var(--red); font-size: 10px; }
+.slop-bad .slop-dot { background: var(--red); box-shadow: 0 0 5px var(--red); }
+.slop-warn { color: var(--amber); font-size: 10px; }
+.slop-warn .slop-dot { background: var(--amber); }
+
+/* REVENUE / PRICING TABLES */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+.price-card {
+  background: var(--bg2); padding: 1.75rem;
+  position: relative;
+}
+.price-card.featured { background: var(--bg3); }
+.price-card.featured::before {
+  content: 'RECOMMENDED';
+  position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 2px; padding: 3px 10px;
+  background: var(--lime); color: #000; font-weight: 600;
+}
+.price-tier {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 8px;
+}
+.price-val {
+  font-family: 'Syne', sans-serif; font-size: 2rem;
+  font-weight: 800; color: var(--text); margin-bottom: 4px;
+}
+.price-val span { font-size: 13px; color: var(--text3); font-weight: 400; }
+.price-who { font-size: 12px; color: var(--text2); margin-bottom: 1rem; line-height: 1.4; }
+.price-features { list-style: none; padding: 0; }
+.price-features li {
+  font-size: 11px; color: var(--text2); padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 6px; align-items: flex-start;
+}
+.price-features li:last-child { border: none; }
+.pf-check { color: var(--lime); flex-shrink: 0; }
+.pf-x { color: var(--text3); flex-shrink: 0; }
+
+/* MRR PROJECTION */
+.mrr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mrr-table th {
+  text-align: left; font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); padding: 8px 12px; border-bottom: 1px solid var(--border);
+}
+.mrr-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+  color: var(--text2); vertical-align: top;
+}
+.mrr-table td:first-child { color: var(--lime); font-family: 'JetBrains Mono', monospace; }
+.mrr-table tr:last-child td { border: none; font-weight: 600; color: var(--text); }
+
+/* TECH STACK */
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px; margin: 1.5rem 0;
+}
+.stack-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 12px;
+}
+.stack-layer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 6px;
+}
+.stack-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.stack-why { font-size: 11px; color: var(--text2); line-height: 1.4; }
+
+/* ROADMAP */
+.roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.road-phase { background: var(--bg2); padding: 1.5rem; }
+.road-phase-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 6px;
+}
+.road-phase-title {
+  font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+  margin-bottom: 10px; color: var(--text);
+}
+.road-items { list-style: none; padding: 0; }
+.road-item {
+  font-size: 11px; color: var(--text2); padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 6px;
+}
+.road-item:last-child { border: none; }
+.road-item::before { content: '→'; color: var(--lime); flex-shrink: 0; }
+
+/* MISC */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+@media(max-width:650px){ .two-col { grid-template-columns: 1fr; } .score-cards { grid-template-columns: repeat(2,1fr); } .dash-shell { grid-template-columns: 1fr; } .dash-sidebar { display: none; } .health-row { grid-template-columns: 1fr; } .roadmap { grid-template-columns: 1fr; } }
+
+.label-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 2px; display: inline-block; margin-bottom: 8px;
+}
+.lt-lime { background: rgba(184,255,87,.1); color: var(--lime); border: 1px solid rgba(184,255,87,.3); }
+.lt-red { background: rgba(255,87,87,.1); color: var(--red); border: 1px solid rgba(255,87,87,.3); }
+.lt-amber { background: rgba(255,170,51,.1); color: var(--amber); border: 1px solid rgba(255,170,51,.3); }
+.lt-blue { background: rgba(85,153,255,.1); color: var(--blue); border: 1px solid rgba(85,153,255,.3); }
+
+.insight-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-left: 3px solid var(--lime);
+  padding: 1.25rem 1.5rem; border-radius: 0 4px 4px 0;
+  margin: 1.5rem 0;
+}
+.insight-box p { font-size: 13px; color: var(--text2); line-height: 1.75; }
+.insight-box strong { color: var(--lime); }
+
+.footer {
+  padding: 2rem; border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace; font-size: 9px;
+  color: var(--text3); letter-spacing: 1px; text-align: center;
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-logo">Debt<span>Map</span></div>
+  <a href="#market" class="nav-link active">Market Research</a>
+  <a href="#crisis" class="nav-link">The Crisis</a>
+  <a href="#competition" class="nav-link">Competitors</a>
+  <a href="#icp" class="nav-link">Who Buys</a>
+  <a href="#product" class="nav-link">Product Design</a>
+  <a href="#screens" class="nav-link">All Screens</a>
+  <a href="#pricing" class="nav-link">Pricing</a>
+  <a href="#stack" class="nav-link">Tech Stack</a>
+  <a href="#roadmap" class="nav-link">Roadmap</a>
+</nav>
+
+<!-- ─── HERO ─── -->
+<div class="hero" id="market">
+  <div class="hero-eyebrow">Market Research & Product Design · June 2026</div>
+  <h1>
+    DebtMap<br>
+    <span class="highlight">AI Code Health OS</span><br>
+    <span class="dim">for the Vibe Coding Era</span>
+  </h1>
+  <p class="hero-sub">
+    The security & technical debt crisis created by AI code generators is the most urgent unsolved problem in developer tooling today. This is the full market research and product design blueprint for DebtMap — the tool that fixes it.
+  </p>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <span class="hs-val">$14.8B</span>
+      <div class="hs-label">App security market 2026</div>
+    </div>
+    <div class="hero-stat">
+      <span class="hs-val">91.5%</span>
+      <div class="hs-label">Vibe-coded apps with vulnerabilities (Q1 2026)</div>
+    </div>
+    <div class="hero-stat">
+      <span class="hs-val">8M</span>
+      <div class="hs-label">Lovable users — primary target market</div>
+    </div>
+    <div class="hero-stat">
+      <span class="hs-val">24%</span>
+      <div class="hs-label">CAGR — SAST market 2026–2035</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── THE CRISIS ─── -->
+<section class="section" id="crisis">
+  <div class="section-tag">01 · Market Research</div>
+  <div class="section-title">The Numbers Behind<br>the <span class="accent">Vibe Code Crisis</span></div>
+  <p class="section-intro">This isn't a theoretical risk. These are documented incidents and statistically-verified facts from 2026. Each one is a sales conversation waiting to happen.</p>
+
+  <div class="crisis-grid">
+    <div class="crisis-card cc-red">
+      <div class="crisis-num cn-red">91.5%</div>
+      <div class="crisis-label">of vibe-coded apps had at least one vulnerability traceable to AI hallucination in Q1 2026</div>
+      <div class="crisis-source">Source: Q1 2026 assessment of 200+ vibe-coded apps</div>
+    </div>
+    <div class="crisis-card cc-amber">
+      <div class="crisis-num cn-amber">2.74×</div>
+      <div class="crisis-label">More security vulnerabilities in AI-generated code vs. human-written code across 470 GitHub PRs (CodeRabbit analysis)</div>
+      <div class="crisis-source">Source: CodeRabbit analysis, 2026</div>
+    </div>
+    <div class="crisis-card cc-lime">
+      <div class="crisis-num cn-lime">1,645</div>
+      <div class="crisis-label">Lovable-generated apps audited — 170 of them (10.3%) had critical row-level security flaws exposing real user data</div>
+      <div class="crisis-source">Source: Lovable CVE-2025-48757 security incident</div>
+    </div>
+    <div class="crisis-card cc-blue">
+      <div class="crisis-num cn-blue">19.7%</div>
+      <div class="crisis-label">of 2.23M AI-generated code samples contain hallucinated package names — exploited via "slopsquatting" attacks</div>
+      <div class="crisis-source">Source: Cloud Security Alliance, April 2026</div>
+    </div>
+    <div class="crisis-card cc-purple">
+      <div class="crisis-num cn-purple">1.5M</div>
+      <div class="crisis-label">API keys leaked in a single incident when a founder shipped a vibe-coded app without any security review in 2026</div>
+      <div class="crisis-source">Source: Wiz security research, 2026</div>
+    </div>
+    <div class="crisis-card cc-teal">
+      <div class="crisis-num cn-teal">60%</div>
+      <div class="crisis-label">of all new code on GitHub is AI-generated in 2026 — projected to hit 60% by year end. Security review hasn't scaled with it.</div>
+      <div class="crisis-source">Source: GitHub Octoverse, 2026</div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <p>The core structural problem: <strong>vibe coding tools optimise for speed of creation, not security by default.</strong> When 63% of Lovable users are non-developers, they lack the security knowledge to identify missing authentication checks, exposed API keys, or insecure database configs. They need a tool that speaks their language — plain English, not security jargon. That's the gap DebtMap fills.</p>
+  </div>
+
+  <div class="section-tag" style="margin-top:2rem">Market Size — TAM / SAM / SOM</div>
+  <div class="market-bars">
+    <div class="mbar-row">
+      <div class="mbar-label">App security testing (TAM)</div>
+      <div class="mbar-track"><div class="mbar-fill" style="width:100%;background:var(--lime)"></div></div>
+      <div class="mbar-val">$14.8B</div>
+    </div>
+    <div class="mbar-row">
+      <div class="mbar-label">SAST tools specifically</div>
+      <div class="mbar-track"><div class="mbar-fill" style="width:57%;background:var(--teal)"></div></div>
+      <div class="mbar-val">$2.8B</div>
+    </div>
+    <div class="mbar-row">
+      <div class="mbar-label">Vibe coder segment (SAM)</div>
+      <div class="mbar-track"><div class="mbar-fill" style="width:32%;background:var(--amber)"></div></div>
+      <div class="mbar-val">$900M</div>
+    </div>
+    <div class="mbar-row">
+      <div class="mbar-label">Year 1 SOM (realistic)</div>
+      <div class="mbar-track"><div class="mbar-fill" style="width:4%;background:var(--purple)"></div></div>
+      <div class="mbar-val">$2.4M</div>
+    </div>
+    <div class="mbar-row">
+      <div class="mbar-label">CAGR (SAST 2026–2035)</div>
+      <div class="mbar-track"><div class="mbar-fill" style="width:97%;background:var(--red)"></div></div>
+      <div class="mbar-val">24.05%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── COMPETITION ─── -->
+<section class="section" id="competition">
+  <div class="section-tag">02 · Competitive Landscape</div>
+  <div class="section-title">Why Every Existing Tool<br><span class="accent">Fails Vibe Coders</span></div>
+  <p class="section-intro">The security tooling market is crowded — but every existing tool was built for developers who understand code. DebtMap is the first tool built for the 63% of vibe coders who don't.</p>
+
+  <div style="overflow-x:auto">
+  <table class="comp-table">
+    <thead>
+      <tr>
+        <th>Tool</th>
+        <th>ARR / Scale</th>
+        <th>Price</th>
+        <th>Plain English explanations</th>
+        <th>Non-developer UX</th>
+        <th>Slopsquatting detection</th>
+        <th>Vibe tool integration</th>
+        <th>DebtMap gap</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Snyk</td>
+        <td>$500M+ (est.)</td>
+        <td>$25/dev/mo</td>
+        <td><span class="nope">✗ Technical</span></td>
+        <td><span class="nope">✗ Developer only</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="gap-badge">Wrong audience</span></td>
+      </tr>
+      <tr>
+        <td>CodeRabbit</td>
+        <td>$40M ARR (2026)</td>
+        <td>$24/dev/mo</td>
+        <td><span class="yes">✓ Partial</span></td>
+        <td><span class="nope">✗ PR-based only</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="gap-badge">No vibe tool hook</span></td>
+      </tr>
+      <tr>
+        <td>SonarQube</td>
+        <td>$500M+ revenue</td>
+        <td>$15/dev/mo</td>
+        <td><span class="nope">✗ Technical</span></td>
+        <td><span class="nope">✗ DevOps teams</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="gap-badge">Enterprise only</span></td>
+      </tr>
+      <tr>
+        <td>Semgrep</td>
+        <td>Open source</td>
+        <td>Free / $40/dev</td>
+        <td><span class="nope">✗ Rule-based</span></td>
+        <td><span class="nope">✗ CLI-based</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="gap-badge">CLI not accessible</span></td>
+      </tr>
+      <tr>
+        <td>Socket.dev</td>
+        <td>Series A funded</td>
+        <td>$20/dev/mo</td>
+        <td><span class="yes">✓ Partial</span></td>
+        <td><span class="nope">✗ Devs only</span></td>
+        <td><span class="yes">✓ Supply chain</span></td>
+        <td><span class="nope">✗ No</span></td>
+        <td><span class="gap-badge">No vibe UX</span></td>
+      </tr>
+      <tr>
+        <td><strong>DebtMap</strong></td>
+        <td>—</td>
+        <td>$49/mo</td>
+        <td><span class="yes">✓ Plain English AI</span></td>
+        <td><span class="yes">✓ Built for founders</span></td>
+        <td><span class="yes">✓ First tool to do this</span></td>
+        <td><span class="yes">✓ Lovable/Bolt/Cursor</span></td>
+        <td><span class="label-tag lt-lime">Category creator</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="insight-box" style="margin-top:1.5rem">
+    <p>CodeRabbit hit <strong>$40M ARR growing 700% YoY</strong> by targeting developers who already understand code but want faster reviews. DebtMap targets the segment CodeRabbit cannot serve — non-developer founders and solo builders who need security explained to them, not just flagged. This is a parallel market, not a head-to-head fight.</p>
+  </div>
+</section>
+
+<!-- ─── ICP ─── -->
+<section class="section" id="icp">
+  <div class="section-tag">03 · Ideal Customer Profile</div>
+  <div class="section-title">Exactly <span class="accent">Who Pays</span><br>and Why They Can't Say No</div>
+
+  <div class="icp-grid">
+    <div class="icp-card">
+      <div class="icp-tier">Primary ICP · Tier 1</div>
+      <div class="icp-name">Solo Founder / Indie Hacker</div>
+      <div class="icp-desc">Shipped an app on Lovable, Bolt, or Replit. Has paying users. Knows they should worry about security but doesn't know where to start. Can't read the code they built. Living in fear of a breach.</div>
+      <div class="icp-price">₹4,000–4,500/mo (Pro plan)</div>
+    </div>
+    <div class="icp-card">
+      <div class="icp-tier">Primary ICP · Tier 2</div>
+      <div class="icp-name">Technical Founder (Pre-Series A)</div>
+      <div class="icp-desc">Used Cursor/Claude Code to move fast. Getting enterprise inquiries that require SOC 2 or security review. Needs to harden their codebase before the first enterprise deal closes. Has a developer but no security expertise.</div>
+      <div class="icp-price">₹15,000–18,000/mo (Team plan)</div>
+    </div>
+    <div class="icp-card">
+      <div class="icp-tier">Secondary ICP · Tier 3</div>
+      <div class="icp-name">YC / Accelerator Batch Companies</div>
+      <div class="icp-desc">Moved fast with AI tools to get into the batch. Now preparing for Demo Day and investor due diligence. Security posture is suddenly visible. Batch-wide partnerships are a distribution hack — one YC deal = 200 companies.</div>
+      <div class="icp-price">₹15,000/mo + batch discount</div>
+    </div>
+    <div class="icp-card">
+      <div class="icp-tier">Secondary ICP · Tier 4</div>
+      <div class="icp-name">Agency Building for Clients</div>
+      <div class="icp-desc">Design and no-code agencies now ship vibe-coded apps for SMB clients. They have no security review process. One client breach destroys their reputation. DebtMap is rebranded as their "security guarantee" — a premium add-on.</div>
+      <div class="icp-price">₹20,000–50,000/mo (white-label)</div>
+    </div>
+  </div>
+
+  <div class="insight-box" style="margin-top:1rem">
+    <p>The <strong>buying trigger</strong> is always the same: a founder hears about a breach at a company similar to theirs, gets their first enterprise sales inquiry with a security questionnaire, or their co-founder sends them the "91.5% of vibe-coded apps have vulnerabilities" headline. Your marketing is the security news cycle — it writes itself every week in 2026.</p>
+  </div>
+</section>
+
+<!-- ─── PRODUCT DESIGN ─── -->
+<section class="section" id="product">
+  <div class="section-tag">04 · Product Design</div>
+  <div class="section-title">What the Final Product<br><span class="accent">Looks Like</span></div>
+  <p class="section-intro">DebtMap has five core screens. Each one is designed around a non-developer founder — no jargon, no CLI, no CVSS scores without explanation. Security made human.</p>
+
+  <div class="two-col" style="margin-bottom:1.5rem">
+    <div>
+      <div class="label-tag lt-lime">Core principle 1</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Plain English, always</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.7">Every issue is explained as "this means anyone could read your users' private data" — not "BOLA vulnerability in API endpoint /users/{id}." The AI explanation layer is what makes DebtMap fundamentally different from every existing tool.</p>
+    </div>
+    <div>
+      <div class="label-tag lt-amber">Core principle 2</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">One-click fixes</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.7">Every flagged issue has a "Fix it" button that opens a GitHub PR with the Claude-generated patch already written. No copy-pasting code. No understanding required. Click, review, merge. The founder's security workflow in 3 steps.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SCREENS ─── -->
+<section class="section" id="screens" style="padding-top:0">
+
+  <!-- SCREEN 1: DASHBOARD -->
+  <div class="label-tag lt-lime" style="margin-bottom:12px">Screen 01 · Main Dashboard</div>
+  <div class="product-screen">
+    <div class="screen-titlebar">
+      <div class="screen-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+      <div class="screen-name">app.debtmap.io — Dashboard</div>
+    </div>
+    <div class="dash-shell">
+      <div class="dash-sidebar">
+        <div class="sidebar-brand">
+          <div class="sidebar-logo">
+            <div class="logo-icon">D</div>
+            DebtMap
+          </div>
+        </div>
+        <div class="sb-section-label" style="margin-top:4px">Overview</div>
+        <div class="sb-item active">
+          <span class="sb-icon">⬡</span> Dashboard
+        </div>
+        <div class="sb-item">
+          <span class="sb-icon">⚠</span> Issues <span class="sb-badge">14</span>
+        </div>
+        <div class="sb-item">
+          <span class="sb-icon">📦</span> Packages <span class="sb-badge">3</span>
+        </div>
+        <div class="sb-item">
+          <span class="sb-icon">📈</span> Trend
+        </div>
+        <div class="sb-section-label" style="margin-top:12px">Repositories</div>
+        <div class="sb-item">
+          <span class="sb-icon">□</span> saas-app <span class="sb-badge">9</span>
+        </div>
+        <div class="sb-item">
+          <span class="sb-icon">□</span> landing-page <span class="sb-badge ok">0</span>
+        </div>
+        <div class="sb-item">
+          <span class="sb-icon">□</span> api-backend <span class="sb-badge">5</span>
+        </div>
+        <div class="sb-section-label" style="margin-top:12px">Account</div>
+        <div class="sb-item"><span class="sb-icon">⚙</span> Settings</div>
+        <div class="sb-item"><span class="sb-icon">?</span> Help</div>
+      </div>
+
+      <div class="dash-main">
+        <div class="dash-topbar">
+          <div class="dash-topbar-left">
+            <div class="dash-pagetitle">Security Dashboard</div>
+            <div class="dash-pagesub">Last scan: 4 minutes ago · 3 repositories connected</div>
+          </div>
+          <div class="dash-actions">
+            <button class="btn-secondary">↓ Export Report</button>
+            <button class="btn-primary">▶ Run Scan</button>
+          </div>
+        </div>
+
+        <div class="alert-banner">
+          <span class="alert-icon">🚨</span>
+          <div class="alert-text"><strong>Critical issue found in saas-app:</strong> Your login system lets any user access any other user's data. This could expose all your users' private information.</div>
+          <span class="alert-action">Fix now →</span>
+        </div>
+        <div class="alert-banner warn">
+          <span class="alert-icon">⚠️</span>
+          <div class="alert-text"><strong>Slopsquatting risk:</strong> 3 packages in api-backend don't exist on npm — they may have been hallucinated by your AI tool and could be malicious if installed.</div>
+          <span class="alert-action">Review →</span>
+        </div>
+
+        <div class="score-cards">
+          <div class="sc-card">
+            <div class="sc-card-val" style="color:var(--red)">34</div>
+            <div class="sc-card-label">Health Score</div>
+            <div class="sc-card-delta delta-bad">▼ 12 this week</div>
+          </div>
+          <div class="sc-card">
+            <div class="sc-card-val" style="color:var(--amber)">14</div>
+            <div class="sc-card-label">Open Issues</div>
+            <div class="sc-card-delta delta-bad">+5 since last scan</div>
+          </div>
+          <div class="sc-card">
+            <div class="sc-card-val" style="color:var(--red)">2</div>
+            <div class="sc-card-label">Critical</div>
+            <div class="sc-card-delta delta-bad">Fix immediately</div>
+          </div>
+          <div class="sc-card">
+            <div class="sc-card-val" style="color:var(--teal)">8</div>
+            <div class="sc-card-label">Fixed this month</div>
+            <div class="sc-card-delta delta-ok">↑ Up from 3</div>
+          </div>
+        </div>
+
+        <div class="health-row">
+          <div class="health-gauge">
+            <div class="gauge-ring score-low">34</div>
+            <div class="gauge-info">
+              <div class="gauge-repo">saas-app</div>
+              <div class="gauge-sub">main branch · Lovable-generated</div>
+              <div class="gauge-issues">
+                <span class="issue-dot id-crit">2 critical</span>
+                <span class="issue-dot id-high">5 high</span>
+                <span class="issue-dot id-med">2 med</span>
+              </div>
+            </div>
+          </div>
+          <div class="health-gauge">
+            <div class="gauge-ring score-ok">78</div>
+            <div class="gauge-info">
+              <div class="gauge-repo">api-backend</div>
+              <div class="gauge-sub">main branch · Cursor-generated</div>
+              <div class="gauge-issues">
+                <span class="issue-dot id-high">1 high</span>
+                <span class="issue-dot id-med">4 med</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Recent Critical Issues</div>
+        <div class="issue-item">
+          <div class="issue-sev sev-crit"></div>
+          <div class="issue-body">
+            <div class="issue-title">Anyone can read any user's data</div>
+            <div class="issue-plain">Your /api/users/:id endpoint doesn't check if the person asking is the actual owner. Any logged-in user can swap the ID and read someone else's profile, messages, or payment info.</div>
+            <div class="issue-location">saas-app / src/api/users.js:47</div>
+          </div>
+          <div class="issue-actions">
+            <button class="fix-btn">Fix it</button>
+            <button class="view-btn">View</button>
+          </div>
+        </div>
+        <div class="issue-item">
+          <div class="issue-sev sev-crit"></div>
+          <div class="issue-body">
+            <div class="issue-title">Your API key is visible to everyone</div>
+            <div class="issue-plain">Your Stripe secret key is written directly into your code. Anyone who views your GitHub repository or the deployed JavaScript can see it and make charges to your Stripe account.</div>
+            <div class="issue-location">saas-app / src/payment.js:12</div>
+          </div>
+          <div class="issue-actions">
+            <button class="fix-btn">Fix it</button>
+            <button class="view-btn">View</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: ISSUE DETAIL -->
+  <div class="label-tag lt-amber" style="margin-bottom:12px">Screen 02 · Issue Detail & AI Fix</div>
+  <div class="product-screen">
+    <div class="screen-titlebar">
+      <div class="screen-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+      <div class="screen-name">Issue Detail — BOLA in /api/users/:id</div>
+    </div>
+    <div style="padding:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">What's wrong</div>
+        <div style="background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:1rem;margin-bottom:10px">
+          <div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:6px">🚨 Critical — Fix immediately</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7">Your user profile endpoint lets any logged-in person read any other user's profile — not just their own. This is called <strong style="color:var(--text)">Broken Object Level Authorization (BOLA)</strong> — the #1 most common vulnerability in vibe-coded apps.<br><br>In plain terms: if your user ID is <code style="background:var(--bg3);padding:2px 5px;border-radius:2px;font-size:11px">user_123</code>, any other logged-in user can change that to <code style="background:var(--bg3);padding:2px 5px;border-radius:2px;font-size:11px">user_124</code> and see your data.</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">What could go wrong</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="background:rgba(255,87,87,.07);border:1px solid rgba(255,87,87,.2);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text2)">❌ Users' emails, phone numbers, addresses exposed</div>
+          <div style="background:rgba(255,87,87,.07);border:1px solid rgba(255,87,87,.2);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text2)">❌ Subscription status and payment history visible</div>
+          <div style="background:rgba(255,87,87,.07);border:1px solid rgba(255,87,87,.2);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text2)">❌ GDPR / DPDP violation — potential legal liability</div>
+          <div style="background:rgba(255,87,87,.07);border:1px solid rgba(255,87,87,.2);border-radius:4px;padding:8px 10px;font-size:11px;color:var(--text2)">❌ If discovered publicly, users will leave immediately</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">The vulnerable code</div>
+        <div style="background:#0a0a0f;border:1px solid var(--border);border-radius:4px;padding:1rem;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;margin-bottom:10px;color:#ff8888">
+          <span style="color:var(--text3)">// ❌ DANGEROUS — no ownership check</span><br>
+          app.get('/api/users/<span style="color:var(--amber)">:id</span>', async (req, res) => {<br>
+          &nbsp;&nbsp;const user = await db.users.find(<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;{ id: req.params.id }<br>
+          &nbsp;&nbsp;);<br>
+          &nbsp;&nbsp;res.json(user); <span style="color:var(--text3)">// ← no auth check!</span><br>
+          });
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">The fix (AI-generated, ready to apply)</div>
+        <div style="background:#040a04;border:1px solid rgba(51,221,187,.2);border-radius:4px;padding:1rem;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;margin-bottom:10px;color:#88ffcc">
+          <span style="color:var(--text3)">// ✓ SAFE — checks ownership</span><br>
+          app.get('/api/users/<span style="color:var(--amber)">:id</span>', requireAuth, async (req, res) => {<br>
+          &nbsp;&nbsp;<span style="color:var(--lime)">if (req.user.id !== req.params.id) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;return res.status(403).json({error: 'Forbidden'});<br>
+          &nbsp;&nbsp;}</span><br>
+          &nbsp;&nbsp;const user = await db.users.find({ id: req.params.id });<br>
+          &nbsp;&nbsp;res.json(user);<br>
+          });
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-primary" style="flex:1;padding:10px">▶ Open fix as GitHub PR</button>
+          <button class="btn-secondary">Copy code</button>
+          <button class="btn-secondary">Dismiss</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: SLOPSQUATTING -->
+  <div class="label-tag lt-blue" style="margin-bottom:12px">Screen 03 · Slopsquatting / Package Hallucination Detector</div>
+  <div class="product-screen">
+    <div class="screen-titlebar">
+      <div class="screen-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+      <div class="screen-name">Package Safety Scanner — api-backend</div>
+    </div>
+    <div style="padding:1.5rem">
+      <div class="dash-topbar" style="margin-bottom:1rem">
+        <div>
+          <div class="dash-pagetitle">Package Safety Check</div>
+          <div class="dash-pagesub">Scanned 47 packages in package.json · 3 suspicious packages found</div>
+        </div>
+        <button class="btn-primary">Re-scan</button>
+      </div>
+      <div class="alert-banner">
+        <span class="alert-icon">🧪</span>
+        <div class="alert-text"><strong>What is slopsquatting?</strong> AI tools sometimes invent package names that don't exist. Attackers register these fake names as real (malicious) packages. If you install them, they can steal your data or take over your server.</div>
+      </div>
+      <div style="margin-top:1rem">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px">All 47 packages — sorted by risk</div>
+        <div class="slop-item">
+          <div class="slop-name">express-auth-middleware-pro</div>
+          <div style="font-size:11px;color:var(--text3);margin-left:auto;margin-right:12px">AI-generated · Not in npm registry</div>
+          <div class="slop-status slop-bad"><span class="slop-dot"></span>DANGEROUS</div>
+        </div>
+        <div class="slop-item">
+          <div class="slop-name">supabase-rls-helper</div>
+          <div style="font-size:11px;color:var(--text3);margin-left:auto;margin-right:12px">Hallucinated · Use @supabase/supabase-js instead</div>
+          <div class="slop-status slop-bad"><span class="slop-dot"></span>DANGEROUS</div>
+        </div>
+        <div class="slop-item">
+          <div class="slop-name">next-api-validator</div>
+          <div style="font-size:11px;color:var(--text3);margin-left:auto;margin-right:12px">Possibly hallucinated · No downloads in 2026</div>
+          <div class="slop-status slop-warn"><span class="slop-dot"></span>SUSPECT</div>
+        </div>
+        <div class="slop-item">
+          <div class="slop-name">express</div>
+          <div style="font-size:11px;color:var(--text3);margin-left:auto;margin-right:12px">Verified · 50M weekly downloads</div>
+          <div class="slop-status slop-ok"><span class="slop-dot"></span>Safe</div>
+        </div>
+        <div class="slop-item">
+          <div class="slop-name">@supabase/supabase-js</div>
+          <div style="font-size:11px;color:var(--text3);margin-left:auto;margin-right:12px">Verified · Official Supabase SDK</div>
+          <div class="slop-status slop-ok"><span class="slop-dot"></span>Safe</div>
+        </div>
+        <div class="slop-item">
+          <div class="slop-name">stripe</div>
+          <div style="font-size:11px;color:var(--text3);margin-left:auto;margin-right:12px">Verified · Official Stripe SDK</div>
+          <div class="slop-status slop-ok"><span class="slop-dot"></span>Safe</div>
+        </div>
+        <div style="text-align:center;padding:8px;font-size:11px;color:var(--text3)">+ 41 more safe packages</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: HEALTH TREND -->
+  <div class="label-tag lt-red" style="margin-bottom:12px">Screen 04 · Health Score Trend Over Time</div>
+  <div class="product-screen">
+    <div class="screen-titlebar">
+      <div class="screen-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+      <div class="screen-name">Security Health Trend — Last 8 Weeks</div>
+    </div>
+    <div style="padding:1.5rem">
+      <div class="two-col">
+        <div>
+          <div class="trend-area">
+            <div class="trend-header">
+              <div class="trend-title">Health score — saas-app</div>
+              <div class="trend-val">34 ↓</div>
+            </div>
+            <svg class="chart-svg" viewBox="0 0 400 80" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="redgrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ff5757" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#ff5757" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,20 L50,18 L100,22 L150,35 L200,42 L250,50 L300,55 L350,62 L400,66" fill="none" stroke="#ff5757" stroke-width="2"/>
+              <path d="M0,20 L50,18 L100,22 L150,35 L200,42 L250,50 L300,55 L350,62 L400,66 L400,80 L0,80 Z" fill="url(#redgrad)"/>
+              <circle cx="400" cy="66" r="4" fill="#ff5757"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:4px">
+              <span>Apr 1</span><span>Apr 15</span><span>May 1</span><span>May 15</span><span>Jun 1</span><span>Today</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:8px">
+            Your health score dropped <strong style="color:var(--red)">46 points</strong> over 8 weeks. Every time you shipped a new feature using Lovable, new security issues were added. The trend reverses when you start using DebtMap's auto-fix.
+          </div>
+        </div>
+        <div>
+          <div class="trend-area">
+            <div class="trend-header">
+              <div class="trend-title">Issues introduced vs. fixed per week</div>
+            </div>
+            <svg class="chart-svg" viewBox="0 0 400 80" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="greengrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#33ddbb" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#33ddbb" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <rect x="10" y="50" width="30" height="28" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="10" y="65" width="30" height="13" fill="#33ddbb" opacity=".7" rx="2"/>
+              <rect x="70" y="40" width="30" height="38" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="70" y="60" width="30" height="18" fill="#33ddbb" opacity=".7" rx="2"/>
+              <rect x="130" y="35" width="30" height="43" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="130" y="55" width="30" height="23" fill="#33ddbb" opacity=".7" rx="2"/>
+              <rect x="190" y="30" width="30" height="48" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="190" y="48" width="30" height="30" fill="#33ddbb" opacity=".7" rx="2"/>
+              <rect x="250" y="25" width="30" height="53" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="250" y="40" width="30" height="38" fill="#33ddbb" opacity=".7" rx="2"/>
+              <rect x="310" y="20" width="30" height="58" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="310" y="30" width="30" height="48" fill="#33ddbb" opacity=".7" rx="2"/>
+              <rect x="370" y="15" width="30" height="63" fill="#ff5757" opacity=".5" rx="2"/>
+              <rect x="370" y="20" width="30" height="58" fill="#33ddbb" opacity=".7" rx="2"/>
+            </svg>
+            <div style="display:flex;gap:12px;margin-top:6px">
+              <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><div style="width:8px;height:8px;background:var(--red);border-radius:1px;opacity:.6"></div>Introduced</div>
+              <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text3)"><div style="width:8px;height:8px;background:var(--teal);border-radius:1px;opacity:.8"></div>Fixed</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:8px">
+            More issues are being added each week than are being fixed. This is the <strong style="color:var(--text)">technical debt compounding effect</strong> — common in teams using AI coding tools without automated security scanning.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 5: SOC2 REPORT -->
+  <div class="label-tag lt-lime" style="margin-bottom:12px">Screen 05 · SOC 2 Readiness Report (Team Tier)</div>
+  <div class="product-screen">
+    <div class="screen-titlebar">
+      <div class="screen-dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+      <div class="screen-name">SOC 2 Readiness — my-saas-app</div>
+    </div>
+    <div style="padding:1.5rem">
+      <div class="dash-topbar">
+        <div>
+          <div class="dash-pagetitle">Security Readiness Report</div>
+          <div class="dash-pagesub">Generated June 10, 2026 · For enterprise sales / investor due diligence</div>
+        </div>
+        <div class="dash-actions">
+          <button class="btn-secondary">Share link</button>
+          <button class="btn-primary">↓ Download PDF</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:1rem 0">
+        <div class="sc-card"><div class="sc-card-val" style="color:var(--amber);font-size:1.1rem">62%</div><div class="sc-card-label">SOC 2 Readiness</div></div>
+        <div class="sc-card"><div class="sc-card-val" style="color:var(--teal);font-size:1.1rem">8 / 14</div><div class="sc-card-label">Controls passing</div></div>
+        <div class="sc-card"><div class="sc-card-val" style="color:var(--red);font-size:1.1rem">6</div><div class="sc-card-label">Controls failing</div></div>
+        <div class="sc-card"><div class="sc-card-val" style="color:var(--text2);font-size:1.1rem">~6 wks</div><div class="sc-card-label">Est. time to ready</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="slop-item"><div style="font-size:12px;color:var(--text)">CC6.1 · Logical and physical access controls</div><div class="slop-status slop-bad" style="margin-left:auto"><span class="slop-dot"></span>Failing</div></div>
+        <div class="slop-item"><div style="font-size:12px;color:var(--text)">CC7.2 · System monitoring and alerting</div><div class="slop-status slop-bad" style="margin-left:auto"><span class="slop-dot"></span>Failing</div></div>
+        <div class="slop-item"><div style="font-size:12px;color:var(--text)">CC6.6 · Encryption in transit and at rest</div><div class="slop-status slop-warn" style="margin-left:auto"><span class="slop-dot"></span>Partial</div></div>
+        <div class="slop-item"><div style="font-size:12px;color:var(--text)">CC8.1 · Change management (code review)</div><div class="slop-status slop-ok" style="margin-left:auto"><span class="slop-dot"></span>Passing</div></div>
+        <div class="slop-item"><div style="font-size:12px;color:var(--text)">CC9.2 · Vendor risk management</div><div class="slop-status slop-ok" style="margin-left:auto"><span class="slop-dot"></span>Passing</div></div>
+        <div class="slop-item"><div style="font-size:12px;color:var(--text)">A1.1 · Performance and availability monitoring</div><div class="slop-status slop-ok" style="margin-left:auto"><span class="slop-dot"></span>Passing</div></div>
+      </div>
+      <div style="margin-top:1rem;padding:1rem;background:rgba(184,255,87,.05);border:1px solid rgba(184,255,87,.15);border-radius:4px;font-size:12px;color:var(--text2)">
+        <strong style="color:var(--lime)">What to tell your enterprise prospect:</strong> "We use DebtMap for continuous security monitoring, with weekly automated scans and remediation tracking. We're currently at 62% SOC 2 readiness and on track for certification by Q4 2026."
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PRICING ─── -->
+<section class="section" id="pricing">
+  <div class="section-tag">05 · Pricing Strategy</div>
+  <div class="section-title">Pricing Designed for<br><span class="accent">Non-Developer Buyers</span></div>
+  <p class="section-intro">Every competitor prices per developer seat. DebtMap prices per repository — a unit non-developers understand. "How many apps do I have?" is a question anyone can answer.</p>
+
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-tier">Free</div>
+      <div class="price-val">₹0 <span>/ month</span></div>
+      <div class="price-who">Indie hackers and student builders testing the waters</div>
+      <ul class="price-features">
+        <li><span class="pf-check">✓</span> 1 repository</li>
+        <li><span class="pf-check">✓</span> Weekly automated scan</li>
+        <li><span class="pf-check">✓</span> Health score (0–100)</li>
+        <li><span class="pf-check">✓</span> Plain English issue list</li>
+        <li><span class="pf-x">–</span> AI fix suggestions</li>
+        <li><span class="pf-x">–</span> Slopsquatting detection</li>
+        <li><span class="pf-x">–</span> One-click GitHub PR</li>
+      </ul>
+    </div>
+    <div class="price-card featured">
+      <div class="price-tier">Pro</div>
+      <div class="price-val">₹4,000 <span>/ month</span></div>
+      <div class="price-who">Solo founders with paying users and something to protect</div>
+      <ul class="price-features">
+        <li><span class="pf-check">✓</span> Unlimited repositories</li>
+        <li><span class="pf-check">✓</span> Real-time scanning on every push</li>
+        <li><span class="pf-check">✓</span> AI plain English explanations</li>
+        <li><span class="pf-check">✓</span> AI-generated fix suggestions</li>
+        <li><span class="pf-check">✓</span> One-click GitHub PR fix</li>
+        <li><span class="pf-check">✓</span> Slopsquatting detection</li>
+        <li><span class="pf-x">–</span> SOC 2 readiness report</li>
+      </ul>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Team</div>
+      <div class="price-val">₹16,000 <span>/ month</span></div>
+      <div class="price-who">Pre-Series A teams chasing their first enterprise deal</div>
+      <ul class="price-features">
+        <li><span class="pf-check">✓</span> Everything in Pro</li>
+        <li><span class="pf-check">✓</span> PR-level scanning (catch before merge)</li>
+        <li><span class="pf-check">✓</span> Team dashboard for all repos</li>
+        <li><span class="pf-check">✓</span> SOC 2 readiness report</li>
+        <li><span class="pf-check">✓</span> Shareable security report link</li>
+        <li><span class="pf-check">✓</span> Slack alerts</li>
+        <li><span class="pf-check">✓</span> Email support &lt;12hr SLA</li>
+      </ul>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Enterprise</div>
+      <div class="price-val">₹1.6L+ <span>/ year</span></div>
+      <div class="price-who">Agencies and companies with compliance requirements</div>
+      <ul class="price-features">
+        <li><span class="pf-check">✓</span> Everything in Team</li>
+        <li><span class="pf-check">✓</span> White-label (agency resale)</li>
+        <li><span class="pf-check">✓</span> Custom scanning rules</li>
+        <li><span class="pf-check">✓</span> On-premise option</li>
+        <li><span class="pf-check">✓</span> SSO / SAML</li>
+        <li><span class="pf-check">✓</span> Dedicated support</li>
+        <li><span class="pf-check">✓</span> Annual compliance audit report</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section-tag" style="margin-top:2rem">MRR Projection (Conservative)</div>
+  <table class="mrr-table">
+    <thead>
+      <tr><th>Month</th><th>Free Users</th><th>Pro (₹4K)</th><th>Team (₹16K)</th><th>MRR</th><th>Key milestone</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>M1</td><td>200</td><td>0</td><td>0</td><td>₹0</td><td>Launch in Lovable/Bolt Discord — free tier only</td></tr>
+      <tr><td>M2</td><td>800</td><td>15</td><td>0</td><td>₹60K</td><td>ProductHunt launch. First 15 paying Pro users.</td></tr>
+      <tr><td>M3</td><td>1,800</td><td>40</td><td>3</td><td>₹2.08L</td><td>GitHub Marketplace listing. PR scanning live.</td></tr>
+      <tr><td>M6</td><td>5,000</td><td>120</td><td>15</td><td>₹7.2L</td><td>First case study: "DebtMap caught breach before it happened."</td></tr>
+      <tr><td>M9</td><td>10,000</td><td>250</td><td>35</td><td>₹15.6L</td><td>Agency white-label tier. Lovable partnership.</td></tr>
+      <tr><td>M12</td><td>20,000</td><td>450</td><td>70</td><td>₹29L</td><td>₹3.5 Cr ARR. Seed funding or default alive.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── TECH STACK ─── -->
+<section class="section" id="stack">
+  <div class="section-tag">06 · Tech Stack</div>
+  <div class="section-title">Everything You Need<br><span class="accent">to Build DebtMap</span></div>
+
+  <div class="stack-grid">
+    <div class="stack-card">
+      <div class="stack-layer">Scanning Engine</div>
+      <div class="stack-name">Semgrep OSS</div>
+      <div class="stack-why">Open source SAST engine. Fast, language-agnostic, runs on every push. Free to use. 3,000+ security rules out of the box for OWASP Top 10.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">AI Explanation Layer</div>
+      <div class="stack-name">Claude API (Sonnet)</div>
+      <div class="stack-why">Takes Semgrep's raw finding (code + rule ID) → returns plain English explanation, real-world impact, and a specific code fix. The core value-add of DebtMap.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Package Safety</div>
+      <div class="stack-name">npm / PyPI Registry API</div>
+      <div class="stack-why">Validate every imported package against official registries. Flag anything that doesn't exist or has zero downloads. Slopsquatting detection at no extra cost.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Code Integration</div>
+      <div class="stack-name">GitHub App + Actions</div>
+      <div class="stack-why">GitHub App for repo access. GitHub Actions for PR-level scanning. Octokit for creating PRs with the AI-generated fix automatically applied.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Backend</div>
+      <div class="stack-name">FastAPI (Python)</div>
+      <div class="stack-why">Python for seamless Semgrep integration and Claude API calls. FastAPI for async speed. Python is the natural language for security tooling.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Database</div>
+      <div class="stack-name">Supabase</div>
+      <div class="stack-why">Scan history, health score trends, user repos, fix status. Row-level security for multi-tenant data isolation. Built-in auth for the dashboard login.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Frontend</div>
+      <div class="stack-name">Next.js + Tailwind</div>
+      <div class="stack-why">Dashboard built in Next.js for server-side rendering. Tailwind for rapid UI iteration. Recharts for health score trend graphs. Deploy to Vercel.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Notifications</div>
+      <div class="stack-name">Resend + Slack SDK</div>
+      <div class="stack-why">Email alerts when new critical issues are found. Slack webhook integration for Team tier. Resend free tier handles first 3,000 emails/month.</div>
+    </div>
+    <div class="stack-card">
+      <div class="stack-layer">Payments</div>
+      <div class="stack-name">Razorpay Subscriptions</div>
+      <div class="stack-why">UPI AutoPay + card for Indian market. Monthly subscription with annual discount option. Webhook for plan upgrade/downgrade events.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── ROADMAP ─── -->
+<section class="section" id="roadmap">
+  <div class="section-tag">07 · Build Roadmap</div>
+  <div class="section-title">30 → 60 → 90 Days<br><span class="accent">to First ₹1L MRR</span></div>
+
+  <div class="roadmap">
+    <div class="road-phase">
+      <div class="road-phase-label">Phase 1 · Days 1–30</div>
+      <div class="road-phase-title">MVP — Ship & Charge</div>
+      <ul class="road-items">
+        <li>GitHub App that clones repo on push</li>
+        <li>Semgrep scan → raw JSON findings</li>
+        <li>Claude API: plain English explanation per issue</li>
+        <li>npm/PyPI package validation (slopsquatting)</li>
+        <li>Health score algorithm (weighted severity)</li>
+        <li>React dashboard — issue list + score gauge</li>
+        <li>Razorpay Pro subscription (₹4,000/mo)</li>
+        <li>Launch in Lovable, Bolt, Indie Hackers communities</li>
+        <li>Target: 15 paying Pro users</li>
+      </ul>
+    </div>
+    <div class="road-phase">
+      <div class="road-phase-label">Phase 2 · Days 31–60</div>
+      <div class="road-phase-title">Retention & Distribution</div>
+      <ul class="road-items">
+        <li>One-click GitHub PR fix (Octokit PR creation)</li>
+        <li>Health score trend chart (Recharts)</li>
+        <li>Email alert on new critical issue found</li>
+        <li>GitHub Marketplace listing</li>
+        <li>ProductHunt launch</li>
+        <li>Team tier — PR-level scanning + Slack alerts</li>
+        <li>SOC 2 readiness checklist (basic)</li>
+        <li>First case study blog post</li>
+        <li>Target: 40 Pro + 5 Team</li>
+      </ul>
+    </div>
+    <div class="road-phase">
+      <div class="road-phase-label">Phase 3 · Days 61–90</div>
+      <div class="road-phase-title">Growth & Partnerships</div>
+      <ul class="road-items">
+        <li>Lovable / Bolt direct integration (native security layer)</li>
+        <li>White-label for agencies (resell to clients)</li>
+        <li>SOC 2 PDF report generator</li>
+        <li>Shareable security report URL (for investor DD)</li>
+        <li>VS Code extension (scan while coding)</li>
+        <li>YC batch outreach (200 companies, one deal)</li>
+        <li>Weekly security newsletter for vibe coders</li>
+        <li>Target: ₹1L+ MRR, default alive</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="insight-box" style="margin-top:1.5rem">
+    <p>The single biggest distribution hack: <strong>get DebtMap listed as the native security layer inside Lovable or Bolt.</strong> Lovable has 8 million users. A single in-product banner "Your app has 3 security issues — fix them with DebtMap" converts at 5–10% = 400,000 potential leads. That's not growth hacking — that's a category-defining partnership. Reach out to Lovable's head of partnerships in Month 2.</p>
+  </div>
+</section>
+
+<div class="footer">
+  DEBTMAP · MARKET RESEARCH & PRODUCT DESIGN · JUNE 2026 · BUILT FOR MATHIVANAN G
+</div>
+
+<script>
+// Sticky nav active state on scroll
+const sections = document.querySelectorAll('section[id], div[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
