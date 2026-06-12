@@ -5,7 +5,7 @@ Handles triggering and monitoring security scans.
 The scan pipeline runs as a background task to avoid HTTP timeout:
 1. Receive scan request → create scan record (status: queued)
 2. Return scan_id immediately
-3. Background task: clone → semgrep → claude → registry → save results
+3. Background task: clone → semgrep → groq → registry → save results
 4. Frontend polls GET /api/scans/{scan_id}/status for progress
 """
 import asyncio
@@ -17,7 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
 from app.database import get_db
 from app.services import semgrep as semgrep_service
-from app.services import claude as claude_service
+from app.services import groq as groq_service
 from app.services import registry as registry_service
 from app.services.scorer import calculate_scores_by_severity
 
@@ -154,14 +154,14 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         )
         log(f"[SEMGREP] Scan complete. Found {len(findings)} potential issues.", 40)
 
-        # ── Step 2: Claude enrichment ───────────────────────────────────────
+        # ── Step 2: Groq enrichment ─────────────────────────────────────────
         if findings:
-            log(f"[CLAUDE] Sending {len(findings)} findings to Claude for plain English explanation...", 45)
-            enriched_findings = await claude_service.explain_findings_batch(findings)
-            log("[CLAUDE] AI explanations complete.", 70)
+            log(f"[GROQ] Sending {len(findings)} findings to Groq for plain English explanation...", 45)
+            enriched_findings = await groq_service.explain_findings_batch(findings)
+            log("[GROQ] AI explanations complete.", 70)
         else:
             enriched_findings = []
-            log("[CLAUDE] No findings to explain.", 70)
+            log("[GROQ] No findings to explain.", 70)
 
         # ── Step 3: Save issues to DB ───────────────────────────────────────
         log("[DB] Saving issues to database...", 75)

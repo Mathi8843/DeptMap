@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     github_client_secret: str
     github_webhook_secret: str = "debtmap-webhook-secret"
 
-    # Claude / Anthropic
-    anthropic_api_key: str
-    claude_model: str = "claude-3-5-sonnet-20241022"
+    # Groq API Settings
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
 
     # App Security
     secret_key: str = "change-this-in-production"

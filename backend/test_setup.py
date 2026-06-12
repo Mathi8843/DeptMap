@@ -26,12 +26,12 @@ def test_supabase():
         return False
 
 
-def test_claude_fallback():
-    print("\n[2/3] Testing Claude service...")
+def test_groq_fallback():
+    print("\n[2/3] Testing Groq service...")
     try:
-        from app.services.claude import get_client, _match_fallback
+        from app.services.groq import get_client, _match_fallback
         has_key = get_client() is not None
-        print(f"  Claude API: {'[OK] Key configured' if has_key else '[INFO] No key - fallback mode active'}")
+        print(f"  Groq API: {'[OK] Key configured' if has_key else '[INFO] No key - fallback mode active'}")
         test_rules = [
             "javascript.express.security.audit.express-sql-injection",
             "generic.secrets.security.detected-hardcoded-password",
@@ -45,7 +45,7 @@ def test_claude_fallback():
                 print(f"  [INFO] No match for {rule.split('.')[-1]} - will use generic fallback")
         return True
     except Exception as e:
-        print(f"  [FAIL] Claude service: {e}")
+        print(f"  [FAIL] Groq service: {e}")
         return False
 
 
@@ -79,11 +79,11 @@ if __name__ == "__main__":
     print("  DebtMap Backend - Setup Verification")
     print("=" * 50)
     r1 = test_supabase()
-    r2 = test_claude_fallback()
+    r2 = test_groq_fallback()
     r3 = test_semgrep_wsl()
     print("\n" + "=" * 50)
     print(f"  Supabase tables:      {'OK' if r1 else 'FAIL'}")
-    print(f"  Claude / fallback:    {'OK' if r2 else 'FAIL'}")
+    print(f"  Groq / fallback:      {'OK' if r2 else 'FAIL'}")
     print(f"  Semgrep (WSL/native): {'OK' if r3 else 'INSTALLING...'}")
     if r1 and r2:
         print("\n  Backend ready! Run:")

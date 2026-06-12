@@ -1,26 +1,25 @@
 """
-Claude AI explanation service.
+Groq AI explanation service.
 Takes a raw Semgrep finding and returns:
 - plain_english_title: one-line title a non-developer understands
 - plain_english_body: 2-3 sentence plain English explanation
 - impact_bullets: 3 bullet points of real-world consequences
 - ai_fix_code: corrected version of the vulnerable code
 
-Uses Claude 3.5 Sonnet via the Anthropic Python SDK.
+Uses Groq Chat Completions API via httpx.
 Falls back to intelligent rule-based explanations if API key is not set.
 """
 import json
 import logging
 import re
-from anthropic import Anthropic, APIError
+import httpx
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-_client: Anthropic | None = None
 
-# ─── Rule-based fallbacks (work without Claude key) ────────────────────────────
+# ─── Rule-based fallbacks (work without Groq key) ────────────────────────────
 # Maps Semgrep rule ID keywords → human-readable explanations
 # These cover the most common vulnerability patterns from vibe-coded apps
 RULE_FALLBACKS: dict[str, dict] = {
@@ -162,15 +161,12 @@ def _generic_fallback(finding: dict) -> dict:
     }
 
 
-def get_client() -> Anthropic | None:
-    """Get Claude client. Returns None if no API key is configured."""
-    global _client
-    key = settings.anthropic_api_key
-    if not key or key == "sk-ant-your-key-here" or not key.startswith("sk-ant"):
+def get_client() -> str | None:
+    """Get Groq API key. Returns None if no API key is configured."""
+    key = settings.groq_api_key
+    if not key or key == "gsk-your-key-here" or key.strip() == "":
         return None
-    if _client is None:
-        _client = Anthropic(api_key=key)
-    return _client
+    return key.strip()
 
 
 SYSTEM_PROMPT = """You are a security advisor for DebtMap, a tool that helps non-technical startup founders understand code vulnerabilities.
@@ -211,7 +207,7 @@ async def explain_finding(finding: dict) -> dict:
     
     Priority:
     0. Already explained (bypass)
-    1. Claude API (if key is configured)
+    1. Groq API (if key is configured)
     2. Rule-based fallback (if rule matches our table)
     3. Generic fallback
     """
@@ -223,10 +219,10 @@ async def explain_finding(finding: dict) -> dict:
             "ai_fix_code": finding.get("ai_fix_code", finding.get("code_snippet", "")),
         }
 
-    client = get_client()
+    api_key = get_client()
 
-    if client:
-        # Use Claude AI
+    if api_key:
+        # Use Groq AI
         try:
             prompt = USER_PROMPT_TEMPLATE.format(
                 rule_id=finding.get("semgrep_rule_id", "unknown"),
@@ -237,21 +233,40 @@ async def explain_finding(finding: dict) -> dict:
                 raw_message=finding.get("_raw_message", "No message available"),
                 code_snippet=finding.get("code_snippet", "No code available"),
             )
-            message = client.messages.create(
-                model=settings.claude_model,
-                max_tokens=1024,
-                system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            content = message.content[0].text.strip()
-            if content.startswith("```"):
-                content = content.split("```")[1]
-                if content.startswith("json"):
-                    content = content[4:]
-            result = json.loads(content)
-            return result
-        except (APIError, json.JSONDecodeError, ValueError, KeyError) as e:
-            logger.error(f"Claude call failed: {e} — falling back to rule table")
+            
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            
+            payload = {
+                "model": settings.groq_model,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+            }
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                content = data["choices"][0]["message"]["content"].strip()
+                if content.startswith("```"):
+                    content = content.split("```")[1]
+                    if content.startswith("json"):
+                        content = content[4:]
+                result = json.loads(content)
+                return result
+        except Exception as e:
+            logger.error(f"Groq API call failed: {e} — falling back to rule table")
 
     # Fallback: rule-based explanation
     matched = _match_fallback(finding.get("semgrep_rule_id", ""))
@@ -270,14 +285,14 @@ async def explain_finding(finding: dict) -> dict:
 
 async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) -> list[dict]:
     """
-    Explain multiple findings. Batches Claude calls to respect rate limits.
-    Falls back gracefully if Claude is unavailable.
+    Explain multiple findings. Batches Groq calls to respect rate limits.
+    Falls back gracefully if Groq is unavailable.
     """
     import asyncio
 
     enriched = []
-    has_claude = get_client() is not None
-    mode = "Claude AI" if has_claude else "rule-based fallback (no Claude key)"
+    has_groq = get_client() is not None
+    mode = "Groq AI" if has_groq else "rule-based fallback (no Groq key)"
     logger.info(f"Explaining {len(findings)} findings using {mode}")
 
     for i in range(0, len(findings), max_concurrent):
@@ -298,7 +313,7 @@ async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) 
                 "ai_fix_code": result.get("ai_fix_code", finding.get("code_snippet", "")),
             })
 
-        if has_claude and i + max_concurrent < len(findings):
+        if has_groq and i + max_concurrent < len(findings):
             await asyncio.sleep(0.5)
 
     return enriched
