@@ -7,24 +7,169 @@ Takes a raw Semgrep finding and returns:
 - ai_fix_code: corrected version of the vulnerable code
 
 Uses Claude 3.5 Sonnet via the Anthropic Python SDK.
-Structured JSON output via Claude's response format.
+Falls back to intelligent rule-based explanations if API key is not set.
 """
 import json
 import logging
+import re
 from anthropic import Anthropic, APIError
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-# Anthropic client (singleton-style, thread-safe)
 _client: Anthropic | None = None
 
+# ─── Rule-based fallbacks (work without Claude key) ────────────────────────────
+# Maps Semgrep rule ID keywords → human-readable explanations
+# These cover the most common vulnerability patterns from vibe-coded apps
+RULE_FALLBACKS: dict[str, dict] = {
+    "sql-injection": {
+        "title": "Search box can be used to steal your entire database",
+        "body": "Your app builds database queries by directly combining user input with SQL code. An attacker can type special characters into a search box or URL to read, modify, or delete any data in your database — including all user accounts and payment details.",
+        "bullets": [
+            "Attacker can read every user's email, password hash, and personal data",
+            "Attacker can delete all records or modify prices/balances",
+            "GDPR/DPDP violation — mandatory breach notification required",
+        ],
+        "fix_hint": "Use parameterized queries or an ORM (e.g., Prisma, SQLAlchemy). Never concatenate user input into SQL strings.",
+    },
+    "hardcoded-secret": {
+        "title": "Your secret API key or password is visible in the source code",
+        "body": "A password, API key, or secret token has been written directly into the code. Anyone who can see your GitHub repository or the deployed app files can steal these credentials and use them.",
+        "bullets": [
+            "Attacker can use your API key to rack up charges on your account",
+            "Third-party services (Stripe, Twilio, etc.) can be fully accessed",
+            "GitHub automatically scans and flags exposed secrets — public repos trigger alerts",
+        ],
+        "fix_hint": "Move the secret to a .env file. Use os.environ.get() or process.env. Never commit .env files to git.",
+    },
+    "missing-auth": {
+        "title": "Anyone can access this page or action without logging in",
+        "body": "This API route or page has no authentication check. Any person on the internet — without an account — can call this endpoint and perform actions meant only for logged-in users.",
+        "bullets": [
+            "Strangers can view, modify, or delete other users' data",
+            "Admin-only actions accessible to anyone with the right URL",
+            "User trust destroyed if discovered — major churn risk",
+        ],
+        "fix_hint": "Add authentication middleware to this route. Check for a valid session token before processing the request.",
+    },
+    "broken-object": {
+        "title": "Users can read or edit other users' private data",
+        "body": "Your app uses an ID from the URL or request body to fetch data but doesn't check if the logged-in user actually owns that data. User 1 can change the ID in the URL to 2 and access User 2's private information.",
+        "bullets": [
+            "Any user can read any other user's orders, messages, or profile",
+            "Billing data, addresses, and private content exposed",
+            "Classic IDOR vulnerability — in top 10 most exploited web flaws",
+        ],
+        "fix_hint": "Always filter database queries by the authenticated user's ID: WHERE user_id = current_user.id",
+    },
+    "xss": {
+        "title": "Attackers can inject malicious scripts that run in your users' browsers",
+        "body": "Your app displays user-provided content without sanitizing it. An attacker can post a comment or fill a form field with JavaScript code that then runs in other users' browsers — stealing their session tokens and taking over their accounts.",
+        "bullets": [
+            "Attacker can steal login cookies and impersonate any user",
+            "Fake login forms injected into your pages to harvest passwords",
+            "Can redirect users to phishing sites automatically",
+        ],
+        "fix_hint": "Escape all user-generated content before rendering it in HTML. Use your framework's safe rendering methods (e.g., React's JSX auto-escapes by default).",
+    },
+    "insecure-direct": {
+        "title": "File or resource paths can be manipulated to access unauthorized files",
+        "body": "Your app uses user input to construct file paths or resource locations without validating them. An attacker can use special path characters like `../` to navigate outside the intended directory and access sensitive system files.",
+        "bullets": [
+            "Server configuration files and .env files could be read",
+            "Access to other users' uploaded files",
+            "In severe cases, system files like /etc/passwd accessible",
+        ],
+        "fix_hint": "Validate that the resolved path starts with the expected base directory. Use path.resolve() and check with path.startsWith(baseDir).",
+    },
+    "cors": {
+        "title": "Any website on the internet can make requests to your API as your users",
+        "body": "Your API allows requests from any origin (website). This means a malicious website can make API calls to your backend on behalf of your logged-in users — reading their data or performing actions without their knowledge.",
+        "bullets": [
+            "Malicious sites can read authenticated user data from your API",
+            "Actions (payments, deletions) can be triggered from third-party sites",
+            "Session tokens exploited without user interaction",
+        ],
+        "fix_hint": "Set CORS to only allow your specific frontend domain. Never use wildcard (*) origin in production with credentials enabled.",
+    },
+    "command-injection": {
+        "title": "Attackers can run any command on your server",
+        "body": "Your app passes user input directly to a system shell command. An attacker can add extra shell commands using characters like `;`, `&&`, or `|` — gaining full control of your server.",
+        "bullets": [
+            "Complete server takeover — attacker can install malware",
+            "All data on the server can be stolen or destroyed",
+            "Server used to attack other systems (DDoS, spam)",
+        ],
+        "fix_hint": "Never use shell=True with user input. Use subprocess with a list of arguments, not a string. Validate all input before using in system calls.",
+    },
+    "prototype-pollution": {
+        "title": "Malicious data can corrupt your application's core JavaScript objects",
+        "body": "Your code merges or copies objects without checking for dangerous keys like `__proto__` or `constructor`. An attacker can send specially crafted JSON that modifies the base JavaScript Object prototype, potentially bypassing security checks or crashing your app.",
+        "bullets": [
+            "Authentication checks can be bypassed in some configurations",
+            "Application crashes or undefined behavior for all users",
+            "Can escalate to Remote Code Execution in Node.js environments",
+        ],
+        "fix_hint": "Use Object.create(null) for lookup objects, or validate that merged objects don't contain __proto__, constructor, or prototype keys.",
+    },
+    "cleartext": {
+        "title": "Sensitive data is being sent or stored without encryption",
+        "body": "Passwords, tokens, or sensitive information are being transmitted or stored in plain text. Anyone intercepting network traffic or reading the database can see this data directly.",
+        "bullets": [
+            "Passwords readable by anyone with database access",
+            "Network traffic interception exposes user credentials",
+            "Regulatory violation — GDPR requires encryption of personal data",
+        ],
+        "fix_hint": "Hash passwords with bcrypt. Use HTTPS for all traffic. Encrypt sensitive fields before storing in the database.",
+    },
+}
 
-def get_client() -> Anthropic:
+
+def _match_fallback(rule_id: str) -> dict | None:
+    """Match a Semgrep rule ID to a known fallback explanation."""
+    rule_lower = rule_id.lower()
+    for keyword, data in RULE_FALLBACKS.items():
+        if keyword in rule_lower:
+            return data
+    return None
+
+
+def _generic_fallback(finding: dict) -> dict:
+    """Generate a generic explanation when no specific rule match exists."""
+    rule_id = finding.get("semgrep_rule_id", "")
+    severity = finding.get("severity", "medium")
+    file_path = finding.get("file_path", "your code")
+
+    # Make a readable title from the rule ID
+    rule_parts = rule_id.split(".")
+    readable = rule_parts[-1].replace("-", " ").replace("_", " ") if rule_parts else "security issue"
+
+    return {
+        "plain_english_title": f"Security issue detected: {readable}",
+        "plain_english_body": (
+            f"A {severity}-severity security issue was found in `{file_path}`. "
+            f"The scanner detected a pattern that could allow attackers to compromise your application. "
+            f"Review the flagged code and consult a developer to assess the impact."
+        ),
+        "impact_bullets": [
+            f"Potential {severity} security vulnerability in {file_path}",
+            "Could expose user data or application functionality to attackers",
+            "Recommend developer review before deploying to production",
+        ],
+        "ai_fix_code": finding.get("code_snippet", "# Manual review required"),
+    }
+
+
+def get_client() -> Anthropic | None:
+    """Get Claude client. Returns None if no API key is configured."""
     global _client
+    key = settings.anthropic_api_key
+    if not key or key == "sk-ant-your-key-here" or not key.startswith("sk-ant"):
+        return None
     if _client is None:
-        _client = Anthropic(api_key=settings.anthropic_api_key)
+        _client = Anthropic(api_key=key)
     return _client
 
 
@@ -49,94 +194,92 @@ Vulnerable code:
 
 Explain this to a non-technical founder and provide a fix. Respond with this exact JSON structure:
 {{
-  "plain_english_title": "A title in 8 words or less that explains what's broken in human terms (e.g. 'Anyone can read any user's data')",
-  "plain_english_body": "2-3 sentences explaining the vulnerability as if talking to a non-developer. Use real-world impact language. Explain what an attacker could do, not what the code does wrong.",
+  "plain_english_title": "A title in 8 words or less that explains what's broken in human terms (e.g. 'Anyone can read any user\\'s data')",
+  "plain_english_body": "2-3 sentences explaining the vulnerability as if talking to a non-developer. Use real-world impact language.",
   "impact_bullets": [
-    "First real-world consequence (e.g. 'Users' emails and payment history visible to anyone')",
-    "Second consequence (e.g. 'GDPR / DPDP violation — potential legal liability')",
-    "Third consequence (e.g. 'If discovered publicly, users will leave immediately')"
+    "First real-world consequence",
+    "Second consequence",
+    "Third consequence"
   ],
-  "ai_fix_code": "The corrected version of the code snippet with the vulnerability fixed. Keep it minimal — only change what's needed. Include a brief comment on the added line explaining what it does."
+  "ai_fix_code": "The corrected version of the code snippet with the vulnerability fixed."
 }}"""
 
 
 async def explain_finding(finding: dict) -> dict:
     """
-    Send a Semgrep finding to Claude and get back plain English explanation + fix.
+    Explain a Semgrep finding in plain English.
     
-    Args:
-        finding: dict from semgrep.parse_findings()
-    
-    Returns:
-        dict with keys: plain_english_title, plain_english_body, impact_bullets, ai_fix_code
+    Priority:
+    0. Already explained (bypass)
+    1. Claude API (if key is configured)
+    2. Rule-based fallback (if rule matches our table)
+    3. Generic fallback
     """
-    prompt = USER_PROMPT_TEMPLATE.format(
-        rule_id=finding.get("semgrep_rule_id", "unknown"),
-        severity=finding.get("severity", "unknown"),
-        file_path=finding.get("file_path", "unknown"),
-        line_start=finding.get("line_start", 0),
-        line_end=finding.get("line_end", 0),
-        raw_message=finding.get("_raw_message", "No message available"),
-        code_snippet=finding.get("code_snippet", "No code available"),
-    )
-
-    try:
-        client = get_client()
-        message = client.messages.create(
-            model=settings.claude_model,
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-        )
-
-        # Extract text content from Claude response
-        content = message.content[0].text.strip()
-
-        # Remove markdown code fences if Claude added them
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-
-        result = json.loads(content)
-
-        # Validate required fields
-        required = ["plain_english_title", "plain_english_body", "impact_bullets", "ai_fix_code"]
-        for field in required:
-            if field not in result:
-                raise ValueError(f"Claude response missing field: {field}")
-
-        return result
-
-    except (APIError, json.JSONDecodeError, ValueError, KeyError) as e:
-        logger.error(f"Claude explanation failed for {finding.get('semgrep_rule_id')}: {e}")
-        # Return safe fallback so the scan doesn't fail entirely
+    if finding.get("plain_english_title"):
         return {
-            "plain_english_title": _fallback_title(finding.get("semgrep_rule_id", "")),
-            "plain_english_body": (
-                f"A security issue was detected in {finding.get('file_path', 'your code')}. "
-                f"The scanner identified a potential vulnerability that could affect your application's security. "
-                f"Please review the code at line {finding.get('line_start', '?')} carefully."
-            ),
-            "impact_bullets": [
-                "Security vulnerability detected — manual review required",
-                "Could expose user data or application credentials",
-                "Recommend consulting with a developer to assess impact",
-            ],
-            "ai_fix_code": finding.get("code_snippet", "# Review this code manually"),
+            "plain_english_title": finding["plain_english_title"],
+            "plain_english_body": finding.get("plain_english_body", ""),
+            "impact_bullets": finding.get("impact_bullets", []),
+            "ai_fix_code": finding.get("ai_fix_code", finding.get("code_snippet", "")),
         }
+
+    client = get_client()
+
+    if client:
+        # Use Claude AI
+        try:
+            prompt = USER_PROMPT_TEMPLATE.format(
+                rule_id=finding.get("semgrep_rule_id", "unknown"),
+                severity=finding.get("severity", "unknown"),
+                file_path=finding.get("file_path", "unknown"),
+                line_start=finding.get("line_start", 0),
+                line_end=finding.get("line_end", 0),
+                raw_message=finding.get("_raw_message", "No message available"),
+                code_snippet=finding.get("code_snippet", "No code available"),
+            )
+            message = client.messages.create(
+                model=settings.claude_model,
+                max_tokens=1024,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            content = message.content[0].text.strip()
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+            result = json.loads(content)
+            return result
+        except (APIError, json.JSONDecodeError, ValueError, KeyError) as e:
+            logger.error(f"Claude call failed: {e} — falling back to rule table")
+
+    # Fallback: rule-based explanation
+    matched = _match_fallback(finding.get("semgrep_rule_id", ""))
+    if matched:
+        logger.info(f"Using rule-based fallback for: {finding.get('semgrep_rule_id')}")
+        return {
+            "plain_english_title": matched["title"],
+            "plain_english_body": matched["body"],
+            "impact_bullets": matched["bullets"],
+            "ai_fix_code": f"# AI Fix Tip: {matched['fix_hint']}\n\n" + finding.get("code_snippet", ""),
+        }
+
+    # Last resort: generic
+    return _generic_fallback(finding)
 
 
 async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) -> list[dict]:
     """
-    Explain multiple findings with rate limiting.
-    Processes in batches to avoid Claude API rate limits.
-    Returns the findings list with plain_english_* fields populated.
+    Explain multiple findings. Batches Claude calls to respect rate limits.
+    Falls back gracefully if Claude is unavailable.
     """
     import asyncio
 
     enriched = []
-    # Process in batches of max_concurrent
+    has_claude = get_client() is not None
+    mode = "Claude AI" if has_claude else "rule-based fallback (no Claude key)"
+    logger.info(f"Explaining {len(findings)} findings using {mode}")
+
     for i in range(0, len(findings), max_concurrent):
         batch = findings[i:i + max_concurrent]
         tasks = [explain_finding(f) for f in batch]
@@ -144,9 +287,8 @@ async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) 
 
         for finding, result in zip(batch, results):
             if isinstance(result, Exception):
-                logger.error(f"Failed to explain finding: {result}")
-                # Use the fallback from explain_finding's except block
-                result = await explain_finding(finding)
+                logger.error(f"explain_finding raised: {result}")
+                result = _generic_fallback(finding)
 
             enriched.append({
                 **finding,
@@ -156,16 +298,7 @@ async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) 
                 "ai_fix_code": result.get("ai_fix_code", finding.get("code_snippet", "")),
             })
 
-        # Small delay between batches to respect rate limits
-        if i + max_concurrent < len(findings):
+        if has_claude and i + max_concurrent < len(findings):
             await asyncio.sleep(0.5)
 
     return enriched
-
-
-def _fallback_title(rule_id: str) -> str:
-    """Generate a readable fallback title from a Semgrep rule ID."""
-    # e.g. "javascript.express.security.audit.express-missing-auth" → "Missing auth security issue"
-    parts = rule_id.split(".")
-    last = parts[-1].replace("-", " ").replace("_", " ") if parts else "security issue"
-    return f"Security issue: {last}"

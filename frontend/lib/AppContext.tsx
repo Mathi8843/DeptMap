@@ -87,13 +87,20 @@ interface AppContextType {
   overallScore: number;
 }
 
+import { apiFetch, getSavedUser } from "./api";
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState(mockUser);
-  const [repos, setRepos] = useState<Repo[]>(mockRepos);
-  const [issues, setIssues] = useState<Issue[]>(mockIssues);
-  const [packages, setPackages] = useState<Package[]>(mockPackages);
+  const [user, setUser] = useState({
+    id: "00000000-0000-0000-0000-000000000000",
+    name: "Mathivanan G",
+    email: "mathi@debtmap.io",
+    plan: "pro" as "free" | "pro" | "team" | "enterprise",
+  });
+  const [repos, setRepos] = useState<Repo[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [webhookAlerts, setWebhookAlerts] = useState<WebhookAlert[]>([
     { id: "w_01", timestamp: "10:48 AM", channel: "#security", message: "Audit Scan completed. saas-app health is 34%. 6 issues open.", type: "slack" },
@@ -101,7 +108,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   ]);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
   
-  // Scanning Simulation States
+  // Scanning States
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanLogs, setScanLogs] = useState<string[]>([]);
@@ -118,7 +125,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  // Sync state on load in case of hydration mismatches
+  // Sync state on load
   useEffect(() => {
     if (typeof window !== "undefined") {
       if (theme === "light") {
@@ -128,6 +135,89 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }
     }
   }, [theme]);
+  
+  // Load saved user from localstorage on mount
+  useEffect(() => {
+    const saved = getSavedUser();
+    if (saved) {
+      setUser({
+        id: saved.id,
+        name: saved.name,
+        email: saved.email,
+        plan: saved.plan
+      });
+    } else {
+      // Save default user initially to trigger auto-creation
+      const defaultUser = {
+        id: "00000000-0000-0000-0000-000000000000",
+        name: "Mathivanan G",
+        email: "mathi@debtmap.io",
+        plan: "pro" as const
+      };
+      setUser(defaultUser);
+      localStorage.setItem("debtmap_user", JSON.stringify(defaultUser));
+    }
+  }, []);
+
+  // Fetch initial data from FastAPI backend when user is loaded
+  const fetchData = async () => {
+    try {
+      // Retrieve profile details to check plan and ensure user exists
+      const profile = await apiFetch("/auth/me");
+      setUser({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        plan: profile.plan
+      });
+
+      const dbRepos = await apiFetch("/repos");
+      setRepos(dbRepos);
+      
+      const dbIssues = await apiFetch("/issues");
+      // Format issues to match the frontend shape (mapping snake_case to camelCase where necessary)
+      const formattedIssues = dbIssues.map((i: any) => ({
+        id: i.id,
+        repo_id: i.repo_id,
+        repo_name: i.repos?.full_name?.split("/")[1] || "repo",
+        semgrep_rule_id: i.semgrep_rule_id,
+        severity: i.severity,
+        file_path: i.file_path,
+        line_start: i.line_start,
+        line_end: i.line_end,
+        code_snippet: i.code_snippet || "",
+        plain_english_title: i.plain_english_title || i.semgrep_rule_id,
+        plain_english_body: i.plain_english_body || "A security issue has been found.",
+        impact_bullets: i.impact_bullets || [],
+        ai_fix_code: i.ai_fix_code || "",
+        status: i.status,
+        fix_pr_url: i.fix_pr_url,
+        created_at: i.created_at
+      }));
+      setIssues(formattedIssues);
+      
+      const dbPackages = await apiFetch("/packages");
+      const formattedPackages = dbPackages.map((p: any) => ({
+        id: p.id,
+        package_name: p.package_name,
+        package_manager: p.package_manager,
+        status: p.status,
+        exists_in_registry: p.exists_in_registry,
+        weekly_downloads: p.weekly_downloads,
+        reason: p.reason,
+        alternative_name: p.alternative_name
+      }));
+      setPackages(formattedPackages);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data from backend:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.id) {
+      fetchData();
+    }
+  }, [user.id]);
   
   // Toast helpers
   const showToast = (message: string, type: Toast["type"]) => {
@@ -148,14 +238,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setWebhookAlerts((prev) => [
       { id, timestamp: time, channel, message, type },
-      ...prev.slice(0, 14) // keep last 15 items
+      ...prev.slice(0, 14)
     ]);
-
-    // Slide in simulated notification card
     showToast(`Incoming Alert sent to ${channel}: "${message.slice(0, 45)}..."`, "info");
   };
 
-  // Recalculate repo health score based on issues dynamically
+  // Recalculate repo health score dynamically from backend counts (or we can fallback to calculate locally)
   const recalculateHealthScores = (currentIssues: Issue[], currentRepos: Repo[]) => {
     return currentRepos.map((repo) => {
       const repoIssues = currentIssues.filter((i) => i.repo_id === repo.id && i.status === "open");
@@ -182,7 +270,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
       });
 
-      // Clamp score
       score = Math.max(12, Math.min(100, score));
 
       return {
@@ -196,162 +283,219 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     });
   };
 
-  // Effect to sync repo health scores whenever issues change
   useEffect(() => {
     setRepos((prevRepos) => recalculateHealthScores(issues, prevRepos));
   }, [issues]);
 
-  // Overall aggregate score calculation
   const overallScore = Math.round(
     repos.reduce((acc, r) => acc + r.health_score, 0) / (repos.length || 1)
   );
 
-  // Upgrade Plan Simulation
-  const upgradePlan = (newPlan: typeof mockUser.plan) => {
-    setUser((prev) => ({ ...prev, plan: newPlan }));
+  // Upgrade Plan
+  const upgradePlan = (newPlan: typeof user.plan) => {
+    setUser((prev) => {
+      const updated = { ...prev, plan: newPlan };
+      const saved = getSavedUser();
+      if (saved) {
+        localStorage.setItem("debtmap_user", JSON.stringify({ ...saved, plan: newPlan }));
+      }
+      return updated;
+    });
     showToast(`Successfully upgraded account to ${newPlan.toUpperCase()} plan!`, "success");
     triggerWebhookAlert("billing@debtmap.io", `Account upgraded to ${newPlan.toUpperCase()} tier. Invoice generated.`, "email");
   };
 
-  // Connect Repository Simulation
-  const connectRepo = (fullName: string, language: string, generator: string, isPrivate: boolean) => {
-    const id = `repo_${Math.random().toString(36).substring(2, 9)}`;
-    const newRepo: Repo = {
-      id,
-      full_name: fullName,
-      language,
-      default_branch: "main",
-      is_private: isPrivate,
-      last_scanned_at: new Date().toISOString(),
-      health_score: 100, // Starts clean
-      critical_count: 0,
-      high_count: 0,
-      medium_count: 0,
-      low_count: 0,
-      generator,
-    };
+  // Connect Repository
+  const connectRepo = async (fullName: string, language: string, generator: string, isPrivate: boolean) => {
+    try {
+      showToast(`Connecting repository ${fullName}...`, "info");
+      const newRepo = await apiFetch(`/repos?github_repo_full_name=${encodeURIComponent(fullName)}&generator=${encodeURIComponent(generator)}`, {
+        method: "POST"
+      });
 
-    setRepos((prev) => [...prev, newRepo]);
-    showToast(`Repository ${fullName} connected! Starting automated code audit...`, "info");
-    
-    // Auto-trigger a scan for the new repo
-    triggerScan(id);
+      setRepos((prev) => [...prev, {
+        id: newRepo.id,
+        full_name: newRepo.full_name,
+        language: newRepo.language || language,
+        default_branch: newRepo.default_branch || "main",
+        is_private: newRepo.is_private,
+        last_scanned_at: newRepo.last_scanned_at || new Date().toISOString(),
+        health_score: newRepo.health_score || 100,
+        critical_count: newRepo.critical_count || 0,
+        high_count: newRepo.high_count || 0,
+        medium_count: newRepo.medium_count || 0,
+        low_count: newRepo.low_count || 0,
+        generator: newRepo.generator || generator
+      }]);
+      showToast(`Repository ${fullName} connected! Starting automated code audit...`, "info");
+      
+      // Auto-trigger a scan for the new repo
+      triggerScan(newRepo.id);
+    } catch (err: any) {
+      showToast(err.message || "Failed to connect repository", "error");
+    }
   };
 
-  // Full Audit Scanner Simulation
+  // Real Audit Scanner Polling
   const triggerScan = async (repoId?: string) => {
     if (isScanning) return;
-    setIsScanning(true);
-    setScanProgress(0);
-    setScanLogs([]);
 
-    const targetRepo = repoId ? repos.find((r) => r.id === repoId) : null;
-    const repoName = targetRepo ? targetRepo.full_name : "all connected workspaces";
-
-    const logSteps = [
-      { progress: 10, log: `[SYSTEM] Initializing repository scan for ${repoName}...` },
-      { progress: 25, log: `[INFO] Connecting code parser. Analyzing project tree...` },
-      { progress: 40, log: `[INFO] Resolving package.json dependencies against NPM registry database...` },
-      { progress: 55, log: `[WARN] Scanning semantic code flows. OWASP top 10 rules applied...` },
-      { progress: 75, log: `[INFO] Evaluating credential exposure and secret keys...` },
-      { progress: 90, log: `[SUCCESS] Compilation complete. Analyzing results...` },
-      { progress: 100, log: `[SUCCESS] Scanning finished. Health scores and metrics updated.` },
-    ];
-
-    for (let i = 0; i < logSteps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 400 + Math.random() * 300));
-      setScanProgress(logSteps[i].progress);
-      setScanLogs((prev) => [...prev, logSteps[i].log]);
+    let scanRepoId = repoId;
+    if (!scanRepoId) {
+      if (repos.length > 0) {
+        scanRepoId = repos[0].id;
+      } else {
+        showToast("No repository connected to scan.", "error");
+        return;
+      }
     }
 
-    setIsScanning(false);
-    showToast(`Scan complete for ${repoName}!`, "success");
-    
-    // Dispatch Webhook Alerts
-    triggerWebhookAlert("#security", `Auditor scan finished for ${repoName}. Clean compilation status.`, "slack");
+    const targetRepo = repos.find((r) => r.id === scanRepoId);
+    const repoName = targetRepo ? targetRepo.full_name : "selected repository";
+
+    setIsScanning(true);
+    setScanProgress(0);
+    setScanLogs([`[SYSTEM] Starting scan process on backend for ${repoName}...`]);
+
+    try {
+      const scanResult = await apiFetch(`/scans?repo_id=${scanRepoId}`, {
+        method: "POST"
+      });
+
+      const scanId = scanResult.scan_id;
+
+      // Set up a polling interval to fetch progress
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResult = await apiFetch(`/scans/${scanId}/status`);
+          setScanProgress(statusResult.progress || 0);
+          
+          if (statusResult.log_messages && statusResult.log_messages.length > 0) {
+            setScanLogs(statusResult.log_messages);
+          }
+
+          if (statusResult.status === "completed") {
+            clearInterval(pollInterval);
+            setIsScanning(false);
+            showToast(`Scan complete for ${repoName}!`, "success");
+            triggerWebhookAlert("#security", `Auditor scan finished for ${repoName}. Health score: ${repos.find(r => r.id === scanRepoId)?.health_score || 100}/100.`, "slack");
+            fetchData(); // Reload issues, packages and repos from backend
+          } else if (statusResult.status === "failed") {
+            clearInterval(pollInterval);
+            setIsScanning(false);
+            showToast(`Scan failed for ${repoName}. Check terminal logs.`, "error");
+            fetchData();
+          }
+        } catch (pollErr: any) {
+          console.error("Error polling scan status:", pollErr);
+        }
+      }, 1500);
+
+    } catch (err: any) {
+      setIsScanning(false);
+      showToast(err.message || "Failed to trigger scan", "error");
+    }
   };
 
-  // Fix Vulnerability Simulation (Git PR workflow)
+  // Create GitHub Fix PR
   const fixIssueSimulate = async (issueId: string): Promise<boolean> => {
-    const targetIssue = issues.find((i) => i.id === issueId);
-    if (!targetIssue || targetIssue.status === "fixed") return false;
+    try {
+      showToast("Creating GitHub Pull Request with fix applied...", "info");
+      const result = await apiFetch(`/issues/${issueId}/fix`, {
+        method: "POST"
+      });
 
-    // We simulate a async PR creation flow
-    return new Promise(async (resolve) => {
-      await new Promise((r) => setTimeout(r, 100));
-      
+      // Update state
       setIssues((prev) =>
         prev.map((i) =>
           i.id === issueId
             ? {
                 ...i,
                 status: "fixed",
-                fix_pr_url: `https://github.com/mathivanan/${i.repo_name}/pull/${Math.floor(
-                  Math.random() * 100 + 40
-                )}`,
+                fix_pr_url: result.pr_url,
               }
             : i
         )
       );
 
       showToast(`Pull Request merged successfully! Security issue closed.`, "success");
-      triggerWebhookAlert("#security", `Resolved critical risk ${targetIssue.plain_english_title} in ${targetIssue.repo_name}. PR merged.`, "slack");
-      triggerWebhookAlert("mathi@debtmap.io", `Vulnerability Fix: ${targetIssue.plain_english_title} has been remediated.`, "email");
-      resolve(true);
-    });
+      const targetIssue = issues.find((i) => i.id === issueId);
+      const title = targetIssue ? targetIssue.plain_english_title : "Security issue";
+      const repoName = targetIssue ? targetIssue.repo_name : "repository";
+      triggerWebhookAlert("#security", `Resolved risk: ${title} in ${repoName}. PR opened.`, "slack");
+      triggerWebhookAlert("mathi@debtmap.io", `Vulnerability Fix PR opened: ${title}`, "email");
+      return true;
+    } catch (err: any) {
+      showToast(err.message || "Failed to apply fix", "error");
+      return false;
+    }
   };
 
   // Dismiss Vulnerability
-  const dismissIssue = (issueId: string) => {
-    const targetIssue = issues.find((i) => i.id === issueId);
-    setIssues((prev) =>
-      prev.map((i) => (i.id === issueId ? { ...i, status: "dismissed" } : i))
-    );
-    showToast("Vulnerability dismissed.", "info");
-    if (targetIssue) {
-      triggerWebhookAlert("#security", `Vulnerability dismissed: ${targetIssue.plain_english_title} in ${targetIssue.repo_name}.`, "slack");
+  const dismissIssue = async (issueId: string) => {
+    try {
+      await apiFetch(`/issues/${issueId}/dismiss`, {
+        method: "POST"
+      });
+      
+      setIssues((prev) =>
+        prev.map((i) => (i.id === issueId ? { ...i, status: "dismissed" } : i))
+      );
+      showToast("Vulnerability dismissed.", "info");
+      const targetIssue = issues.find((i) => i.id === issueId);
+      if (targetIssue) {
+        triggerWebhookAlert("#security", `Vulnerability dismissed: ${targetIssue.plain_english_title} in ${targetIssue.repo_name}.`, "slack");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to dismiss issue", "error");
     }
   };
 
   // Package Safety Resolution Action
-  const auditPackageAction = (pkgId: string, action: "verify" | "replace" | "ignore") => {
-    const targetPkg = packages.find((p) => p.id === pkgId);
-    if (!targetPkg) return;
+  const auditPackageAction = async (pkgId: string, action: "verify" | "replace" | "ignore") => {
+    try {
+      await apiFetch(`/packages/${pkgId}/action?action=${action}`, {
+        method: "POST"
+      });
 
-    if (action === "replace" && targetPkg.alternative_name) {
-      // We replace it by removing the dangerous package and adding/verifying the alternative
-      setPackages((prev) =>
-        prev
-          .filter((p) => p.id !== pkgId)
-          .map((p) =>
-            p.package_name === targetPkg.alternative_name
-              ? { ...p, status: "safe", exists_in_registry: true, reason: "Verified alternative swapped in." }
+      if (action === "ignore") {
+        setPackages((prev) => prev.filter((p) => p.id !== pkgId));
+        showToast(`Ignored package safety alert.`, "info");
+      } else if (action === "verify") {
+        setPackages((prev) =>
+          prev.map((p) =>
+            p.id === pkgId
+              ? {
+                  ...p,
+                  status: "safe",
+                  exists_in_registry: true,
+                  weekly_downloads: 125000,
+                  reason: "Manually verified by workspace administrator",
+                }
               : p
           )
-      );
-      showToast(`Replaced ${targetPkg.package_name} with safe package ${targetPkg.alternative_name}!`, "success");
-      triggerWebhookAlert("#security", `Replaced slopsquatted package ${targetPkg.package_name} with safe library ${targetPkg.alternative_name}.`, "slack");
-    } else if (action === "verify") {
-      setPackages((prev) =>
-        prev.map((p) =>
-          p.id === pkgId
-            ? {
-                ...p,
-                status: "safe",
-                exists_in_registry: true,
-                weekly_downloads: 125000,
-                reason: "Manually verified by workspace administrator",
-              }
-            : p
-        )
-      );
-      showToast(`Dependency package ${targetPkg.package_name} marked as safe!`, "success");
-      triggerWebhookAlert("#security", `Manually whitelist approved package ${targetPkg.package_name}.`, "slack");
-    } else if (action === "ignore") {
-      setPackages((prev) => prev.filter((p) => p.id !== pkgId));
-      showToast(`Ignored package safety alert for ${targetPkg.package_name}.`, "info");
+        );
+        showToast(`Dependency package marked as safe!`, "success");
+      } else if (action === "replace") {
+        // Swap simulation
+        const dbPackages = await apiFetch("/packages");
+        setPackages(dbPackages.map((p: any) => ({
+          id: p.id,
+          package_name: p.package_name,
+          package_manager: p.package_manager,
+          status: p.status,
+          exists_in_registry: p.exists_in_registry,
+          weekly_downloads: p.weekly_downloads,
+          reason: p.reason,
+          alternative_name: p.alternative_name
+        })));
+        showToast(`Swapped package to safe alternative.`, "success");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to perform package action", "error");
     }
   };
+
 
   return (
     <AppContext.Provider

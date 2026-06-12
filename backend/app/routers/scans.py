@@ -40,18 +40,18 @@ async def trigger_scan(
     Returns immediately with a scan_id — use status endpoint to poll progress.
     """
     # Fetch repo from DB
-    repo_result = db.table("repos").select("*").eq("id", repo_id).eq("user_id", user_id).maybe_single().execute()
+    repo_result = db.table("repos").select("*").eq("id", repo_id).eq("user_id", user_id).execute()
     if not repo_result.data:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    repo = repo_result.data
+    repo = repo_result.data[0]
 
     # Fetch user's GitHub access token
-    user_result = db.table("users").select("github_access_token").eq("id", user_id).maybe_single().execute()
+    user_result = db.table("users").select("github_access_token").eq("id", user_id).execute()
     if not user_result.data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    access_token = user_result.data.get("github_access_token")
+    access_token = user_result.data[0].get("github_access_token")
     if not access_token:
         raise HTTPException(status_code=400, detail="GitHub access token missing — re-authenticate")
 
@@ -112,11 +112,11 @@ async def get_scan_status(scan_id: str, db=Depends(get_db)):
         }
 
     # Fall back to DB
-    result = db.table("scans").select("*").eq("id", scan_id).maybe_single().execute()
+    result = db.table("scans").select("*").eq("id", scan_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Scan not found")
 
-    scan = result.data
+    scan = result.data[0]
     return {
         "scan_id": scan_id,
         "status": scan["status"],

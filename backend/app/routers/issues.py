@@ -51,18 +51,17 @@ async def get_issue(issue_id: str, user_id: str = Query(...), db=Depends(get_db)
         .select("*, repos!inner(user_id, full_name, default_branch)")
         .eq("id", issue_id)
         .eq("repos.user_id", user_id)
-        .maybe_single()
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=404, detail="Issue not found")
-    return result.data
+    return result.data[0]
 
 
 @router.post("/{issue_id}/dismiss")
 async def dismiss_issue(issue_id: str, user_id: str = Query(...), db=Depends(get_db)):
     """Mark an issue as dismissed (won't affect score)."""
-    issue = db.table("issues").select("id, repo_id, repos!inner(user_id)").eq("id", issue_id).maybe_single().execute()
+    issue = db.table("issues").select("id, repo_id, repos!inner(user_id)").eq("id", issue_id).execute()
     if not issue.data:
         raise HTTPException(status_code=404, detail="Issue not found")
 
@@ -79,16 +78,15 @@ async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get
     # Fetch issue + repo data
     issue_result = (
         db.table("issues")
-        .select("*, repos!inner(user_id, full_name, default_branch, github_access_token_override)")
+        .select("*, repos!inner(user_id, full_name, default_branch)")
         .eq("id", issue_id)
-        .maybe_single()
         .execute()
     )
 
     if not issue_result.data:
         raise HTTPException(status_code=404, detail="Issue not found")
 
-    issue = issue_result.data
+    issue = issue_result.data[0]
     repo = issue.get("repos", {})
 
     if repo.get("user_id") != user_id:
@@ -101,11 +99,11 @@ async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get
         raise HTTPException(status_code=400, detail="No AI fix available for this issue")
 
     # Get GitHub access token
-    user = db.table("users").select("github_access_token").eq("id", user_id).maybe_single().execute()
-    if not user.data or not user.data.get("github_access_token"):
+    user_res = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    if not user_res.data or not user_res.data[0].get("github_access_token"):
         raise HTTPException(status_code=400, detail="GitHub token missing")
 
-    access_token = user.data["github_access_token"]
+    access_token = user_res.data[0]["github_access_token"]
 
     try:
         # Get original file content to do a proper replacement

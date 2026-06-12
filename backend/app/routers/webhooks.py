@@ -119,8 +119,8 @@ async def handle_push_event(data: dict, db) -> dict:
         }
 
         # Get user's GitHub token
-        user = db.table("users").select("github_access_token").eq("id", repo["user_id"]).maybe_single().execute()
-        access_token = user.data.get("github_access_token", "") if user.data else ""
+        user_res = db.table("users").select("github_access_token").eq("id", repo["user_id"]).execute()
+        access_token = user_res.data[0].get("github_access_token", "") if user_res.data else ""
 
         asyncio.create_task(run_scan_pipeline(
             scan_id=scan_id,

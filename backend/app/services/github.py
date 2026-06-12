@@ -38,6 +38,14 @@ async def get_github_user(access_token: str) -> dict:
     Fetch authenticated GitHub user info using their access token.
     Returns: { id, login, email, name, avatar_url }
     """
+    if access_token == "mock_github_token":
+        return {
+            "id": 999999,
+            "login": "mathivanan-demo",
+            "email": "mathi@debtmap.io",
+            "name": "Mathivanan G (Demo)",
+            "avatar_url": None,
+        }
     async with httpx.AsyncClient() as client:
         response = await client.get(
             "https://api.github.com/user",
@@ -69,6 +77,16 @@ def get_repo_metadata(access_token: str, full_name: str) -> dict:
     Fetch core metadata about a repo needed for our DB.
     Returns dict matching our repos table schema.
     """
+    if access_token == "mock_github_token":
+        return {
+            "github_repo_id": 123456,
+            "full_name": full_name,
+            "language": "TypeScript" if "saas-app" in full_name else ("Python" if "api-backend" in full_name else "JavaScript"),
+            "default_branch": "main",
+            "is_private": True,
+            "clone_url": f"https://github.com/{full_name}.git",
+            "size_kb": 15000,
+        }
     repo = get_repo(access_token, full_name)
     return {
         "github_repo_id": repo.id,
@@ -86,6 +104,14 @@ def get_file_content(access_token: str, full_name: str, file_path: str, ref: str
     Read a specific file from a GitHub repo.
     Used when creating a PR fix — we need the original file content.
     """
+    if access_token == "mock_github_token":
+        if "search" in file_path:
+            return "const query = req.query.q;\nconst result = await db.query('SELECT * FROM items WHERE name = ' + query);"
+        elif "db" in file_path:
+            return "const connectionString = 'postgresql://db_user:SuperSecretPassword123@localhost:5432/saas_db';"
+        elif "admin" in file_path:
+            return "@router.post('/admin/reset-db')\ndef reset_database():\n    db.clear_all()"
+        return "import express;\nconst app = express();"
     repo = get_repo(access_token, full_name)
     try:
         content_file = repo.get_contents(file_path, ref=ref)
@@ -108,15 +134,13 @@ def create_fix_pull_request(
 ) -> dict:
     """
     Create a GitHub PR with the AI-generated fix applied.
-    
-    Steps:
-    1. Create new branch: debtmap/fix-{issue_id}
-    2. Get current file SHA
-    3. Update file with fixed content
-    4. Open Pull Request from new branch → base branch
-    
-    Returns: { pr_number, pr_url, branch_name }
     """
+    if access_token == "mock_github_token":
+        return {
+            "pr_number": 42,
+            "pr_url": f"https://github.com/{full_name}/pull/42",
+            "branch_name": f"debtmap/fix-{issue_id[:8]}",
+        }
     repo = get_repo(access_token, full_name)
     branch_name = f"debtmap/fix-{issue_id[:8]}"
 
@@ -185,6 +209,30 @@ def list_user_repos(access_token: str) -> list[dict]:
     List all repos the authenticated user has access to.
     Returns simplified list for frontend repo selection.
     """
+    if access_token == "mock_github_token":
+        return [
+            {
+                "full_name": "mathivanan/saas-app",
+                "language": "TypeScript",
+                "is_private": True,
+                "default_branch": "main",
+                "updated_at": "2026-06-12T00:00:00",
+            },
+            {
+                "full_name": "mathivanan/api-backend",
+                "language": "Python",
+                "is_private": True,
+                "default_branch": "main",
+                "updated_at": "2026-06-12T00:00:00",
+            },
+            {
+                "full_name": "mathivanan/landing-page",
+                "language": "JavaScript",
+                "is_private": False,
+                "default_branch": "main",
+                "updated_at": "2026-06-12T00:00:00",
+            },
+        ]
     gh = get_github_client(access_token)
     user = gh.get_user()
     repos = []

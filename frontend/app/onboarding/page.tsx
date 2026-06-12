@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/AppContext";
-import { Lock, Globe, GitBranch, ChevronRight, Check, Terminal, Shield, AlertTriangle, Zap, ArrowRight } from "lucide-react";
+import { Lock, Globe, GitBranch, ChevronRight, Check, Terminal, Shield, AlertTriangle, Zap, ArrowRight, Loader2 } from "lucide-react";
 
 
 const STEPS = [
@@ -21,9 +21,17 @@ const DEMO_REPOS = [
 
 const GENERATORS = ["Lovable", "Bolt", "Cursor", "Replit", "v0", "Other"];
 
+import { useEffect } from "react";
+import { apiFetch, getSavedUser } from "@/lib/api";
+
+const MOCK_FALLBACK_REPOS = [
+  { full_name: "your-github/saas-app", language: "TypeScript", is_private: true, stars: 0, issues: "Pending scan" },
+  { full_name: "your-github/api-backend", language: "Python", is_private: true, stars: 0, issues: "Pending scan" },
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
-  const { connectRepo, triggerScan, scanLogs, scanProgress, isScanning } = useApp();
+  const { repos, issues, connectRepo, triggerScan, scanLogs, scanProgress, isScanning } = useApp();
 
   const [step, setStep] = useState(1);
   const [githubConnected, setGithubConnected] = useState(false);
@@ -31,26 +39,87 @@ export default function OnboardingPage() {
   const [selectedGenerator, setSelectedGenerator] = useState<string>("Lovable");
   const [scanStarted, setScanStarted] = useState(false);
   const [scanDone, setScanDone] = useState(false);
+  
+  // Real repositories fetched from user's GitHub account
+  const [reposList, setReposList] = useState<any[]>([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
 
-  const handleConnectGitHub = () => {
-    setGithubConnected(true);
-    setTimeout(() => setStep(2), 600);
+  // Auto-detect if user already authorized GitHub on mount
+  useEffect(() => {
+    const saved = getSavedUser();
+    if (saved && saved.github_access_token) {
+      setGithubConnected(true);
+      setStep(2);
+    }
+  }, []);
+
+  // Fetch repositories from backend once GitHub is connected
+  useEffect(() => {
+    if (githubConnected) {
+      const fetchGithubRepos = async () => {
+        setLoadingRepos(true);
+        try {
+          const fetched = await apiFetch("/repos/github-list");
+          setReposList(fetched);
+        } catch (err) {
+          console.error("Failed to load GitHub repos:", err);
+          // Fallback to helpful placeholder structure if offline or error
+          setReposList(MOCK_FALLBACK_REPOS);
+        } finally {
+          setLoadingRepos(false);
+        }
+      };
+      fetchGithubRepos();
+    }
+  }, [githubConnected]);
+
+  const handleConnectGitHub = async () => {
+    try {
+      setStatusMessage("Retrieving authorization link from server...");
+      const data = await apiFetch("/auth/github");
+      if (data && data.auth_url) {
+        window.location.href = data.auth_url;
+      } else {
+        throw new Error("No authorization URL returned from backend");
+      }
+    } catch (err) {
+      console.error("GitHub authorization redirect failed:", err);
+      // Fallback for demo purposes
+      setGithubConnected(true);
+      setReposList(MOCK_FALLBACK_REPOS);
+      setTimeout(() => setStep(2), 600);
+    }
   };
+
+  const [statusMessage, setStatusMessage] = useState("Authorize DebtMap on GitHub");
 
   const handleSelectRepo = (repoName: string) => {
     setSelectedRepo(repoName);
   };
 
-  const handleConfirmRepo = () => {
+  const handleConfirmRepo = async () => {
     if (!selectedRepo) return;
-    const repo = DEMO_REPOS.find((r) => r.full_name === selectedRepo)!;
-    connectRepo(repo.full_name, repo.language, selectedGenerator, repo.private);
+    const repo = reposList.find((r) => r.full_name === selectedRepo);
+    if (!repo) return;
+    
+    await connectRepo(
+      repo.full_name,
+      repo.language || "TypeScript",
+      selectedGenerator,
+      repo.is_private ?? true
+    );
     setStep(3);
   };
 
   const handleStartScan = async () => {
     setScanStarted(true);
-    await triggerScan();
+    // Find the repo we just connected to get its real ID from backend repos state
+    const connectedRepo = repos.find((r) => r.full_name === selectedRepo);
+    if (connectedRepo) {
+      await triggerScan(connectedRepo.id);
+    } else {
+      await triggerScan();
+    }
     setScanDone(true);
     setTimeout(() => setStep(4), 800);
   };
@@ -58,6 +127,14 @@ export default function OnboardingPage() {
   const handleGoToDashboard = () => {
     router.push("/dashboard");
   };
+
+  // Find info of the repo we just scanned to display dynamic stats in Step 4
+  const targetRepo = repos.find((r) => r.full_name === selectedRepo);
+  const repoIssues = issues.filter((i) => i.repo_id === (targetRepo?.id || ""));
+  const openIssuesCount = repoIssues.filter((i) => i.status === "open").length;
+  const criticalCount = repoIssues.filter((i) => i.status === "open" && i.severity === "critical").length;
+  const healthScore = targetRepo?.health_score ?? 100;
+
 
   return (
     <div
@@ -163,42 +240,47 @@ export default function OnboardingPage() {
                 <p className="text-[#8888bb]">Choose the app you want to audit. You can add more repositories later.</p>
               </div>
 
-              <div className="space-y-3">
-                {DEMO_REPOS.map((repo) => (
-                  <button
-                    key={repo.full_name}
-                    onClick={() => handleSelectRepo(repo.full_name)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                      selectedRepo === repo.full_name
-                        ? "border-[#b8ff57]/40 bg-[#b8ff57]/5"
-                        : "border-white/8 bg-white/3 hover:border-white/15"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {selectedRepo === repo.full_name ? (
-                          <div className="w-5 h-5 rounded-full bg-[#b8ff57] flex items-center justify-center flex-shrink-0">
-                            <Check size={11} className="text-black" />
+              {loadingRepos ? (
+                <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                  <Loader2 className="animate-spin text-indigo-400" size={24} />
+                  <p className="text-xs text-[#8888bb] font-mono">Loading repositories from GitHub...</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {reposList.map((repo) => (
+                    <button
+                      key={repo.full_name}
+                      onClick={() => handleSelectRepo(repo.full_name)}
+                      className={`w-full text-left p-4 rounded-xl border transition-all cursor-pointer ${
+                        selectedRepo === repo.full_name
+                          ? "border-[#b8ff57]/40 bg-[#b8ff57]/5"
+                          : "border-white/8 bg-white/3 hover:border-white/15"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {selectedRepo === repo.full_name ? (
+                            <div className="w-5 h-5 rounded-full bg-[#b8ff57] flex items-center justify-center flex-shrink-0">
+                              <Check size={11} className="text-black" />
+                            </div>
+                          ) : (
+                            <div className="w-5 h-5 rounded-full border border-white/15 flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-bold text-sm text-white truncate">{repo.full_name}</div>
+                            <div className="text-xs text-[#44446a] font-mono mt-0.5 truncate">
+                              {repo.language || "Unknown language"} · {repo.is_private ? "Private" : "Public"}
+                            </div>
                           </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full border border-white/15 flex-shrink-0" />
-                        )}
-                        <div>
-                          <div className="font-bold text-sm text-white">{repo.full_name}</div>
-                          <div className="text-xs text-[#44446a] font-mono mt-0.5">{repo.language} · {repo.generator} · {repo.private ? "Private" : "Public"}</div>
                         </div>
                       </div>
-                      <div className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        repo.issues === "Clean"
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                      }`}>
-                        {repo.issues}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </button>
+                  ))}
+                  {reposList.length === 0 && (
+                    <p className="text-center text-xs text-[#44446a] py-6">No repositories found. Connect an account first.</p>
+                  )}
+                </div>
+              )}
 
               {/* Generator select */}
               {selectedRepo && (
@@ -322,9 +404,9 @@ export default function OnboardingPage() {
               {/* Quick summary */}
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { val: "34", label: "Health Score", color: "text-[#ff5757]" },
-                  { val: "7", label: "Open Issues", color: "text-[#ffaa33]" },
-                  { val: "2", label: "Critical — Fix Now", color: "text-[#ff5757]" },
+                  { val: healthScore, label: "Health Score", color: healthScore < 50 ? "text-[#ff5757]" : healthScore < 85 ? "text-[#ffaa33]" : "text-[#b8ff57]" },
+                  { val: openIssuesCount, label: "Open Issues", color: openIssuesCount > 0 ? "text-[#ffaa33]" : "text-[#b8ff57]" },
+                  { val: criticalCount, label: "Critical — Fix Now", color: criticalCount > 0 ? "text-[#ff5757]" : "text-[#44446a]" },
                 ].map((s) => (
                   <div key={s.label} className="bg-[#0d0d1a] border border-white/8 rounded-xl p-4 text-center">
                     <div className={`text-3xl font-extrabold ${s.color} mb-1`}>{s.val}</div>
@@ -336,24 +418,23 @@ export default function OnboardingPage() {
               {/* Sample issues */}
               <div className="space-y-3">
                 <div className="font-mono text-[10px] uppercase tracking-[2px] text-[#44446a]">Issues found</div>
-                {[
-                  { sev: "critical", title: "Anyone can read any user's data", file: "src/api/users.js:47" },
-                  { sev: "critical", title: "Your Stripe secret key is visible to everyone", file: "src/payment.js:12" },
-                  { sev: "high", title: "Search box can be used to steal your database", file: "src/api/search.js:23" },
-                ].map((issue) => (
-                  <div key={issue.title} className="bg-[#0d0d1a] border border-white/8 rounded-xl p-4 flex items-center justify-between gap-4">
+                {repoIssues.slice(0, 3).map((issue) => (
+                  <div key={issue.id} className="bg-[#0d0d1a] border border-white/8 rounded-xl p-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${issue.sev === "critical" ? "bg-[#ff5757] shadow-[0_0_6px_#ff5757]" : "bg-[#ffaa33]"}`} />
-                      <div>
-                        <div className="text-sm font-bold text-white">{issue.title}</div>
-                        <div className="font-mono text-[10px] text-[#44446a]">{issue.file}</div>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${issue.severity === "critical" ? "bg-[#ff5757] shadow-[0_0_6px_#ff5757]" : "bg-[#ffaa33]"}`} />
+                      <div className="min-w-0 font-sans">
+                        <div className="text-sm font-bold text-white truncate">{issue.plain_english_title}</div>
+                        <div className="font-mono text-[10px] text-[#44446a] truncate">{issue.file_path}:{issue.line_start}</div>
                       </div>
                     </div>
                     <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      issue.sev === "critical" ? "bg-[#ff5757]/10 text-[#ff5757] border border-[#ff5757]/20" : "bg-[#ffaa33]/10 text-[#ffaa33] border border-[#ffaa33]/20"
-                    }`}>{issue.sev}</span>
+                      issue.severity === "critical" ? "bg-[#ff5757]/10 text-[#ff5757] border border-[#ff5757]/20" : "bg-[#ffaa33]/10 text-[#ffaa33] border border-[#ffaa33]/20"
+                    }`}>{issue.severity}</span>
                   </div>
                 ))}
+                {repoIssues.length === 0 && (
+                  <p className="text-xs text-[#44446a] py-4 text-center font-mono">No security issues detected. Your app is clean!</p>
+                )}
               </div>
 
               <div className="space-y-3">

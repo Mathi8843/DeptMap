@@ -32,14 +32,14 @@ async def connect_repo(
     Fetches repo metadata from GitHub API and stores in our DB.
     """
     # Fetch user's GitHub token
-    user = db.table("users").select("github_access_token").eq("id", user_id).maybe_single().execute()
-    if not user.data or not user.data.get("github_access_token"):
+    user_res = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    if not user_res.data or not user_res.data[0].get("github_access_token"):
         raise HTTPException(status_code=400, detail="GitHub token missing — re-authenticate")
 
-    access_token = user.data["github_access_token"]
+    access_token = user_res.data[0]["github_access_token"]
 
     # Check if already connected
-    existing = db.table("repos").select("id").eq("user_id", user_id).eq("full_name", github_repo_full_name).maybe_single().execute()
+    existing = db.table("repos").select("id").eq("user_id", user_id).eq("full_name", github_repo_full_name).execute()
     if existing.data:
         raise HTTPException(status_code=409, detail="Repository already connected")
 
@@ -75,11 +75,11 @@ async def connect_repo(
 @router.get("/github-list")
 async def list_github_repos(user_id: str = Query(...), db=Depends(get_db)):
     """List user's GitHub repos for the repo selection step in onboarding."""
-    user = db.table("users").select("github_access_token").eq("id", user_id).maybe_single().execute()
-    if not user.data:
+    user_res = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    if not user_res.data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    access_token = user.data.get("github_access_token")
+    access_token = user_res.data[0].get("github_access_token")
     if not access_token:
         raise HTTPException(status_code=400, detail="GitHub token missing")
 
@@ -93,7 +93,7 @@ async def list_github_repos(user_id: str = Query(...), db=Depends(get_db)):
 @router.delete("/{repo_id}")
 async def disconnect_repo(repo_id: str, user_id: str = Query(...), db=Depends(get_db)):
     """Remove a repository and all its associated data."""
-    result = db.table("repos").select("id").eq("id", repo_id).eq("user_id", user_id).maybe_single().execute()
+    result = db.table("repos").select("id").eq("id", repo_id).eq("user_id", user_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Repository not found")
 

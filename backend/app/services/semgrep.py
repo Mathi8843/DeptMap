@@ -11,6 +11,7 @@ Semgrep runtime notes:
 Install WSL on Windows: Run `wsl --install` in admin PowerShell, then restart.
 """
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -23,6 +24,7 @@ import git  # GitPython
 
 from app.config import get_settings
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 SeverityLevel = Literal["critical", "high", "medium", "low"]
@@ -70,8 +72,11 @@ def _get_semgrep_command(target_dir: str) -> list[str]:
     try:
         wsl_check = subprocess.run(["wsl", "--status"], capture_output=True, timeout=5)
         if wsl_check.returncode == 0:
-            # Convert Windows path to WSL path: C:\foo\bar → /mnt/c/foo/bar
-            wsl_path = target_dir.replace("\\", "/").replace("C:", "/mnt/c").replace("D:", "/mnt/d")
+            # Convert Windows path to WSL path: C:\foo\bar → /mnt/c/foo/bar (case-insensitive for drive letter)
+            wsl_path = target_dir.replace("\\", "/")
+            if len(wsl_path) >= 2 and wsl_path[1] == ":":
+                drive = wsl_path[0].lower()
+                wsl_path = f"/mnt/{drive}{wsl_path[2:]}"
             return ["wsl", "semgrep"] + semgrep_args + [wsl_path]
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
@@ -167,16 +172,61 @@ async def scan_repository(
     access_token: str,
 ) -> tuple[list[dict], str]:
     """
-    Full scan pipeline:
-    1. Create temp directory
-    2. Clone repo
-    3. Run Semgrep
-    4. Parse findings
-    5. Clean up temp directory
-    
-    Returns: (findings_list, repo_dir_used)
-    The caller (scan router) then enriches findings with Claude.
+    Full scan pipeline.
     """
+    if access_token == "mock_github_token":
+        import asyncio
+        await asyncio.sleep(1.5)  # simulate scanner delay
+
+        if "saas-app" in full_name:
+            findings = [
+                {
+                    "semgrep_rule_id": "javascript.express.security.audit.express-sql-injection",
+                    "severity": "critical",
+                    "file_path": "src/routes/search.ts",
+                    "line_start": 12,
+                    "line_end": 15,
+                    "code_snippet": "const query = req.query.q;\nconst result = await db.query('SELECT * FROM items WHERE name = ' + query);",
+                    "plain_english_title": "SQL Injection in Search Endpoint",
+                    "plain_english_body": "User input is directly concatenated into a database query string, allowing attackers to execute arbitrary SQL commands.",
+                    "impact_bullets": ["Attackers can view, edit, or delete any database table content.", "Vulnerable to schema dumps and complete data leaks."],
+                    "ai_fix_code": "const query = req.query.q;\nconst result = await db.query('SELECT * FROM items WHERE name = $1', [query]);",
+                    "_raw_message": "User input concatenated in SQL query"
+                },
+                {
+                    "semgrep_rule_id": "generic.secrets.security.detected-hardcoded-password",
+                    "severity": "high",
+                    "file_path": "src/config/db.ts",
+                    "line_start": 4,
+                    "line_end": 4,
+                    "code_snippet": "const connectionString = 'postgresql://db_user:SuperSecretPassword123@localhost:5432/saas_db';",
+                    "plain_english_title": "Hardcoded Database Credentials",
+                    "plain_english_body": "A sensitive database connection string containing a plain-text password was found hardcoded in the codebase.",
+                    "impact_bullets": ["Any developer or user with access to the source code can access the DB.", "Exposes data to unauthorized internet scans if public."],
+                    "ai_fix_code": "const connectionString = process.env.DATABASE_URL;",
+                    "_raw_message": "Hardcoded password"
+                }
+            ]
+        elif "api-backend" in full_name:
+            findings = [
+                {
+                    "semgrep_rule_id": "python.lang.security.audit.missing-auth",
+                    "severity": "high",
+                    "file_path": "app/api/admin.py",
+                    "line_start": 8,
+                    "line_end": 10,
+                    "code_snippet": "@router.post('/admin/reset-db')\ndef reset_database():\n    db.clear_all()",
+                    "plain_english_title": "Missing Authentication on Admin Endpoint",
+                    "plain_english_body": "A sensitive administrative function lacks an authentication decorator, allowing anyone to execute it.",
+                    "impact_bullets": ["Unauthenticated users can wipe backend database tables.", "Exposes system controls to denial-of-service exploits."],
+                    "ai_fix_code": "@router.post('/admin/reset-db')\n@require_admin_role\ndef reset_database(current_user: User = Depends(get_current_user)):\n    db.clear_all()",
+                    "_raw_message": "Endpoint lacks authentication decorator"
+                }
+            ]
+        else:
+            findings = []
+        return findings, ""
+
     # Create isolated temp dir for this scan
     temp_dir = tempfile.mkdtemp(
         prefix=f"debtmap_{full_name.replace('/', '_')}_",
@@ -206,15 +256,12 @@ async def scan_repository(
 def get_package_files(clone_url: str, access_token: str) -> dict[str, str]:
     """
     Clone repo and extract just package manifest files.
-    Returns dict of { filename: content } for:
-    - package.json (npm)
-    - requirements.txt (pip)
-    - Pipfile (pipenv)
-    - pyproject.toml (poetry)
-    
-    Used by the registry service for slopsquatting detection.
-    Faster than a full Semgrep scan.
     """
+    if access_token == "mock_github_token":
+        return {
+            "package.json": '{\n  "dependencies": {\n    "express": "^4.18.2",\n    "pg": "^8.11.3",\n    "react": "^18.2.0"\n  }\n}'
+        }
+
     target_files = ["package.json", "requirements.txt", "Pipfile", "pyproject.toml"]
     temp_dir = tempfile.mkdtemp(prefix="debtmap_pkgs_")
     results = {}
