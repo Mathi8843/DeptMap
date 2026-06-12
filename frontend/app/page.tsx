@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useApp } from "@/lib/AppContext";
 import { Shield, Zap, Package, TrendingUp, ArrowRight, GitBranch, Check, AlertTriangle, Lock, Eye, EyeOff } from "lucide-react";
 
 const STATS = [
@@ -78,8 +80,87 @@ const PLANS = [
 export default function LandingPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const router = useRouter();
+  const { login, showToast } = useApp();
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    if (!email || !password) {
+      setErrorMsg("Please fill in all fields");
+      return;
+    }
+    if (mode === "signup" && !name) {
+      setErrorMsg("Please enter your name");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const endpoint = mode === "signin" ? "/api/auth/signin" : "/api/auth/signup";
+      const body = mode === "signin" 
+        ? { email, password } 
+        : { email, password, name };
+        
+      const response = await fetch(`${apiUrl}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.detail || "Authentication failed");
+      }
+      
+      const data = await response.json();
+      
+      if (mode === "signup") {
+        showToast("Registration successful! Signing in...", "success");
+        // Auto-signin right after signup
+        const loginRes = await fetch(`${apiUrl}/api/auth/signin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        if (!loginRes.ok) {
+          throw new Error("Registered successfully, but auto-signin failed. Please sign in manually.");
+        }
+        const loginData = await loginRes.json();
+        login({
+          id: loginData.user_id,
+          name: loginData.name,
+          email: loginData.email,
+          avatar_url: null,
+          plan: loginData.plan,
+          github_access_token: loginData.github_access_token
+        });
+        router.push("/onboarding");
+      } else {
+        login({
+          id: data.user_id,
+          name: data.name,
+          email: data.email,
+          avatar_url: null,
+          plan: data.plan,
+          github_access_token: data.github_access_token
+        });
+        router.push("/dashboard");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -179,9 +260,20 @@ export default function LandingPage() {
                 <div className="flex-1 h-px bg-white/5" />
               </div>
 
-              <div className="space-y-3">
+              <form onSubmit={handleEmailAuth} className="space-y-3">
+                {mode === "signup" && (
+                  <input
+                    type="text"
+                    required
+                    placeholder="Your Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-white/5 border border-white/8 rounded-xl px-4 py-3 text-sm text-white placeholder-[#44446a] focus:outline-none focus:border-[#b8ff57]/30 transition-colors"
+                  />
+                )}
                 <input
                   type="email"
+                  required
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -190,6 +282,7 @@ export default function LandingPage() {
                 <div className="relative">
                   <input
                     type={showPass ? "text" : "password"}
+                    required
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -203,13 +296,22 @@ export default function LandingPage() {
                     {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
-                <Link
-                  href="/dashboard"
-                  className="block w-full text-center py-3.5 bg-[#b8ff57] hover:bg-[#d4ff8a] text-black font-mono text-[11px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all"
+
+                {errorMsg && (
+                  <div className="text-xs text-rose-400 bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-center">
+                    {errorMsg}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full text-center py-3.5 bg-[#b8ff57] hover:bg-[#d4ff8a] text-black font-mono text-[11px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
+                  {loading && <span className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />}
                   {mode === "signin" ? "Sign In to Dashboard" : "Create Free Account"}
-                </Link>
-              </div>
+                </button>
+              </form>
             </div>
 
             <p className="text-[11px] text-[#44446a] text-center leading-relaxed">

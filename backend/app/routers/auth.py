@@ -13,6 +13,7 @@ Flow:
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
 from app.config import get_settings
 from app.database import get_db
@@ -21,6 +22,17 @@ from app.services import github as github_service
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
+
+
+class EmailAuthRequest(BaseModel):
+    email: str
+    password: str
+
+
+class EmailSignUpRequest(BaseModel):
+    email: str
+    password: str
+    name: str
 
 
 @router.get("/github")
@@ -170,4 +182,101 @@ async def get_current_user(
         "repos_count": repos_count.count or 0,
         "created_at": user["created_at"],
     }
+
+
+@router.post("/signup")
+async def email_signup(payload: EmailSignUpRequest, db=Depends(get_db)):
+    """
+    Sign up a new user using Supabase Auth.
+    Creates both the auth credentials and the public.users record.
+    """
+    try:
+        credentials = {
+            "email": payload.email,
+            "password": payload.password,
+            "options": {
+                "data": {
+                    "name": payload.name
+                }
+            }
+        }
+        auth_response = db.auth.sign_up(credentials)
+        if not auth_response.user:
+            raise HTTPException(status_code=400, detail="Failed to create user account.")
+            
+        user_id = auth_response.user.id
+        
+        # Create user profile record in public.users
+        db.table("users").upsert({
+            "id": user_id,
+            "email": payload.email,
+            "name": payload.name,
+            "github_access_token": "mock_github_token",  # Mock default so local flows work initially
+            "plan": "free"
+        }).execute()
+        
+        return {
+            "user_id": user_id,
+            "email": payload.email,
+            "name": payload.name,
+            "plan": "free",
+            "github_access_token": "mock_github_token",
+            "message": "Registration successful. Please sign in."
+        }
+    except Exception as e:
+        logger.exception("Email signup failed")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/signin")
+async def email_signin(payload: EmailAuthRequest, db=Depends(get_db)):
+    """
+    Sign in an existing user with email and password via Supabase Auth.
+    """
+    try:
+        credentials = {
+            "email": payload.email,
+            "password": payload.password
+        }
+        auth_response = db.auth.sign_in_with_password(credentials)
+        if not auth_response.user:
+            raise HTTPException(status_code=400, detail="Invalid email or password.")
+            
+        user_id = auth_response.user.id
+        email = auth_response.user.email
+        
+        # Retrieve user profile from public.users
+        profile_res = db.table("users").select("*").eq("id", user_id).execute()
+        
+        if profile_res.data:
+            profile = profile_res.data[0]
+        else:
+            # Auto-create profile if missing
+            name = auth_response.user.user_metadata.get("name", email.split("@")[0])
+            db.table("users").insert({
+                "id": user_id,
+                "email": email,
+                "name": name,
+                "github_access_token": "mock_github_token",
+                "plan": "free"
+            }).execute()
+            profile = {
+                "id": user_id,
+                "email": email,
+                "name": name,
+                "plan": "free",
+                "github_access_token": "mock_github_token"
+            }
+            
+        return {
+            "user_id": profile["id"],
+            "email": profile["email"],
+            "name": profile["name"],
+            "plan": profile["plan"],
+            "github_access_token": profile.get("github_access_token", "mock_github_token"),
+            "session_token": auth_response.session.access_token if auth_response.session else None
+        }
+    except Exception as e:
+        logger.exception("Email signin failed")
+        raise HTTPException(status_code=400, detail=str(e))
 

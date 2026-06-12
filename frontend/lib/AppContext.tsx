@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { apiFetch, getSavedUser, SavedUser } from "./api";
+import { apiFetch, getSavedUser, saveUser, logoutUser, SavedUser } from "./api";
 
 export interface Repo {
   id: string;
@@ -87,6 +87,8 @@ interface AppContextType {
   overallScore: number;
   soc2Report: any;
   trendData: any[];
+  login: (userData: SavedUser) => void;
+  logout: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -519,6 +521,29 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const login = (userData: SavedUser) => {
+    saveUser(userData);
+    setUser({
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      avatar_url: userData.avatar_url || null,
+      plan: userData.plan
+    });
+    showToast(`Welcome back, ${userData.name}!`, "success");
+  };
+
+  const logout = () => {
+    logoutUser();
+    setUser({
+      id: "00000000-0000-0000-0000-000000000000",
+      name: "Mathivanan G",
+      email: "mathi@debtmap.io",
+      avatar_url: null,
+      plan: "pro"
+    });
+    showToast("Logged out successfully.", "info");
+  };
 
   return (
     <AppContext.Provider
@@ -546,6 +571,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         overallScore,
         soc2Report,
         trendData,
+        login,
+        logout,
       }}
     >
       {children}

@@ -133,10 +133,30 @@ def parse_findings(semgrep_output: dict, repo_dir: str) -> list[dict]:
     for item in results:
         raw_path = item.get("path", "")
         # Make path relative to repo root
+        raw_posix = raw_path.replace("\\", "/")
+        repo_posix = repo_dir.replace("\\", "/")
+        
+        # If running in WSL, raw_posix might start with /mnt/c/..., while repo_posix might start with C:/...
+        if repo_posix.lower().startswith("c:/") or (len(repo_posix) >= 2 and repo_posix[1] == ":"):
+            drive = repo_posix[0].lower()
+            wsl_repo_posix = f"/mnt/{drive}{repo_posix[2:]}"
+        else:
+            wsl_repo_posix = repo_posix
+            
         try:
-            rel_path = str(Path(raw_path).relative_to(repo_dir))
+            rel_path = str(Path(raw_posix).relative_to(Path(repo_posix)))
         except ValueError:
-            rel_path = raw_path
+            try:
+                rel_path = str(Path(raw_posix).relative_to(Path(wsl_repo_posix)))
+            except ValueError:
+                # If everything else fails, split by '/repo/'
+                if "/repo/" in raw_posix:
+                    rel_path = raw_posix.split("/repo/", 1)[1]
+                else:
+                    rel_path = raw_path
+                    
+        # Ensure forward slashes for GitHub API compatibility
+        rel_path = rel_path.replace("\\", "/")
 
         severity_str = item.get("extra", {}).get("severity", "INFO")
         severity: SeverityLevel = SEVERITY_MAP.get(severity_str.upper(), "low")

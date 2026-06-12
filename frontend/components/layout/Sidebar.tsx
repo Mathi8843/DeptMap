@@ -6,12 +6,12 @@ import { useApp } from "@/lib/AppContext";
 import ConnectRepoModal from "./ConnectRepoModal";
 import {
   LayoutDashboard, AlertTriangle, Package,
-  TrendingUp, Shield, GitBranch, Settings, Zap, Plus, Globe, Lock, Sun, Moon
+  TrendingUp, Shield, GitBranch, Settings, Zap, Plus, Globe, Lock, Sun, Moon, LogOut
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, repos, issues, upgradePlan, theme, setTheme } = useApp();
+  const { user, repos, issues, upgradePlan, theme, setTheme, logout } = useApp();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   const openIssues = issues.filter((i) => i.status === "open");
@@ -169,14 +169,26 @@ export default function Sidebar() {
             <Zap size={11} /> Upgrade to Pro
           </button>
         )}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-bg-card border border-border-subtle flex items-center justify-center text-xs font-bold text-text-main">
-            {user.name[0]}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-bg-card border border-border-subtle flex items-center justify-center text-xs font-bold text-text-main">
+              {user.name ? user.name[0] : "?"}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-text-main truncate">{user.name || "User"}</div>
+              <div className="text-[10px] text-text-muted truncate">{user.email}</div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-text-main truncate">{user.name}</div>
-            <div className="text-[10px] text-text-muted truncate">{user.email}</div>
-          </div>
+          <button
+            onClick={() => {
+              logout();
+              window.location.href = "/";
+            }}
+            className="p-1.5 rounded-lg border border-border-subtle hover:bg-rose-500/5 text-text-muted hover:text-rose-500 transition-all cursor-pointer"
+            title="Log Out"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </div>
 
