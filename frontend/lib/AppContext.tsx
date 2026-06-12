@@ -200,7 +200,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         fix_pr_url: i.fix_pr_url,
         created_at: i.created_at
       }));
+      console.log(formattedIssues);
       setIssues(formattedIssues);
+      
       
       const dbPackages = await apiFetch("/packages");
       const formattedPackages = dbPackages.map((p: any) => ({

@@ -167,9 +167,36 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         log("[DB] Saving issues to database...", 75)
         now = datetime.now(timezone.utc).isoformat()
 
-        if enriched_findings:
-            issue_rows = [
-                {
+        # Fetch existing unresolved/dismissed issues for this repo to synchronize
+        existing_result = db.table("issues").select("*").eq("repo_id", repo["id"]).in_("status", ["open", "dismissed"]).execute()
+        existing_issues = existing_result.data or []
+
+        existing_by_key = {}
+        for issue in existing_issues:
+            key = (issue["file_path"], issue["semgrep_rule_id"])
+            existing_by_key.setdefault(key, []).append(issue)
+
+        new_issue_rows = []
+
+        # Compare and synchronize
+        for f in enriched_findings:
+            key = (f["file_path"], f["semgrep_rule_id"])
+            if key in existing_by_key and existing_by_key[key]:
+                # Retain existing active issue, update its details
+                matched_issue = existing_by_key[key].pop(0)
+                db.table("issues").update({
+                    "scan_id": scan_id,
+                    "line_start": f["line_start"],
+                    "line_end": f["line_end"],
+                    "code_snippet": f["code_snippet"],
+                    "plain_english_title": f["plain_english_title"],
+                    "plain_english_body": f["plain_english_body"],
+                    "impact_bullets": f["impact_bullets"],
+                    "ai_fix_code": f["ai_fix_code"],
+                }).eq("id", matched_issue["id"]).execute()
+            else:
+                # Insert as a new issue
+                new_issue_rows.append({
                     "id": str(uuid.uuid4()),
                     "repo_id": repo["id"],
                     "scan_id": scan_id,
@@ -185,10 +212,20 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                     "ai_fix_code": f["ai_fix_code"],
                     "status": "open",
                     "created_at": now,
-                }
-                for f in enriched_findings
-            ]
-            db.table("issues").insert(issue_rows).execute()
+                })
+
+        # Save new issues in bulk
+        if new_issue_rows:
+            db.table("issues").insert(new_issue_rows).execute()
+
+        # Any remaining issues in existing_by_key list were not found in the new scan (they are resolved/deleted)
+        resolved_ids = []
+        for key, issues_list in existing_by_key.items():
+            for issue in issues_list:
+                resolved_ids.append(issue["id"])
+
+        if resolved_ids:
+            db.table("issues").update({"status": "fixed"}).in_("id", resolved_ids).execute()
 
         # ── Step 4: Package registry audit ──────────────────────────────────
         log("[REGISTRY] Checking npm/PyPI package registries for hallucinated packages...", 80)
