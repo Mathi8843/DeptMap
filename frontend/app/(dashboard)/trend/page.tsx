@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { mockHealthHistory } from "@/lib/mock-data";
+import { TrendingUp as TrendingUpIcon } from "lucide-react";
 import { useApp } from "@/lib/AppContext";
 import { Lock, TrendingUp, TrendingDown, HelpCircle, ShieldCheck } from "lucide-react";
 import {
@@ -32,21 +32,36 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function TrendPage() {
-  const { overallScore, issues } = useApp();
+  const { overallScore, issues, trendData } = useApp();
 
   const currentScore = overallScore;
-  const firstScore = mockHealthHistory[0].score;
+  const hasHistory = trendData && trendData.length > 0;
+  const firstScore = hasHistory ? trendData[0].score : currentScore;
   const drop = firstScore - currentScore;
 
   const openIssues = issues.filter(i => i.status === "open").length;
   const fixedIssues = issues.filter(i => i.status === "fixed").length;
 
   const stats = [
-    { label: "Current Score", value: currentScore, color: currentScore >= 70 ? "text-emerald-500 dark:text-emerald-400" : currentScore >= 40 ? "text-amber-500 dark:text-amber-400" : "text-rose-500", delta: `Drop of ${drop}pts since April` },
-    { label: "Trend Status", value: drop > 0 ? "Down" : "Up", color: drop > 0 ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400", delta: "Last 9 weeks scan history" },
+    { label: "Current Score", value: currentScore, color: currentScore >= 70 ? "text-emerald-500 dark:text-emerald-400" : currentScore >= 40 ? "text-amber-500 dark:text-amber-400" : "text-rose-500", delta: drop > 0 ? `Drop of ${drop}pts since first scan` : `Increase of ${Math.abs(drop)}pts since first scan` },
+    { label: "Trend Status", value: drop > 0 ? "Down" : "Up", color: drop > 0 ? "text-rose-500" : "text-emerald-500 dark:text-emerald-400", delta: hasHistory ? `Based on ${trendData.length} scans` : "No scan history yet" },
     { label: "Active Exposures", value: openIssues, color: "text-amber-500 dark:text-amber-400", delta: "Unresolved alerts" },
     { label: "Fixed via PRs", value: fixedIssues, color: "text-emerald-500 dark:text-emerald-400", delta: "Total resolved issues" },
   ];
+
+  if (!hasHistory) {
+    return (
+      <div className="p-8 max-w-5xl mx-auto space-y-6 animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-500 glow-indigo/10 mb-4">
+          <TrendingUpIcon size={28} />
+        </div>
+        <h2 className="font-display font-extrabold text-xl text-text-main">No Scan History Yet</h2>
+        <p className="text-sm text-text-sub text-center max-w-md leading-relaxed">
+          Automated code health tracking logs scores after each repository scan. Connect a repository and run a scan to start visualizing your security score timeline.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6 animate-fade-in">
@@ -87,7 +102,7 @@ export default function TrendPage() {
           
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockHealthHistory} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="glowScore" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={C.rose} stopOpacity={0.25} />
@@ -132,7 +147,7 @@ export default function TrendPage() {
           
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockHealthHistory} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barGap={3}>
+              <BarChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barGap={3}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
                 <XAxis 
                   dataKey="date" 

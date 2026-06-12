@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useApp } from "@/lib/AppContext";
 import { Check, X, Shield, CreditCard, Bell, HelpCircle, AlertCircle, Zap } from "lucide-react";
 import clsx from "clsx";
-import { PLAN_LIMITS } from "@/lib/mock-data";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
 
 const plans = [
   {
@@ -299,7 +299,7 @@ export default function SettingsPage() {
                           : "border border-border-subtle hover:border-border-glow text-text-sub hover:text-text-main bg-bg-deep/40"
                       )}
                     >
-                      {plan.key === "enterprise" ? "Contact Sales" : "Upgrade Plan"}
+                      Switch to {plan.name}
                     </button>
                   )}
                 </div>

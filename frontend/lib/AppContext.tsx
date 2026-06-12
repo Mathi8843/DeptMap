@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { mockUser, mockRepos, mockIssues, mockPackages } from "./mock-data";
+import { apiFetch, getSavedUser, SavedUser } from "./api";
 
 export interface Repo {
   id: string;
@@ -62,7 +62,7 @@ export interface WebhookAlert {
 }
 
 interface AppContextType {
-  user: typeof mockUser;
+  user: SavedUser;
   repos: Repo[];
   issues: Issue[];
   packages: Package[];
@@ -85,18 +85,19 @@ interface AppContextType {
   dismissIssue: (issueId: string) => void;
   auditPackageAction: (pkgId: string, action: "verify" | "replace" | "ignore") => void;
   overallScore: number;
+  soc2Report: any;
+  trendData: any[];
 }
-
-import { apiFetch, getSavedUser } from "./api";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState({
+  const [user, setUser] = useState<SavedUser>({
     id: "00000000-0000-0000-0000-000000000000",
     name: "Mathivanan G",
     email: "mathi@debtmap.io",
-    plan: "pro" as "free" | "pro" | "team" | "enterprise",
+    avatar_url: null,
+    plan: "pro" as const,
   });
   const [repos, setRepos] = useState<Repo[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -107,6 +108,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     { id: "w_02", timestamp: "10:48 AM", channel: "mathi@debtmap.io", message: "Vulnerability Summary: 2 critical exposures detected.", type: "email" }
   ]);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
+  const [soc2Report, setSoc2Report] = useState<any>(null);
+  const [trendData, setTrendData] = useState<any[]>([]);
   
   // Scanning States
   const [isScanning, setIsScanning] = useState(false);
@@ -144,14 +147,16 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         id: saved.id,
         name: saved.name,
         email: saved.email,
+        avatar_url: saved.avatar_url,
         plan: saved.plan
       });
     } else {
       // Save default user initially to trigger auto-creation
-      const defaultUser = {
+      const defaultUser: SavedUser = {
         id: "00000000-0000-0000-0000-000000000000",
         name: "Mathivanan G",
         email: "mathi@debtmap.io",
+        avatar_url: null,
         plan: "pro" as const
       };
       setUser(defaultUser);
@@ -168,6 +173,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         id: profile.id,
         name: profile.name,
         email: profile.email,
+        avatar_url: profile.avatar_url,
         plan: profile.plan
       });
 
@@ -208,6 +214,21 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         alternative_name: p.alternative_name
       }));
       setPackages(formattedPackages);
+
+      // Fetch compliance and trend data
+      try {
+        const dbSoc2 = await apiFetch("/soc2");
+        setSoc2Report(dbSoc2);
+      } catch (soc2Err) {
+        console.error("Failed to fetch SOC 2 report:", soc2Err);
+      }
+
+      try {
+        const dbTrend = await apiFetch("/trend");
+        setTrendData(dbTrend);
+      } catch (trendErr) {
+        console.error("Failed to fetch trend data:", trendErr);
+      }
     } catch (err) {
       console.error("Failed to fetch dashboard data from backend:", err);
     }
@@ -521,6 +542,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         dismissIssue,
         auditPackageAction,
         overallScore,
+        soc2Report,
+        trendData,
       }}
     >
       {children}

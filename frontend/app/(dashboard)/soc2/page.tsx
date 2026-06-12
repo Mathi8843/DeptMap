@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/AppContext";
 import { Lock, Download, Share2, Shield, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, CreditCard, ShieldCheck } from "lucide-react";
-import { mockSoc2Controls, PLAN_LIMITS } from "@/lib/mock-data";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
 
 const statusConfig = {
   passing: { label: "Control Passing", text: "text-emerald-500 dark:text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/10", icon: CheckCircle },
@@ -12,18 +12,19 @@ const statusConfig = {
 };
 
 export default function Soc2Page() {
-  const { user, upgradePlan, showToast } = useApp();
+  const { user, upgradePlan, showToast, soc2Report } = useApp();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [expandedControl, setExpandedControl] = useState<string | null>(null);
 
   const hasSoc2 = PLAN_LIMITS[user.plan].soc2_report;
 
-  // Calculate readiness metrics
-  const passingCount = mockSoc2Controls.filter(c => c.status === "passing").length;
-  const failingCount = mockSoc2Controls.filter(c => c.status === "failing").length;
-  const partialCount = mockSoc2Controls.filter(c => c.status === "partial").length;
-  const readiness = Math.round(((passingCount + partialCount * 0.5) / mockSoc2Controls.length) * 100);
+  // Calculate readiness metrics from backend report
+  const controls = soc2Report?.controls || [];
+  const readiness = soc2Report?.readiness_percent ?? 0;
+  const passingCount = soc2Report?.passing_count ?? 0;
+  const failingCount = soc2Report?.failing_count ?? 0;
+  const partialCount = soc2Report?.partial_count ?? 0;
 
   const handleShare = () => {
     navigator.clipboard.writeText("https://app.debtmap.io/shared/audit/usr_01_soc2");
@@ -198,7 +199,7 @@ export default function Soc2Page() {
         <div className="glass-card rounded-2xl p-5 space-y-1">
           <div className="text-[10px] font-mono uppercase tracking-[1.5px] text-text-muted font-bold">Controls Passing</div>
           <div className="font-display font-extrabold text-3xl text-emerald-500 dark:text-emerald-400 tracking-wide">
-            {passingCount} <span className="text-xs text-text-muted">/ {mockSoc2Controls.length}</span>
+            {passingCount} <span className="text-xs text-text-muted">/ {controls.length}</span>
           </div>
         </div>
 
@@ -222,12 +223,12 @@ export default function Soc2Page() {
       {/* Controls List Accordion */}
       <div className="space-y-4">
         <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">
-          Audited Controls ({mockSoc2Controls.length} Criteria mapped)
+          Audited Controls ({controls.length} Criteria mapped)
         </h3>
 
         <div className="space-y-4">
-          {mockSoc2Controls.map((control) => {
-            const cfg = statusConfig[control.status];
+          {controls.map((control: any) => {
+            const cfg = (statusConfig as any)[control.status];
             const StatusIcon = cfg.icon;
             const isExpanded = expandedControl === control.id;
 
@@ -276,7 +277,7 @@ export default function Soc2Page() {
                     ) : (
                       <div className="space-y-2">
                         <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">Blocking Vulnerabilities:</div>
-                        {control.issues.map((issueStr, idx) => (
+                        {control.issues.map((issueStr: string, idx: number) => (
                           <div 
                             key={idx}
                             className="p-3.5 rounded-xl bg-rose-500/5 border border-rose-500/10 text-xs text-rose-300 font-mono flex items-center justify-between gap-4"

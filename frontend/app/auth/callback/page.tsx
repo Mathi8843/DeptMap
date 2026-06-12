@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Loader2 } from "lucide-react";
 
-export default function AuthCallbackPage() {
+function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState("Authenticating you with GitHub...");
@@ -80,42 +80,54 @@ export default function AuthCallbackPage() {
   }, [searchParams, router]);
 
   return (
+    <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
+      <div className="flex justify-center">
+        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <Shield size={24} className={error ? "text-rose-400" : "animate-pulse"} />
+        </div>
+      </div>
+      
+      <h1 className="text-2xl font-bold tracking-tight">
+        {error ? "Authentication Error" : "Connecting Accounts"}
+      </h1>
+
+      {error ? (
+        <div className="space-y-4">
+          <p className="text-sm text-rose-400/90 leading-relaxed bg-rose-500/5 border border-rose-500/10 rounded-xl p-4">
+            {error}
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+          >
+            Back to Home
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-[#8888bb]">{status}</p>
+          <div className="flex justify-center pt-2">
+            <Loader2 className="text-indigo-400 animate-spin" size={20} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
     <div 
       style={{ background: "radial-gradient(circle at 50% 30%, #15102a 0%, #06060c 60%)" }}
       className="min-h-screen text-[#eeeeff] flex flex-col items-center justify-center p-6"
     >
-      <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
-        <div className="flex justify-center">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <Shield size={24} className={error ? "text-rose-400" : "animate-pulse"} />
-          </div>
+      <Suspense fallback={
+        <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl flex flex-col items-center justify-center min-h-[200px]">
+          <Loader2 className="text-indigo-400 animate-spin" size={28} />
         </div>
-        
-        <h1 className="text-2xl font-bold tracking-tight">
-          {error ? "Authentication Error" : "Connecting Accounts"}
-        </h1>
-
-        {error ? (
-          <div className="space-y-4">
-            <p className="text-sm text-rose-400/90 leading-relaxed bg-rose-500/5 border border-rose-500/10 rounded-xl p-4">
-              {error}
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-sm font-semibold transition-all cursor-pointer"
-            >
-              Back to Home
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-[#8888bb]">{status}</p>
-            <div className="flex justify-center pt-2">
-              <Loader2 className="text-indigo-400 animate-spin" size={20} />
-            </div>
-          </div>
-        )}
-      </div>
+      }>
+        <AuthCallbackInner />
+      </Suspense>
     </div>
   );
 }
