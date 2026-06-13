@@ -11,6 +11,89 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/issues", tags=["issues"])
 
 
+def apply_patch(
+    original_content: str,
+    code_snippet: str,
+    ai_fix_code: str,
+    line_start: int,
+    line_end: int,
+) -> str:
+    """
+    Robustly apply the AI fix code to the original file content.
+    Uses a hybrid approach of substring matching and line-number targeting with indentation recovery.
+    """
+    import textwrap
+
+    # Normalize inputs
+    code_snippet_strip = code_snippet.strip()
+    ai_fix_code_strip = ai_fix_code.strip()
+
+    # Standardize newlines
+    newline = "\r\n" if "\r\n" in original_content else "\n"
+
+    # Option 1: Unique Substring Match
+    count = original_content.count(code_snippet_strip)
+    if count == 1:
+        start_idx = original_content.find(code_snippet_strip)
+        line_start_idx = original_content.rfind("\n", 0, start_idx) + 1
+        line_prefix = original_content[line_start_idx:start_idx]
+        
+        # Check if the prefix is entirely whitespace
+        if not line_prefix or line_prefix.isspace():
+            end_idx = start_idx + len(code_snippet_strip)
+            line_end_idx = original_content.find("\n", end_idx)
+            if line_end_idx == -1:
+                line_end_idx = len(original_content)
+                
+            indentation = line_prefix
+            
+            # Format the fix code with this indentation
+            dedented_fix = textwrap.dedent(ai_fix_code_strip)
+            indented_lines = []
+            for line in dedented_fix.splitlines():
+                if line.strip() == "":
+                    indented_lines.append("")
+                else:
+                    indented_lines.append(indentation + line)
+            formatted_fix = newline.join(indented_lines)
+            
+            return original_content[:line_start_idx] + formatted_fix + original_content[line_end_idx:]
+        else:
+            # Inline replacement: do not add indentation
+            return original_content.replace(code_snippet_strip, ai_fix_code_strip, 1)
+
+    # Option 2: Line-Number Target with Indentation Recovery
+    original_lines = original_content.splitlines(keepends=True)
+
+    if 1 <= line_start <= len(original_lines):
+        actual_line_end = min(line_end, len(original_lines))
+
+        first_target_line = original_lines[line_start - 1]
+        indentation = ""
+        for char in first_target_line:
+            if char.isspace() and char not in ("\r", "\n"):
+                indentation += char
+            else:
+                break
+
+        dedented_fix = textwrap.dedent(ai_fix_code_strip)
+        indented_lines = []
+        for line in dedented_fix.splitlines():
+            if line.strip() == "":
+                indented_lines.append(newline)
+            else:
+                indented_lines.append(indentation + line + newline)
+
+        patched_lines = (
+            original_lines[: line_start - 1]
+            + indented_lines
+            + original_lines[actual_line_end:]
+        )
+        return "".join(patched_lines)
+
+    return original_content.replace(code_snippet_strip, ai_fix_code_strip)
+
+
 @router.get("")
 async def list_issues(
     user_id: str = Query(...),
@@ -114,10 +197,13 @@ async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get
             ref=repo.get("default_branch", "main"),
         )
 
-        # Apply the fix: replace the vulnerable snippet with the AI fix
-        fixed_content = original_content.replace(
-            issue["code_snippet"].strip(),
-            issue["ai_fix_code"].strip(),
+        # Apply the fix robustly using line targeting & indentation recovery
+        fixed_content = apply_patch(
+            original_content=original_content,
+            code_snippet=issue.get("code_snippet", ""),
+            ai_fix_code=issue.get("ai_fix_code", ""),
+            line_start=issue.get("line_start", 0),
+            line_end=issue.get("line_end", 0),
         )
 
         # Create the PR
