@@ -3,12 +3,48 @@ Issues router.
 CRUD for security issues — list, get, dismiss, and trigger fix (PR creation).
 """
 import logging
+import uuid
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app.database import get_db
 from app.services import github as github_service
+from app.services.scorer import calculate_scores_by_severity
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/issues", tags=["issues"])
+
+
+def update_repo_health_score(db, repo_id: str, is_fix: bool = False):
+    """
+    Recalculate the health score for a repo and insert a health history record.
+    """
+    try:
+        # Fetch all issues for the repo
+        all_issues = db.table("issues").select("severity,status").eq("repo_id", repo_id).execute()
+        scores = calculate_scores_by_severity(all_issues.data or [])
+
+        # Update repos table
+        db.table("repos").update({
+            "health_score": scores["health_score"],
+            "critical_count": scores["critical_count"],
+            "high_count": scores["high_count"],
+            "medium_count": scores["medium_count"],
+            "low_count": scores["low_count"],
+        }).eq("id", repo_id).execute()
+
+        # Record health history
+        now = datetime.now(timezone.utc).isoformat()
+        db.table("health_history").insert({
+            "id": str(uuid.uuid4()),
+            "repo_id": repo_id,
+            "score": scores["health_score"],
+            "introduced_count": 0,
+            "fixed_count": 1 if is_fix else 0,
+            "recorded_at": now,
+        }).execute()
+        
+    except Exception as e:
+        logger.error(f"Failed to update repo health score for repo {repo_id}: {e}")
 
 
 def apply_patch(
@@ -148,7 +184,13 @@ async def dismiss_issue(issue_id: str, user_id: str = Query(...), db=Depends(get
     if not issue.data:
         raise HTTPException(status_code=404, detail="Issue not found")
 
+    repo_id = issue.data[0]["repo_id"]
+
     db.table("issues").update({"status": "dismissed"}).eq("id", issue_id).execute()
+    
+    # Update repository health metrics
+    update_repo_health_score(db, repo_id, is_fix=True)
+    
     return {"success": True, "status": "dismissed"}
 
 
@@ -223,6 +265,9 @@ async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get
             "status": "fixed",
             "fix_pr_url": pr_result["pr_url"],
         }).eq("id", issue_id).execute()
+
+        # Update repository health metrics and record history
+        update_repo_health_score(db, issue.get("repo_id"), is_fix=True)
 
         return {
             "success": True,
