@@ -167,6 +167,19 @@ def parse_findings(semgrep_output: dict, repo_dir: str) -> list[dict]:
         # Extract the actual vulnerable code lines
         code_lines = item.get("extra", {}).get("lines", "")
 
+        if code_lines == "requires login" and start_line > 0:
+            try:
+                # Read the actual lines from the cloned file on disk
+                local_file_path = os.path.join(repo_dir, rel_path.replace("/", os.sep))
+                if os.path.exists(local_file_path):
+                    with open(local_file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        file_lines = f.readlines()
+                        # line_start and line_end are 1-based index
+                        extracted_lines = file_lines[start_line - 1 : end_line]
+                        code_lines = "".join(extracted_lines)
+            except Exception as read_err:
+                logger.error(f"Failed to read original code lines for {rel_path} from disk: {read_err}")
+
         findings.append({
             "semgrep_rule_id": item.get("check_id", "unknown"),
             "severity": severity,
