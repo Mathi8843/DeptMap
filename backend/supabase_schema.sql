@@ -50,7 +50,9 @@ CREATE TABLE IF NOT EXISTS public.scans (
     triggered_at    TIMESTAMPTZ DEFAULT now(),
     completed_at    TIMESTAMPTZ,
     findings_count  INTEGER DEFAULT 0,
-    trigger_source  TEXT DEFAULT 'manual'    -- 'manual' | 'webhook:push:main'
+    trigger_source  TEXT DEFAULT 'manual',   -- 'manual' | 'webhook:push:main'
+    progress        INTEGER DEFAULT 0,
+    log_messages    JSONB DEFAULT '[]'::jsonb
 );
 
 CREATE INDEX IF NOT EXISTS idx_scans_repo_id ON public.scans(repo_id);
@@ -130,18 +132,18 @@ ALTER TABLE public.health_history ENABLE ROW LEVEL SECURITY;
 
 -- Users can only read their own profile
 CREATE POLICY "users_own_profile" ON public.users
-    FOR ALL USING (id::text = current_setting('app.user_id', true));
+    FOR ALL USING (id = auth.uid());
 
 -- Users can only see their own repos
 CREATE POLICY "repos_own_data" ON public.repos
-    FOR ALL USING (user_id::text = current_setting('app.user_id', true));
+    FOR ALL USING (user_id = auth.uid());
 
 -- Issues visible only through repo ownership
 CREATE POLICY "issues_own_data" ON public.issues
     FOR ALL USING (
         repo_id IN (
             SELECT id FROM public.repos
-            WHERE user_id::text = current_setting('app.user_id', true)
+            WHERE user_id = auth.uid()
         )
     );
 
@@ -150,7 +152,7 @@ CREATE POLICY "packages_own_data" ON public.packages
     FOR ALL USING (
         repo_id IN (
             SELECT id FROM public.repos
-            WHERE user_id::text = current_setting('app.user_id', true)
+            WHERE user_id = auth.uid()
         )
     );
 
@@ -159,7 +161,7 @@ CREATE POLICY "health_history_own_data" ON public.health_history
     FOR ALL USING (
         repo_id IN (
             SELECT id FROM public.repos
-            WHERE user_id::text = current_setting('app.user_id', true)
+            WHERE user_id = auth.uid()
         )
     );
 
@@ -168,6 +170,6 @@ CREATE POLICY "scans_own_data" ON public.scans
     FOR ALL USING (
         repo_id IN (
             SELECT id FROM public.repos
-            WHERE user_id::text = current_setting('app.user_id', true)
+            WHERE user_id = auth.uid()
         )
     );

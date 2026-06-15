@@ -8,23 +8,24 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app.database import get_db
 from app.services import github as github_service
+from app.services import decrypt_token, get_current_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/repos", tags=["repos"])
 
 
 @router.get("")
-async def list_repos(user_id: str = Query(...), db=Depends(get_db)):
+async def list_repos(current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """List all connected repositories for a user."""
-    result = db.table("repos").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    result = db.table("repos").select("*").eq("user_id", current_user_id).order("created_at", desc=True).execute()
     return result.data or []
 
 
 @router.post("")
 async def connect_repo(
-    user_id: str = Query(...),
     github_repo_full_name: str = Query(...),
     generator: str = Query("Unknown"),
+    current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db),
 ):
     """
@@ -32,14 +33,15 @@ async def connect_repo(
     Fetches repo metadata from GitHub API and stores in our DB.
     """
     # Fetch user's GitHub token
-    user_res = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    user_res = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
     if not user_res.data or not user_res.data[0].get("github_access_token"):
         raise HTTPException(status_code=400, detail="GitHub token missing — re-authenticate")
 
-    access_token = user_res.data[0]["github_access_token"]
+    encrypted_token = user_res.data[0]["github_access_token"]
+    access_token = decrypt_token(encrypted_token)
 
     # Check if already connected
-    existing = db.table("repos").select("id").eq("user_id", user_id).eq("full_name", github_repo_full_name).execute()
+    existing = db.table("repos").select("id").eq("user_id", current_user_id).eq("full_name", github_repo_full_name).execute()
     if existing.data:
         raise HTTPException(status_code=409, detail="Repository already connected")
 
@@ -54,7 +56,7 @@ async def connect_repo(
 
     result = db.table("repos").insert({
         "id": repo_id,
-        "user_id": user_id,
+        "user_id": current_user_id,
         "github_repo_id": meta["github_repo_id"],
         "full_name": meta["full_name"],
         "language": meta["language"],
@@ -73,15 +75,17 @@ async def connect_repo(
 
 
 @router.get("/github-list")
-async def list_github_repos(user_id: str = Query(...), db=Depends(get_db)):
+async def list_github_repos(current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """List user's GitHub repos for the repo selection step in onboarding."""
-    user_res = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    user_res = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
     if not user_res.data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    access_token = user_res.data[0].get("github_access_token")
-    if not access_token:
+    encrypted_token = user_res.data[0].get("github_access_token")
+    if not encrypted_token:
         raise HTTPException(status_code=400, detail="GitHub token missing")
+
+    access_token = decrypt_token(encrypted_token)
 
     try:
         repos = github_service.list_user_repos(access_token)
@@ -91,9 +95,9 @@ async def list_github_repos(user_id: str = Query(...), db=Depends(get_db)):
 
 
 @router.delete("/{repo_id}")
-async def disconnect_repo(repo_id: str, user_id: str = Query(...), db=Depends(get_db)):
+async def disconnect_repo(repo_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """Remove a repository and all its associated data."""
-    result = db.table("repos").select("id").eq("id", repo_id).eq("user_id", user_id).execute()
+    result = db.table("repos").select("id").eq("id", repo_id).eq("user_id", current_user_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Repository not found")
 

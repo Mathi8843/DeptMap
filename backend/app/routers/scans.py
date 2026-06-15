@@ -20,18 +20,16 @@ from app.services import semgrep as semgrep_service
 from app.services import groq as groq_service
 from app.services import registry as registry_service
 from app.services.scorer import calculate_scores_by_severity
+from app.services import decrypt_token, get_current_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/scans", tags=["scans"])
-
-# In-memory scan progress store (in production: use Redis or Supabase Realtime)
-_scan_progress: dict[str, dict] = {}
 
 
 @router.post("")
 async def trigger_scan(
     repo_id: str = Query(...),
-    user_id: str = Query(...),
+    current_user_id: str = Depends(get_current_user_id),
     background_tasks: BackgroundTasks = None,
     db=Depends(get_db),
 ):
@@ -40,20 +38,22 @@ async def trigger_scan(
     Returns immediately with a scan_id — use status endpoint to poll progress.
     """
     # Fetch repo from DB
-    repo_result = db.table("repos").select("*").eq("id", repo_id).eq("user_id", user_id).execute()
+    repo_result = db.table("repos").select("*").eq("id", repo_id).eq("user_id", current_user_id).execute()
     if not repo_result.data:
         raise HTTPException(status_code=404, detail="Repository not found")
 
     repo = repo_result.data[0]
 
     # Fetch user's GitHub access token
-    user_result = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    user_result = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
     if not user_result.data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    access_token = user_result.data[0].get("github_access_token")
-    if not access_token:
+    encrypted_token = user_result.data[0].get("github_access_token")
+    if not encrypted_token:
         raise HTTPException(status_code=400, detail="GitHub access token missing — re-authenticate")
+
+    access_token = decrypt_token(encrypted_token)
 
     # Create scan record
     scan_id = str(uuid.uuid4())
@@ -65,14 +65,9 @@ async def trigger_scan(
         "status": "queued",
         "triggered_at": now,
         "findings_count": 0,
-    }).execute()
-
-    # Track in-memory progress
-    _scan_progress[scan_id] = {
-        "status": "queued",
         "progress": 0,
-        "logs": ["[SYSTEM] Scan queued. Starting engine..."],
-    }
+        "log_messages": ["[SYSTEM] Scan queued. Starting engine..."],
+    }).execute()
 
     # Launch background scan
     if background_tasks:
@@ -88,59 +83,65 @@ async def trigger_scan(
 
 
 @router.get("/{scan_id}/status")
-async def get_scan_status(scan_id: str, db=Depends(get_db)):
+async def get_scan_status(
+    scan_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db),
+):
     """
     Poll scan progress. Frontend calls this every 2 seconds.
     Returns: { status, progress (0-100), log_messages, findings_count }
     """
-    # Check in-memory first (real-time progress)
-    if scan_id in _scan_progress:
-        progress = _scan_progress[scan_id]
-
-        # Also get findings count from DB if completed
-        findings_count = 0
-        if progress.get("status") == "completed":
-            result = db.table("issues").select("id", count="exact").eq("scan_id", scan_id).execute()
-            findings_count = result.count or 0
-
-        return {
-            "scan_id": scan_id,
-            "status": progress["status"],
-            "progress": progress["progress"],
-            "log_messages": progress["logs"],
-            "findings_count": findings_count,
-        }
-
-    # Fall back to DB
-    result = db.table("scans").select("*").eq("id", scan_id).execute()
+    # Get scan from DB and join repos to verify ownership
+    result = db.table("scans").select("*, repos!inner(user_id)").eq("id", scan_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Scan not found")
 
     scan = result.data[0]
+    
+    # Verify ownership
+    if scan["repos"]["user_id"] != current_user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this scan")
+
+    findings_count = 0
+    if scan["status"] == "completed":
+        findings_count = scan.get("findings_count", 0)
+        if not findings_count:
+            res_count = db.table("issues").select("id", count="exact").eq("scan_id", scan_id).execute()
+            findings_count = res_count.count or 0
+
     return {
         "scan_id": scan_id,
         "status": scan["status"],
-        "progress": 100 if scan["status"] == "completed" else 0,
-        "log_messages": [],
-        "findings_count": scan.get("findings_count", 0),
+        "progress": scan.get("progress", 0),
+        "log_messages": scan.get("log_messages") or [],
+        "findings_count": findings_count,
     }
 
 
 async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
     """
     The actual scan pipeline — runs in background.
-    Updates _scan_progress throughout for frontend polling.
+    Updates progress and log_messages in DB throughout.
     """
+    logs_list = []
+    # Initialize logs list from DB
+    scan_res = db.table("scans").select("log_messages").eq("id", scan_id).execute()
+    if scan_res.data and scan_res.data[0].get("log_messages"):
+        logs_list = list(scan_res.data[0]["log_messages"])
+    else:
+        logs_list = ["[SYSTEM] Scan queued. Starting engine..."]
 
     def log(msg: str, progress: int | None = None):
-        _scan_progress[scan_id]["logs"].append(msg)
+        logs_list.append(msg)
+        update_data = {"log_messages": logs_list}
         if progress is not None:
-            _scan_progress[scan_id]["progress"] = progress
+            update_data["progress"] = progress
+        db.table("scans").update(update_data).eq("id", scan_id).execute()
         logger.info(f"[Scan {scan_id[:8]}] {msg}")
 
     try:
-        _scan_progress[scan_id]["status"] = "running"
-        db.table("scans").update({"status": "running"}).eq("id", scan_id).execute()
+        db.table("scans").update({"status": "running", "progress": 5}).eq("id", scan_id).execute()
 
         # ── Step 1: Clone + Semgrep ─────────────────────────────────────────
         log(f"[SYSTEM] Cloning repository: {repo['full_name']}...", 5)
@@ -218,7 +219,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         if new_issue_rows:
             db.table("issues").insert(new_issue_rows).execute()
 
-        # Any remaining issues in existing_by_key list were not found in the new scan (they are resolved/deleted)
+        # Any remaining issues in existing_by_key list were not found in the new scan (they are resolved/fixed)
         resolved_ids = []
         for key, issues_list in existing_by_key.items():
             for issue in issues_list:
@@ -292,15 +293,12 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         }).eq("id", scan_id).execute()
 
         log(f"[SUCCESS] Scan complete. Health score: {scores['health_score']}/100. Issues: {len(enriched_findings)} found.", 100)
-        _scan_progress[scan_id]["status"] = "completed"
-        _scan_progress[scan_id]["progress"] = 100
 
     except Exception as e:
         logger.exception(f"Scan pipeline failed for scan_id={scan_id}")
         error_msg = f"[ERROR] Scan failed: {str(e)}"
-        _scan_progress[scan_id]["status"] = "failed"
-        _scan_progress[scan_id]["logs"].append(error_msg)
         db.table("scans").update({
             "status": "failed",
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", scan_id).execute()
+        log(error_msg, 100)

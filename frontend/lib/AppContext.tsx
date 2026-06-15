@@ -79,7 +79,7 @@ interface AppContextType {
   scanLogs: string[];
   triggerScan: (repoId?: string) => Promise<void>;
   
-  connectRepo: (fullName: string, language: string, generator: string, isPrivate: boolean) => void;
+  connectRepo: (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan?: boolean) => void;
   upgradePlan: (newPlan: "free" | "pro" | "team" | "enterprise") => void;
   fixIssueSimulate: (issueId: string) => Promise<boolean>;
   dismissIssue: (issueId: string) => void;
@@ -100,6 +100,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     email: "mathi@debtmap.io",
     avatar_url: null,
     plan: "pro" as const,
+    session_token: "mock-session-token",
+    has_github_token: true
   });
   const [repos, setRepos] = useState<Repo[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -145,13 +147,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const saved = getSavedUser();
     if (saved) {
-      setUser({
-        id: saved.id,
-        name: saved.name,
-        email: saved.email,
-        avatar_url: saved.avatar_url,
-        plan: saved.plan
-      });
+      setUser(saved);
     } else {
       // Save default user initially to trigger auto-creation
       const defaultUser: SavedUser = {
@@ -159,7 +155,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         name: "Mathivanan G",
         email: "mathi@debtmap.io",
         avatar_url: null,
-        plan: "pro" as const
+        plan: "pro" as const,
+        session_token: "mock-session-token",
+        has_github_token: true
       };
       setUser(defaultUser);
       localStorage.setItem("debtmap_user", JSON.stringify(defaultUser));
@@ -171,13 +169,15 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     try {
       // Retrieve profile details to check plan and ensure user exists
       const profile = await apiFetch("/auth/me");
-      setUser({
+      setUser((prev) => ({
+        ...prev,
         id: profile.id,
         name: profile.name,
         email: profile.email,
         avatar_url: profile.avatar_url,
-        plan: profile.plan
-      });
+        plan: profile.plan,
+        has_github_token: profile.has_github_token
+      }));
 
       const dbRepos = await apiFetch("/repos");
       setRepos(dbRepos);
@@ -331,7 +331,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Connect Repository
-  const connectRepo = async (fullName: string, language: string, generator: string, isPrivate: boolean) => {
+  const connectRepo = async (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan = true) => {
     try {
       showToast(`Connecting repository ${fullName}...`, "info");
       const newRepo = await apiFetch(`/repos?github_repo_full_name=${encodeURIComponent(fullName)}&generator=${encodeURIComponent(generator)}`, {
@@ -352,10 +352,12 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         low_count: newRepo.low_count || 0,
         generator: newRepo.generator || generator
       }]);
-      showToast(`Repository ${fullName} connected! Starting automated code audit...`, "info");
+      showToast(`Repository ${fullName} connected!${autoScan ? " Starting automated code audit..." : ""}`, "info");
       
       // Auto-trigger a scan for the new repo
-      triggerScan(newRepo.id);
+      if (autoScan) {
+        triggerScan(newRepo.id);
+      }
     } catch (err: any) {
       showToast(err.message || "Failed to connect repository", "error");
     }
@@ -523,13 +525,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
   const login = (userData: SavedUser) => {
     saveUser(userData);
-    setUser({
-      id: userData.id,
-      name: userData.name,
-      email: userData.email,
-      avatar_url: userData.avatar_url || null,
-      plan: userData.plan
-    });
+    setUser(userData);
     showToast(`Welcome back, ${userData.name}!`, "success");
   };
 
@@ -540,7 +536,9 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       name: "Mathivanan G",
       email: "mathi@debtmap.io",
       avatar_url: null,
-      plan: "pro"
+      plan: "pro",
+      session_token: "mock-session-token",
+      has_github_token: true
     });
     showToast("Logged out successfully.", "info");
   };

@@ -41,11 +41,28 @@ SEVERITY_MAP: dict[str, SeverityLevel] = {
 def clone_repo(clone_url: str, access_token: str, dest_dir: str) -> None:
     """
     Clone a GitHub repository using the user's access token for auth.
-    Uses HTTPS with token embedded in URL (standard GitHub auth method).
+    Passes credentials securely via environment variables to git to avoid exposing them in command-line arguments or URL traces.
     """
-    # Inject token into clone URL: https://token@github.com/owner/repo.git
-    auth_url = clone_url.replace("https://", f"https://{access_token}@")
-    git.Repo.clone_from(auth_url, dest_dir, depth=1)  # shallow clone for speed
+    import base64
+    
+    if access_token == "mock_github_token":
+        # In mock mode, clone_from is not called since scan_repository is mocked.
+        # But if it is, we use the raw URL.
+        git.Repo.clone_from(clone_url, dest_dir, depth=1)
+        return
+
+    # Base64 encode basic auth credentials: "x-access-token:<token>"
+    token_bytes = f"x-access-token:{access_token}".encode("utf-8")
+    auth_header = f"Authorization: Basic {base64.b64encode(token_bytes).decode('utf-8')}"
+    
+    env = os.environ.copy()
+    env.update({
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "http.extraHeader",
+        "GIT_CONFIG_VALUE_0": auth_header
+    })
+    
+    git.Repo.clone_from(clone_url, dest_dir, depth=1, env=env)  # shallow clone for speed
 
 
 def _get_semgrep_command(target_dir: str) -> list[str]:

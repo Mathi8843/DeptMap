@@ -6,14 +6,15 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query
 from app.database import get_db
 from app.services.scorer import compute_soc2_status
+from app.services import get_current_user_id
 
 router = APIRouter(prefix="/api/soc2", tags=["soc2"])
 
 
 @router.get("")
 async def get_soc2_report(
-    user_id: str = Query(...),
     repo_id: str | None = Query(None),
+    current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db),
 ):
     """
@@ -25,7 +26,7 @@ async def get_soc2_report(
     query = (
         db.table("issues")
         .select("*, repos!inner(user_id)")
-        .eq("repos.user_id", user_id)
+        .eq("repos.user_id", current_user_id)
     )
     if repo_id:
         query = query.eq("repo_id", repo_id)

@@ -15,7 +15,8 @@ function AuthCallbackInner() {
     const email = searchParams.get("email");
     const avatarUrl = searchParams.get("avatar_url");
     const plan = searchParams.get("plan");
-    const githubAccessToken = searchParams.get("github_access_token");
+    const sessionToken = searchParams.get("session_token");
+    const hasGithubToken = searchParams.get("has_github_token") === "true";
 
     if (userId && email) {
       // Save user profile to localStorage directly
@@ -25,14 +26,18 @@ function AuthCallbackInner() {
         email: email,
         avatar_url: avatarUrl || null,
         plan: plan || "free",
-        github_access_token: githubAccessToken || undefined
+        session_token: sessionToken || undefined,
+        has_github_token: hasGithubToken
       }));
 
-      setStatus("Authentication successful! Redirecting to onboarding...");
       setTimeout(() => {
+        setStatus("Authentication successful! Redirecting to onboarding...");
+      }, 0);
+      
+      const timer = setTimeout(() => {
         router.push("/onboarding");
       }, 1000);
-      return;
+      return () => clearTimeout(timer);
     }
 
     const code = searchParams.get("code");
@@ -60,15 +65,19 @@ function AuthCallbackInner() {
           email: data.email,
           avatar_url: data.avatar_url,
           plan: data.plan,
-          github_access_token: data.github_access_token
+          session_token: data.session_token,
+          has_github_token: true
         }));
 
-        setStatus("Authentication successful! Redirecting to onboarding...");
+        setTimeout(() => {
+          setStatus("Authentication successful! Redirecting to onboarding...");
+        }, 0);
         
         // Brief delay for premium user feel
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           router.push("/onboarding");
         }, 1000);
+        return () => clearTimeout(timer);
 
       } catch (err: any) {
         console.error("Auth callback error:", err);

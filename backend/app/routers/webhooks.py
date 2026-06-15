@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from app.config import get_settings
 from app.database import get_db
+from app.services import decrypt_token
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
@@ -108,19 +109,17 @@ async def handle_push_event(data: dict, db) -> dict:
             "triggered_at": now,
             "findings_count": 0,
             "trigger_source": f"webhook:push:{branch}",
+            "progress": 0,
+            "log_messages": [f"[SYSTEM] Webhook triggered scan for push to {branch}..."],
         }).execute()
 
         # Launch background scan (import here to avoid circular imports at module load)
-        from app.routers.scans import run_scan_pipeline, _scan_progress
-        _scan_progress[scan_id] = {
-            "status": "queued",
-            "progress": 0,
-            "logs": [f"[SYSTEM] Webhook triggered scan for push to {branch}..."],
-        }
+        from app.routers.scans import run_scan_pipeline
 
         # Get user's GitHub token
         user_res = db.table("users").select("github_access_token").eq("id", repo["user_id"]).execute()
-        access_token = user_res.data[0].get("github_access_token", "") if user_res.data else ""
+        encrypted_token = user_res.data[0].get("github_access_token", "") if user_res.data else ""
+        access_token = decrypt_token(encrypted_token)
 
         asyncio.create_task(run_scan_pipeline(
             scan_id=scan_id,

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.database import get_db
 from app.services import github as github_service
 from app.services.scorer import calculate_scores_by_severity
+from app.services import decrypt_token, get_current_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/issues", tags=["issues"])
@@ -132,7 +133,7 @@ def apply_patch(
 
 @router.get("")
 async def list_issues(
-    user_id: str = Query(...),
+    current_user_id: str = Depends(get_current_user_id),
     repo_id: str | None = Query(None),
     severity: str | None = Query(None, description="Comma-separated: critical,high,medium,low"),
     status: str = Query("open"),
@@ -145,7 +146,7 @@ async def list_issues(
     query = (
         db.table("issues")
         .select("*, repos!inner(user_id, full_name)")
-        .eq("repos.user_id", user_id)
+        .eq("repos.user_id", current_user_id)
         .eq("status", status)
     )
 
@@ -163,13 +164,13 @@ async def list_issues(
 
 
 @router.get("/{issue_id}")
-async def get_issue(issue_id: str, user_id: str = Query(...), db=Depends(get_db)):
+async def get_issue(issue_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """Get a single issue by ID."""
     result = (
         db.table("issues")
         .select("*, repos!inner(user_id, full_name, default_branch)")
         .eq("id", issue_id)
-        .eq("repos.user_id", user_id)
+        .eq("repos.user_id", current_user_id)
         .execute()
     )
     if not result.data:
@@ -178,11 +179,12 @@ async def get_issue(issue_id: str, user_id: str = Query(...), db=Depends(get_db)
 
 
 @router.post("/{issue_id}/dismiss")
-async def dismiss_issue(issue_id: str, user_id: str = Query(...), db=Depends(get_db)):
+async def dismiss_issue(issue_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """Mark an issue as dismissed (won't affect score)."""
+    # Verify ownership
     issue = db.table("issues").select("id, repo_id, repos!inner(user_id)").eq("id", issue_id).execute()
-    if not issue.data:
-        raise HTTPException(status_code=404, detail="Issue not found")
+    if not issue.data or issue.data[0]["repos"]["user_id"] != current_user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     repo_id = issue.data[0]["repo_id"]
 
@@ -195,7 +197,7 @@ async def dismiss_issue(issue_id: str, user_id: str = Query(...), db=Depends(get
 
 
 @router.post("/{issue_id}/fix")
-async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get_db)):
+async def create_fix_pr(issue_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """
     Create a GitHub Pull Request with the AI-generated fix applied.
     This is the "one-click fix" feature.
@@ -214,7 +216,7 @@ async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get
     issue = issue_result.data[0]
     repo = issue.get("repos", {})
 
-    if repo.get("user_id") != user_id:
+    if repo.get("user_id") != current_user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     if issue["status"] == "fixed":
@@ -224,11 +226,12 @@ async def create_fix_pr(issue_id: str, user_id: str = Query(...), db=Depends(get
         raise HTTPException(status_code=400, detail="No AI fix available for this issue")
 
     # Get GitHub access token
-    user_res = db.table("users").select("github_access_token").eq("id", user_id).execute()
+    user_res = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
     if not user_res.data or not user_res.data[0].get("github_access_token"):
         raise HTTPException(status_code=400, detail="GitHub token missing")
 
-    access_token = user_res.data[0]["github_access_token"]
+    encrypted_token = user_res.data[0]["github_access_token"]
+    access_token = decrypt_token(encrypted_token)
 
     try:
         # Get original file content to do a proper replacement

@@ -8,7 +8,8 @@ export interface SavedUser {
   email: string;
   avatar_url: string | null;
   plan: "free" | "pro" | "team" | "enterprise";
-  github_access_token?: string;
+  session_token?: string;
+  has_github_token?: boolean;
 }
 
 export function getSavedUser(): SavedUser | null {
@@ -35,12 +36,11 @@ export function logoutUser() {
 }
 
 /**
- * Fetch wrapper that automatically adds the logged-in user_id as a query param.
+ * Fetch wrapper that automatically adds the session JWT to the Authorization header.
  */
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const user = getSavedUser();
-  // If not logged in, we use a fallback ID for local testing/demo purposes
-  const userId = user?.id || "00000000-0000-0000-0000-000000000000"; 
+  const sessionToken = user?.session_token || "mock-session-token";
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   
@@ -50,16 +50,14 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     apiPath = apiPath.startsWith("/") ? `/api${apiPath}` : `/api/${apiPath}`;
   }
 
-  // Construct URL and append user_id query param
+  // Construct URL
   const url = new URL(apiPath, apiUrl);
-  if (!url.searchParams.has("user_id")) {
-    url.searchParams.set("user_id", userId);
-  }
 
   const response = await fetch(url.toString(), {
     ...options,
     headers: {
       "Accept": "application/json",
+      "Authorization": `Bearer ${sessionToken}`,
       ...options.headers,
     },
   });

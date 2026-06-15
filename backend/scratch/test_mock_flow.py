@@ -3,22 +3,22 @@ import time
 import sys
 
 BASE_URL = "http://127.0.0.1:8000"
-USER_ID = "00000000-0000-0000-0000-000000000000"
+HEADERS = {"Authorization": "Bearer mock-session-token"}
 
 def log_step(name):
-    print(f"\n🔹 [STEP] {name}")
+    print(f"\n[STEP] {name}")
 
 def run_test():
     # 1. Verify User Profile / Auto-creation
     log_step("Verifying User Profile / Auto-creation")
-    r = requests.get(f"{BASE_URL}/api/auth/me?user_id={USER_ID}")
+    r = requests.get(f"{BASE_URL}/api/auth/me", headers=HEADERS)
     assert r.status_code == 200, f"Auth failed: {r.text}"
     user_data = r.json()
     print(f"  [OK] Connected user: {user_data['name']} ({user_data['email']})")
 
     # 2. Verify GitHub Repo List Retrieval
     log_step("Retrieving GitHub Repositories List")
-    r = requests.get(f"{BASE_URL}/api/repos/github-list?user_id={USER_ID}")
+    r = requests.get(f"{BASE_URL}/api/repos/github-list", headers=HEADERS)
     assert r.status_code == 200, f"GitHub list failed: {r.text}"
     github_repos = r.json()
     assert len(github_repos) > 0, "No repos returned"
@@ -29,15 +29,15 @@ def run_test():
     target_repo = "mathivanan/saas-app"
     
     # Check if already connected first, if so delete it so we start fresh
-    r = requests.get(f"{BASE_URL}/api/repos?user_id={USER_ID}")
+    r = requests.get(f"{BASE_URL}/api/repos", headers=HEADERS)
     existing_repos = r.json()
     for repo in existing_repos:
         if repo["full_name"] == target_repo:
             print(f"  [INFO] Repository {target_repo} already exists, deleting first...")
-            del_r = requests.delete(f"{BASE_URL}/api/repos/{repo['id']}?user_id={USER_ID}")
+            del_r = requests.delete(f"{BASE_URL}/api/repos/{repo['id']}", headers=HEADERS)
             assert del_r.status_code == 200, f"Deletion failed: {del_r.text}"
             
-    r = requests.post(f"{BASE_URL}/api/repos?user_id={USER_ID}&github_repo_full_name={target_repo}&generator=Lovable")
+    r = requests.post(f"{BASE_URL}/api/repos?github_repo_full_name={target_repo}&generator=Lovable", headers=HEADERS)
     assert r.status_code == 200, f"Connect failed: {r.text}"
     repo_info = r.json()
     repo_id = repo_info["id"]
@@ -45,7 +45,7 @@ def run_test():
 
     # 4. Trigger Scan
     log_step("Triggering Security Scan")
-    r = requests.post(f"{BASE_URL}/api/scans?repo_id={repo_id}&user_id={USER_ID}")
+    r = requests.post(f"{BASE_URL}/api/scans?repo_id={repo_id}", headers=HEADERS)
     assert r.status_code == 200, f"Trigger scan failed: {r.text}"
     scan_info = r.json()
     scan_id = scan_info["scan_id"]
@@ -56,7 +56,7 @@ def run_test():
     completed = False
     for _ in range(20):
         time.sleep(1)
-        r = requests.get(f"{BASE_URL}/api/scans/{scan_id}/status")
+        r = requests.get(f"{BASE_URL}/api/scans/{scan_id}/status", headers=HEADERS)
         assert r.status_code == 200, f"Status check failed: {r.text}"
         status_data = r.json()
         print(f"  Progress: {status_data['progress']}% | Logs: {status_data['log_messages'][-1] if status_data['log_messages'] else 'None'}")
@@ -72,7 +72,7 @@ def run_test():
 
     # 6. Retrieve Open Issues
     log_step("Loading Security Issues")
-    r = requests.get(f"{BASE_URL}/api/issues?user_id={USER_ID}&repo_id={repo_id}")
+    r = requests.get(f"{BASE_URL}/api/issues?repo_id={repo_id}", headers=HEADERS)
     assert r.status_code == 200, f"Fetch issues failed: {r.text}"
     issues = r.json()
     assert len(issues) == 2, f"Expected 2 mock issues, got {len(issues)}"
@@ -83,7 +83,7 @@ def run_test():
     # 7. Test AI Fix PR Creation
     log_step("Testing AI-Generated PR Fix")
     issue_id = issues[0]["id"]
-    r = requests.post(f"{BASE_URL}/api/issues/{issue_id}/fix?user_id={USER_ID}")
+    r = requests.post(f"{BASE_URL}/api/issues/{issue_id}/fix", headers=HEADERS)
     assert r.status_code == 200, f"PR creation failed: {r.text}"
     pr_data = r.json()
     assert pr_data["success"] == True
@@ -93,9 +93,9 @@ def run_test():
 
     # 8. Clean up connected repo
     log_step("Cleaning up database state")
-    r = requests.delete(f"{BASE_URL}/api/repos/{repo_id}?user_id={USER_ID}")
+    r = requests.delete(f"{BASE_URL}/api/repos/{repo_id}", headers=HEADERS)
     assert r.status_code == 200
-    print("  [OK] Database state cleaned. Integration test passed! 🎉")
+    print("  [OK] Database state cleaned. Integration test passed! (Success)")
 
 if __name__ == "__main__":
     run_test()

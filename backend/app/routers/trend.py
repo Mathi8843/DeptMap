@@ -4,14 +4,15 @@ Trend router — health score history for charts.
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from app.database import get_db
+from app.services import get_current_user_id
 
 router = APIRouter(prefix="/api/trend", tags=["trend"])
 
 
 @router.get("")
 async def get_trend(
-    user_id: str = Query(...),
     repo_id: str | None = Query(None),
+    current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db),
 ):
     """
@@ -21,7 +22,7 @@ async def get_trend(
     query = (
         db.table("health_history")
         .select("*, repos!inner(user_id)")
-        .eq("repos.user_id", user_id)
+        .eq("repos.user_id", current_user_id)
         .order("recorded_at", desc=False)
     )
     if repo_id:

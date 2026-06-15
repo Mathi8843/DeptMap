@@ -140,7 +140,8 @@ export default function LandingPage() {
           email: loginData.email,
           avatar_url: null,
           plan: loginData.plan,
-          github_access_token: loginData.github_access_token
+          session_token: loginData.session_token,
+          has_github_token: !!loginData.session_token
         });
         router.push("/onboarding");
       } else {
@@ -150,7 +151,8 @@ export default function LandingPage() {
           email: data.email,
           avatar_url: null,
           plan: data.plan,
-          github_access_token: data.github_access_token
+          session_token: data.session_token,
+          has_github_token: !!data.session_token
         });
         router.push("/dashboard");
       }

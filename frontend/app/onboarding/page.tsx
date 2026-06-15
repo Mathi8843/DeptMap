@@ -39,6 +39,7 @@ export default function OnboardingPage() {
   const [selectedGenerator, setSelectedGenerator] = useState<string>("Lovable");
   const [scanStarted, setScanStarted] = useState(false);
   const [scanDone, setScanDone] = useState(false);
+  const [hasBeenScanning, setHasBeenScanning] = useState(false);
   
   // Real repositories fetched from user's GitHub account
   const [reposList, setReposList] = useState<any[]>([]);
@@ -47,11 +48,36 @@ export default function OnboardingPage() {
   // Auto-detect if user already authorized GitHub on mount
   useEffect(() => {
     const saved = getSavedUser();
-    if (saved && saved.github_access_token) {
-      setGithubConnected(true);
-      setStep(2);
+    if (saved && saved.has_github_token) {
+      setTimeout(() => {
+        setGithubConnected(true);
+        setStep(2);
+      }, 0);
     }
   }, []);
+
+  // Synchronize scanStarted if the application is already scanning
+  useEffect(() => {
+    if (isScanning) {
+      setTimeout(() => {
+        setScanStarted(true);
+        setHasBeenScanning(true);
+      }, 0);
+    }
+  }, [isScanning]);
+
+  // Handle automatic transition to Step 4 when scan finishes
+  useEffect(() => {
+    if (hasBeenScanning && !isScanning) {
+      setTimeout(() => {
+        setScanDone(true);
+      }, 0);
+      const timer = setTimeout(() => {
+        setStep(4);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasBeenScanning, isScanning]);
 
   // Fetch repositories from backend once GitHub is connected
   useEffect(() => {
@@ -106,7 +132,8 @@ export default function OnboardingPage() {
       repo.full_name,
       repo.language || "TypeScript",
       selectedGenerator,
-      repo.is_private ?? true
+      repo.is_private ?? true,
+      false
     );
     setStep(3);
   };
@@ -120,8 +147,6 @@ export default function OnboardingPage() {
     } else {
       await triggerScan();
     }
-    setScanDone(true);
-    setTimeout(() => setStep(4), 800);
   };
 
   const handleGoToDashboard = () => {
