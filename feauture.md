@@ -1,143 +1,462 @@
-# DebtMap — Feature Roadmap & Implementation Tracker
+Semgrep alone is absolutely not enough if your goal is to become the "Cursor for security" or the AI Security OS.
 
-> **DebtMap** is a SaaS security dashboard for non-technical founders that monitors code health,
-> detects vulnerabilities, audits dependencies, and generates SOC 2 compliance reports — all
-> presented in plain English without needing to understand code.
->
-> **Frontend: COMPLETE (mock data)** | Next: Build FastAPI + Semgrep + Claude backend
+If you build DebtMap with only Semgrep, you're basically building a prettier UI around an existing open-source tool. That's easy to copy.
 
----
+The real moat is combining multiple security engines + AI + repository understanding.
 
-## Legend
+Think Like This
 
-| Symbol | Meaning |
-|--------|---------|
-| ✅ | Completed & Shipped |
-| 🔧 | Partially implemented / Needs polish |
-| ⬜ | Not yet started |
+Don't build:
 
----
+DebtMap
+    ↓
+Semgrep
+    ↓
+Dashboard
 
-## Phase 1 — Foundation & Core Layout ✅
+Build:
 
-- ✅ **Next.js 15 Project Setup** — App Router, TypeScript, Tailwind CSS v4
-- ✅ **Global Design System** — Custom CSS variables for Dark/Light theming (`globals.css`)
-- ✅ **Typography System** — Inter (body), Outfit (headings), Fira Code (monospace)
-- ✅ **Dark / Light Theme Toggle** — `html.light` class strategy, synced via `AppContext`
-- ✅ **Sidebar Navigation** — Active link state, section grouping (Overview / Manage), repo quick-access list
-- ✅ **App-level Context (`AppContext.tsx`)** — Global state: repos, issues, packages, toasts, webhooks, theme
-- ✅ **Mock Data Layer (`mock-data.ts`)** — Realistic simulated repos, issues, packages, user
-- ✅ **Toast Notification System** — Animated slide-in toasts with auto-dismiss
-- ✅ **Connect Repository Modal** — Simulated GitHub/GitLab repo connection flow
+                 DebtMap Core Engine
+                        │
+ ┌──────────────┬───────────────┬───────────────┐
+ │              │               │               │
+Static      Dependency      Secrets       AI Analysis
+Analysis     Analysis        Scanner      & Fix Engine
+ │              │               │               │
+Semgrep     npm audit      Gitleaks      Groq/OpenAI
+ │              │               │               │
+ └──────────────┴───────────────┴───────────────┘
+                        │
+             Correlation Engine
+                        │
+                Risk Scoring Engine
+                        │
+                 Fix Recommendation
+                        │
+               GitHub Pull Request
 
----
+This is what makes it a product.
 
-## Phase 2 — Dashboard & Core Pages ✅
+Security Layers
+Layer 1 — Static Code Analysis
 
-- ✅ **Dashboard Overview Page** (`/dashboard`)
-  - ✅ Overall security health score (circular SVG gauge)
-  - ✅ Summary stat cards (open issues, critical, packages, repos)
-  - ✅ Sparkline trend charts (Recharts)
-  - ✅ Live Webhook Alert feed panel
-  - ✅ Workspace CLI Terminal (animated scan log simulation)
-  - ✅ Audit Scanner trigger with progress bar
-- ✅ **Issues List Page** (`/issues`)
-  - ✅ Filter by severity (critical / high / medium / low)
-  - ✅ Filter by status (open / fixed / dismissed)
-  - ✅ Search by title or repo name
-  - ✅ Severity color-coded badges
-- ✅ **Issue Detail Page** (`/issues/[id]`)
-  - ✅ Plain-English vulnerability explanation
-  - ✅ Impact bullet list
-  - ✅ Code snippet viewer (dark code block)
-  - ✅ AI-generated fix code block with diff view
-  - ✅ One-click "Apply Fix" → simulated PR creation + webhook trigger
-  - ✅ Dismiss vulnerability action
-- ✅ **Packages / Dependency Audit Page** (`/packages`)
-  - ✅ Color-coded package safety status (safe / suspect / dangerous / unknown)
-  - ✅ Registry verification badge
-  - ✅ Weekly downloads indicator
-  - ✅ Actions: Verify, Replace with Safe Alternative, Ignore
-- ✅ **Repositories Page** (`/repos`)
-  - ✅ Health score per repository with color coding
-  - ✅ Issue counts breakdown (critical / high / medium / low)
-  - ✅ Last scanned timestamp
-  - ✅ Language and privacy badges
-  - ✅ Per-repo scan trigger
-- ✅ **Trend Analytics Page** (`/trend`)
-  - ✅ Historical health score line chart
-  - ✅ Issues-over-time bar chart
-  - ✅ Recharts integration with gradient fills
+Purpose:
 
----
+Look at source code.
 
-## Phase 3 — Compliance & Reporting 🔧
+Use:
 
-- ✅ **SOC 2 Report Page** (`/soc2`)
-  - ✅ Compliance status checklist (CC, A, PI criteria)
-  - ✅ Evidence summary per category
-  - ✅ Overall compliance score bar
-- ⬜ **Downloadable PDF Report** — Export SOC 2 summary as a branded PDF
-- ⬜ **Evidence Timestamps** — Per-check last-verified date with audit trail
-- ⬜ **SOC 2 Gap Analysis** — Show which criteria are failing and why, with recommended fixes
+Semgrep
+CodeQL (later)
 
----
+Detect:
 
-## Phase 4 — Settings & User Management 🔧
+SQL Injection
+XSS
+SSRF
+Path Traversal
+Command Injection
+Broken Authentication
+Hardcoded Secrets
 
-- ✅ **Settings Page** (`/settings`)
-  - ✅ User profile section (name, email, avatar display)
-  - ✅ Billing plan display and upgrade CTA
-- ⬜ **Notification Preferences** — Configure which events trigger Slack/email alerts
-- ⬜ **Webhook Endpoint Configuration** — User-defined webhook URLs for Slack / Teams / custom
-- ⬜ **API Key Management** — Generate and revoke personal API tokens
-- ⬜ **Team Member Invites** — Add teammates by email (Team/Enterprise plan)
-- ⬜ **Connected OAuth Apps** — View/revoke GitHub, GitLab, Bitbucket OAuth connections
+Example:
 
----
+const sql =
+"SELECT * FROM users WHERE id=" + id;
 
-## Phase 5 — Onboarding & Growth ⬜
+Semgrep finds it.
 
-- ⬜ **Welcome Onboarding Flow** — Multi-step wizard for first-time users (connect repo → first scan → view results)
-- ⬜ **Empty State Screens** — Friendly zero-data states when no repos are connected
-- ⬜ **Plan Comparison Modal** — Visual plan comparison (Free / Pro / Team / Enterprise)
-- ⬜ **Referral / Share Feature** — Share security score badge publicly or with investors
+Layer 2 — Dependency Scanning
 
----
+Most attacks today don't happen because of your code.
 
-## Phase 6 — Advanced Features ⬜
+They happen because of packages.
 
-- ⬜ **Real GitHub OAuth Integration** — Connect actual GitHub accounts via OAuth2
-- ⬜ **Real Semgrep Scan Engine** — Server-side code scanning with Semgrep rules
-- ⬜ **AI Fix Generation (GPT-4)** — Live AI-generated remediation code via OpenAI API
-- ⬜ **CI/CD Badge Widget** — Embeddable security health badge for GitHub READMEs
-- ⬜ **Scheduled Scans** — Cron-based daily/weekly automatic re-scans
-- ⬜ **Slack Bot Integration** — Two-way Slack bot: query issues, trigger scans from Slack
-- ⬜ **Audit History Log** — Full timestamped log of every scan, fix, and user action
-- ⬜ **Multi-Org Support** — Switch between multiple organizations in one account
+Example
 
----
+express
+↓
 
-## Phase 7 — Performance & Polish ⬜
+Old version
 
-- ⬜ **Mobile Responsive Layout** — Sidebar collapse, touch-friendly cards on small screens
-- ⬜ **Keyboard Shortcuts** — Power-user hotkeys (e.g. `S` to scan, `F` to filter)
-- ⬜ **Accessibility (WCAG AA)** — ARIA labels, focus rings, color-contrast validation
-- ⬜ **Skeleton Loading States** — Shimmer placeholders while data fetches
-- ⬜ **Error Boundaries** — Graceful fallback UI for crashed components
-- ⬜ **SEO / Meta Tags** — Page-level title/description tags for all routes
+↓
 
----
+Known CVE
 
-## Immediate Next Steps (Priority Queue)
+Use
 
-1. ⬜ Polish Settings page — add Notification Preferences and Webhook config UI
-2. ⬜ Add SOC 2 Gap Analysis section with actionable fix suggestions
-3. ⬜ Add Mobile Responsive layout (sidebar collapse)
-4. ⬜ Add Skeleton loading states for data-heavy pages
-5. ⬜ Implement Welcome Onboarding Flow for first-time users
-6. ⬜ Downloadable PDF Report for SOC 2
+Node
 
----
+npm audit
 
-*Last updated: 2026-06-10 | Track this file across sessions to monitor progress.*
+Python
+
+pip-audit
+
+Java
+
+OWASP Dependency Check
+
+Rust
+
+cargo audit
+
+Go
+
+govulncheck
+
+Now you detect
+
+jsonwebtoken
+
+↓
+
+Critical vulnerability
+
+↓
+
+Upgrade
+Layer 3 — Secret Detection
+
+Very important.
+
+Developers accidentally commit
+
+Stripe Secret
+
+AWS Keys
+
+JWT Secret
+
+OpenAI Keys
+
+Use
+
+Gitleaks
+
+or
+
+TruffleHog
+
+Example
+
+sk_live_xxxxxxxxxxx
+
+Immediately flag.
+
+Layer 4 — Infrastructure Scanning
+
+Eventually.
+
+Look at
+
+Dockerfile
+
+Terraform
+
+Kubernetes
+
+GitHub Actions
+
+Use
+
+Trivy
+
+Example
+
+Dockerfile
+
+FROM ubuntu:16
+
+Very old.
+
+Flag it.
+
+Layer 5 — AI Code Smell Detection
+
+This is where AI becomes valuable.
+
+Semgrep cannot detect
+
+This code technically works
+
+BUT
+
+It has horrible architecture
+
+Example
+
+400-line function
+
+10 nested loops
+
+repeated logic
+
+dead code
+
+duplicate validation
+
+LLM detects this.
+
+Prompt
+
+Review this file.
+
+Find:
+
+- code smells
+- maintainability issues
+- duplicated logic
+- bad architecture
+
+Return JSON.
+Layer 6 — AI Vulnerability Review
+
+This is huge.
+
+Ask AI
+
+Pretend you are
+a senior security engineer.
+
+Review this file.
+
+Could this be exploited?
+
+Explain why.
+
+Sometimes AI catches issues rule-based scanners miss.
+
+Layer 7 — Repository Understanding
+
+Instead of scanning files independently
+
+Understand
+
+Frontend
+
+↓
+
+Backend
+
+↓
+
+Database
+
+↓
+
+Auth
+
+↓
+
+Payments
+
+This is repository intelligence.
+
+Example
+
+Login page
+
+↓
+
+calls
+
+↓
+
+API
+
+↓
+
+Middleware
+
+↓
+
+JWT
+
+↓
+
+Database
+
+Now AI can reason
+
+Login exists
+
+But middleware missing.
+
+That's impossible with simple regex scanning.
+
+Layer 8 — Risk Correlation
+
+Example
+
+Scanner says
+
+Hardcoded JWT Secret
+
+Dependency Scanner says
+
+Old JWT Library
+
+Secret Scanner says
+
+API Key Exposed
+
+Instead of
+
+3 Issues
+
+DebtMap says
+
+Authentication system is compromised.
+
+Now you're thinking like a security platform.
+
+Layer 9 — AI Fix Generator
+
+This is the hardest part.
+
+Input
+
+Issue
+
+Code
+
+Neighbor files
+
+Project context
+
+AI outputs
+
+Patch
+
+Then
+
+git diff
+
+Then
+
+GitHub PR.
+
+Layer 10 — Verification
+
+Never trust AI.
+
+Generated fix
+
+↓
+
+Run tests
+
+↓
+
+Run Semgrep again
+
+↓
+
+Run lint
+
+↓
+
+Run build
+
+↓
+
+Only then
+
+Create Pull Request
+
+Otherwise
+
+AI might introduce another bug.
+
+This is the architecture I'd build
+                 GitHub
+
+                    │
+
+              GitHub Webhook
+
+                    │
+
+              Clone Repository
+
+                    │
+
+        Repository Parser Engine
+
+                    │
+
+    ┌────────┬────────┬────────┬────────┐
+    │        │        │        │
+Semgrep  npm audit Gitleaks Trivy
+    │        │        │        │
+    └────────┴────────┴────────┘
+
+            Merge Findings
+
+                    │
+
+        Repository Context Builder
+
+                    │
+
+          AI Analysis Engine
+
+                    │
+
+      Risk Correlation Engine
+
+                    │
+
+       Health Score Generator
+
+                    │
+
+      AI Fix Recommendation
+
+                    │
+
+      Validation Pipeline
+
+                    │
+
+       GitHub Pull Request
+Your Real Competitive Advantage
+
+Most people think DebtMap's value is:
+
+Detect vulnerabilities.
+
+Wrong.
+
+Everyone already does that.
+
+Your advantage is:
+
+Detect
+
+↓
+
+Correlate
+
+↓
+
+Explain
+
+↓
+
+Prioritize
+
+↓
+
+Generate Fix
+
+↓
+
+Validate
+
+↓
+
+Open Pull Request
+
+That's an end-to-end security workflow, not just a scanner.

@@ -41,28 +41,11 @@ SEVERITY_MAP: dict[str, SeverityLevel] = {
 def clone_repo(clone_url: str, access_token: str, dest_dir: str) -> None:
     """
     Clone a GitHub repository using the user's access token for auth.
-    Passes credentials securely via environment variables to git to avoid exposing them in command-line arguments or URL traces.
+    Uses HTTPS with token embedded in URL (standard GitHub auth method).
     """
-    import base64
-    
-    if access_token == "mock_github_token":
-        # In mock mode, clone_from is not called since scan_repository is mocked.
-        # But if it is, we use the raw URL.
-        git.Repo.clone_from(clone_url, dest_dir, depth=1)
-        return
-
-    # Base64 encode basic auth credentials: "x-access-token:<token>"
-    token_bytes = f"x-access-token:{access_token}".encode("utf-8")
-    auth_header = f"Authorization: Basic {base64.b64encode(token_bytes).decode('utf-8')}"
-    
-    env = os.environ.copy()
-    env.update({
-        "GIT_CONFIG_COUNT": "1",
-        "GIT_CONFIG_KEY_0": "http.extraHeader",
-        "GIT_CONFIG_VALUE_0": auth_header
-    })
-    
-    git.Repo.clone_from(clone_url, dest_dir, depth=1, env=env)  # shallow clone for speed
+    # Inject token into clone URL: https://token@github.com/owner/repo.git
+    auth_url = clone_url.replace("https://", f"https://{access_token}@")
+    git.Repo.clone_from(auth_url, dest_dir, depth=1)  # shallow clone for speed
 
 
 def _get_semgrep_command(target_dir: str) -> list[str]:
@@ -216,6 +199,113 @@ def parse_findings(semgrep_output: dict, repo_dir: str) -> list[dict]:
     return findings
 
 
+def _extract_imported_paths(code_snippet: str, file_path: str) -> list[str]:
+    """
+    Parse import statements in a code snippet and return relative file paths
+    that might exist in the repo. Handles JS/TS, Python, and Java imports.
+    Only resolves relative imports (starts with . or /) — skips npm/stdlib packages.
+    """
+    import re
+    candidates = []
+
+    # JS/TS: import ... from './foo' or require('./foo')
+    js_patterns = [
+        r"""from\s+['"](\.[^'"]+)['"]""",
+        r"""require\s*\(\s*['"](\.[^'"]+)['"]\s*\)""",
+        r"""import\s*\(\s*['"](\.[^'"]+)['"]\s*\)""",
+    ]
+    for pattern in js_patterns:
+        candidates += re.findall(pattern, code_snippet)
+
+    # Python: from .module import ... or from ..module import ...
+    py_patterns = [
+        r"""from\s+(\.+[\w.]+)\s+import""",
+        r"""import\s+(\.+[\w.]+)""",
+    ]
+    for pattern in py_patterns:
+        candidates += re.findall(pattern, code_snippet)
+
+    # Resolve relative paths based on the file's directory
+    file_dir = os.path.dirname(file_path)
+    resolved = []
+    extensions = ["", ".ts", ".tsx", ".js", ".jsx", ".py", ".java"]
+
+    for c in candidates:
+        # Convert Python dot-notation to path (e.g., ..utils → ../utils)
+        if c.startswith(".") and not c.startswith("./") and not c.startswith("../"):
+            # Python relative: .module → ./module, ..module → ../module
+            dots = len(c) - len(c.lstrip("."))
+            rest = c[dots:].replace(".", "/")
+            prefix = "../" * (dots - 1) if dots > 1 else "./"
+            c = prefix + rest
+
+        # Normalize to relative path from repo root
+        joined = os.path.normpath(os.path.join(file_dir, c)).replace("\\", "/")
+        resolved.append((c, joined))
+
+    return resolved
+
+
+def _enrich_with_file_context(findings: list[dict], repo_dir: str) -> list[dict]:
+    """
+    For each finding, read:
+    1. The full source file the snippet came from (gives imports, class structure, other functions)
+    2. Any locally imported files referenced in the snippet (cross-file context)
+
+    Attaches two new fields:
+    - _full_file_content: str — full source of the flagged file
+    - _related_files: list[dict] — [{path, content}] for imported local files
+    """
+    MAX_FILE_CHARS = 8000   # Cap per file to stay within token limits
+    MAX_RELATED = 3         # Max number of related files to fetch per finding
+
+    for finding in findings:
+        file_path = finding.get("file_path", "")
+        abs_path = os.path.join(repo_dir, file_path.replace("/", os.sep))
+
+        # 1. Full source file
+        full_content = ""
+        if os.path.exists(abs_path):
+            try:
+                with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
+                    full_content = f.read(MAX_FILE_CHARS)
+                    if len(full_content) == MAX_FILE_CHARS:
+                        full_content += "\n... [file truncated for context window]"
+            except Exception as e:
+                logger.warning(f"Could not read full file {abs_path}: {e}")
+
+        finding["_full_file_content"] = full_content
+
+        # 2. Related imported files
+        code_snippet = finding.get("code_snippet", "")
+        related = []
+
+        try:
+            imported_paths = _extract_imported_paths(code_snippet, file_path)
+            for original, rel_path in imported_paths[:MAX_RELATED]:
+                # Try with and without common extensions
+                extensions = ["", ".ts", ".tsx", ".js", ".jsx", ".py", "/index.ts", "/index.js"]
+                for ext in extensions:
+                    candidate = os.path.join(repo_dir, (rel_path + ext).replace("/", os.sep))
+                    if os.path.exists(candidate):
+                        try:
+                            with open(candidate, "r", encoding="utf-8", errors="ignore") as f:
+                                content = f.read(MAX_FILE_CHARS)
+                            related.append({
+                                "path": (rel_path + ext).replace("\\", "/"),
+                                "content": content,
+                            })
+                        except Exception as e:
+                            logger.warning(f"Could not read related file {candidate}: {e}")
+                        break  # found with this extension, stop trying
+        except Exception as e:
+            logger.warning(f"Import extraction failed for {file_path}: {e}")
+
+        finding["_related_files"] = related
+
+    return findings
+
+
 async def scan_repository(
     full_name: str,
     clone_url: str,
@@ -295,6 +385,10 @@ async def scan_repository(
 
         # Step 3: Parse
         findings = parse_findings(raw_output, repo_dir)
+
+        # Step 4: Enrich each finding with full file context + imported file context
+        # MUST happen before shutil.rmtree — repo_dir will be deleted in finally block
+        findings = _enrich_with_file_context(findings, repo_dir)
 
         return findings, repo_dir
 

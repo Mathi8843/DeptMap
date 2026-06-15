@@ -183,10 +183,22 @@ Severity: {severity}
 File: {file_path}, Lines {line_start}-{line_end}
 Raw scanner message: {raw_message}
 
-Vulnerable code:
+─── FLAGGED CODE (lines {line_start}-{line_end}) ───
 ```
 {code_snippet}
 ```
+
+─── FULL FILE CONTEXT ({file_path}) ───
+This is the complete source file the snippet came from. Use it to understand imports, class structure, surrounding functions, and middleware:
+```
+{full_file_content}
+```
+{related_files_section}
+IMPORTANT INSTRUCTIONS FOR THE FIX:
+- Your ai_fix_code must be a working replacement for the FLAGGED CODE ONLY (lines {line_start}-{line_end}), not the entire file.
+- If the fix requires adding an import or helper that is already present in the full file context, do NOT add it again.
+- If the fix depends on a function or variable defined in a related file, reference it correctly — do not redefine it.
+- If context is insufficient to write a complete fix (e.g. the auth system is unclear), write the best fix you can and add a comment like: # NOTE: Adjust 'get_current_user' to match your auth system
 
 Explain this to a non-technical founder and provide a fix. Respond with this exact JSON structure:
 {{
@@ -197,7 +209,7 @@ Explain this to a non-technical founder and provide a fix. Respond with this exa
     "Second consequence",
     "Third consequence"
   ],
-  "ai_fix_code": "The corrected version of the code snippet with the vulnerability fixed."
+  "ai_fix_code": "The corrected version of the FLAGGED CODE LINES ONLY, using correct imports/functions from the full file context."
 }}"""
 
 
@@ -224,6 +236,24 @@ async def explain_finding(finding: dict) -> dict:
     if api_key:
         # Use Groq AI
         try:
+            # Build related files section if cross-file context exists
+            related_files = finding.get("_related_files", [])
+            if related_files:
+                related_section_parts = ["\n─── RELATED IMPORTED FILES ───"]
+                related_section_parts.append(
+                    "These files are imported by the flagged file. Use them to understand shared utilities, auth helpers, and DB connections:\n"
+                )
+                for rf in related_files:
+                    related_section_parts.append(f"── {rf['path']} ──")
+                    related_section_parts.append(f"```\n{rf['content']}\n```\n")
+                related_files_section = "\n".join(related_section_parts) + "\n"
+            else:
+                related_files_section = ""
+
+            full_file_content = finding.get("_full_file_content", "")
+            if not full_file_content:
+                full_file_content = "(Full file content unavailable — fix based on the snippet only)"
+
             prompt = USER_PROMPT_TEMPLATE.format(
                 rule_id=finding.get("semgrep_rule_id", "unknown"),
                 severity=finding.get("severity", "unknown"),
@@ -232,6 +262,8 @@ async def explain_finding(finding: dict) -> dict:
                 line_end=finding.get("line_end", 0),
                 raw_message=finding.get("_raw_message", "No message available"),
                 code_snippet=finding.get("code_snippet", "No code available"),
+                full_file_content=full_file_content,
+                related_files_section=related_files_section,
             )
             
             headers = {
