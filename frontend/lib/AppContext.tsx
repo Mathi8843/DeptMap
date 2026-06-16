@@ -453,7 +453,42 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       triggerWebhookAlert("mathi@debtmap.io", `Vulnerability Fix PR opened: ${title}`, "email");
       return true;
     } catch (err: any) {
-      showToast(err.message || "Failed to apply fix", "error");
+      if (err.message && err.message.toLowerCase().includes("verification failed")) {
+        const force = window.confirm(
+          `${err.message}\n\nWould you like to bypass verification and force create the Pull Request anyway?`
+        );
+        if (force) {
+          try {
+            showToast("Force creating GitHub Pull Request...", "info");
+            const result = await apiFetch(`/issues/${issueId}/fix?bypass=true`, {
+              method: "POST"
+            });
+            setIssues((prev) =>
+              prev.map((i) =>
+                i.id === issueId
+                  ? {
+                      ...i,
+                      status: "fixed",
+                      fix_pr_url: result.pr_url,
+                    }
+                  : i
+              )
+            );
+            showToast(`Pull Request created successfully! (Verification bypassed)`, "success");
+            const targetIssue = issues.find((i) => i.id === issueId);
+            const title = targetIssue ? targetIssue.plain_english_title : "Security issue";
+            const repoName = targetIssue ? targetIssue.repo_name : "repository";
+            triggerWebhookAlert("#security", `Resolved risk: ${title} in ${repoName}. PR opened.`, "slack");
+            triggerWebhookAlert("mathi@debtmap.io", `Vulnerability Fix PR opened: ${title}`, "email");
+            return true;
+          } catch (retryErr: any) {
+            showToast(retryErr.message || "Failed to force apply fix", "error");
+            return false;
+          }
+        }
+      } else {
+        showToast(err.message || "Failed to apply fix", "error");
+      }
       return false;
     }
   };

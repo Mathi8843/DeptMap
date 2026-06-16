@@ -75,7 +75,7 @@ def run_test():
     r = requests.get(f"{BASE_URL}/api/issues?repo_id={repo_id}", headers=HEADERS)
     assert r.status_code == 200, f"Fetch issues failed: {r.text}"
     issues = r.json()
-    assert len(issues) == 2, f"Expected 2 mock issues, got {len(issues)}"
+    assert len(issues) == 4, f"Expected 4 mock issues, got {len(issues)}"
     print(f"  [OK] Loaded {len(issues)} open issues:")
     for issue in issues:
         print(f"    - [{issue['severity'].upper()}] {issue['plain_english_title']} in {issue['file_path']}")

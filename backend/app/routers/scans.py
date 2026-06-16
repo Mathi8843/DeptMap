@@ -17,6 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
 from app.database import get_db
 from app.services import semgrep as semgrep_service
+from app.services import gitleaks as gitleaks_service
 from app.services import groq as groq_service
 from app.services import registry as registry_service
 from app.services.scorer import calculate_scores_by_severity
@@ -155,6 +156,43 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         )
         log(f"[SEMGREP] Scan complete. Found {len(findings)} potential issues.", 40)
 
+        # ── Step 1.5: Secret Detection (Gitleaks) ───────────────────────────
+        log("[GITLEAKS] Running secret detection...", 40)
+        try:
+            secret_findings = await gitleaks_service.scan_repository(
+                full_name=repo["full_name"],
+                clone_url=clone_url,
+                access_token=access_token,
+            )
+            findings.extend(secret_findings)
+            log(f"[GITLEAKS] Secret scan complete. Found {len(secret_findings)} secret(s).", 44)
+        except Exception as e:
+            log(f"[GITLEAKS] Secret scan failed (non-fatal): {e}", 44)
+
+        # ── Step 1.8: Dependency Audit (npm audit + pip-audit + Registry) ───
+        log("[REGISTRY] Auditing packages for vulnerabilities and registry check...", 44)
+        package_results = []
+        try:
+            package_files = semgrep_service.get_package_files(
+                clone_url=clone_url,
+                access_token=access_token,
+            )
+            audit_res = await registry_service.audit_packages(
+                package_files=package_files,
+                clone_url=clone_url,
+                access_token=access_token,
+            )
+            package_results = audit_res.get("packages", [])
+            package_issues = audit_res.get("issues", [])
+            
+            # Add package issues to the findings list so they can be explained by Groq and saved in the issues table!
+            findings.extend(package_issues)
+            
+            dangerous_count = sum(1 for p in package_results if p["status"] == "dangerous")
+            log(f"[REGISTRY] Dependency audit complete. Found {len(package_issues)} package issues. {dangerous_count} dangerous package(s).", 48)
+        except Exception as e:
+            log(f"[REGISTRY] Dependency audit failed (non-fatal): {e}", 48)
+
         # ── Step 2: Groq enrichment ─────────────────────────────────────────
         if findings:
             log(f"[GROQ] Sending {len(findings)} findings to Groq for plain English explanation...", 45)
@@ -228,15 +266,9 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         if resolved_ids:
             db.table("issues").update({"status": "fixed"}).in_("id", resolved_ids).execute()
 
-        # ── Step 4: Package registry audit ──────────────────────────────────
-        log("[REGISTRY] Checking npm/PyPI package registries for hallucinated packages...", 80)
+        # ── Step 4: Package registry save ───────────────────────────────────
+        log("[DB] Saving package audit results to database...", 80)
         try:
-            package_files = semgrep_service.get_package_files(
-                clone_url=clone_url,
-                access_token=access_token,
-            )
-            package_results = await registry_service.audit_packages(package_files)
-
             if package_results:
                 pkg_rows = [
                     {
@@ -255,11 +287,11 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                     for p in package_results
                 ]
                 db.table("packages").insert(pkg_rows).execute()
-
-            dangerous_count = sum(1 for p in package_results if p["status"] == "dangerous")
-            log(f"[REGISTRY] Package audit complete. {dangerous_count} dangerous package(s) found.", 88)
+            
+            dangerous_count = sum(1 for p in package_results if p["status"] == "dangerous") if package_results else 0
+            log(f"[DB] Package results saved. {dangerous_count} dangerous package(s) found.", 88)
         except Exception as e:
-            log(f"[REGISTRY] Package audit failed (non-fatal): {e}", 88)
+            log(f"[DB] Package results save failed (non-fatal): {e}", 88)
 
         # ── Step 5: Calculate health score ──────────────────────────────────
         log("[SCORER] Calculating code health score...", 92)

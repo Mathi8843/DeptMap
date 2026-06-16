@@ -123,12 +123,75 @@ RULE_FALLBACKS: dict[str, dict] = {
         ],
         "fix_hint": "Hash passwords with bcrypt. Use HTTPS for all traffic. Encrypt sensitive fields before storing in the database.",
     },
+    "gitleaks": {
+        "title": "Exposed API key or secret token found in your code",
+        "body": "A live secret token or API key was found hardcoded in your code. Attackers can find this key by scanning your repository and use it to access your accounts or charge you for usage.",
+        "bullets": [
+            "Attackers can misuse your credentials immediately upon code push",
+            "Exposes external API accounts (like OpenAI, Stripe, AWS) to theft and financial risk",
+            "Exposing secrets violates compliance frameworks like SOC 2 and GDPR",
+        ],
+        "fix_hint": "Move the secret to environment variables (e.g., .env file). Revoke the exposed credential immediately and generate a new one.",
+    },
+    "vulnerable-dependency": {
+        "title": "Using a package version with known security vulnerabilities",
+        "body": "Your project depends on a library version that has documented security vulnerabilities (CVEs). Attackers can exploit these known flaws to compromise your application.",
+        "bullets": [
+            "Exposes your application to publicly documented exploits",
+            "Can lead to data leaks, prototype pollution, or denial of service",
+            "Fails security compliance checks (like SOC 2 CC7.2)",
+        ],
+        "fix_hint": "Upgrade the package to the safe version in your manifest file and run install.",
+    },
 }
 
 
 def _match_fallback(rule_id: str) -> dict | None:
-    """Match a Semgrep rule ID to a known fallback explanation."""
+    """Match a Semgrep/Gitleaks rule ID to a known fallback explanation."""
     rule_lower = rule_id.lower()
+    
+    # Vulnerable dependency rule mapping
+    if "vulnerable-dependency" in rule_lower or "package-vulnerability" in rule_lower:
+        return RULE_FALLBACKS["vulnerable-dependency"]
+        
+    # Gitleaks rule mapping
+    if "gitleaks" in rule_lower or "api-key" in rule_lower or "hardcoded-secret" in rule_lower:
+        # Check if we have a specific match like openai, aws, stripe
+        if "openai" in rule_lower:
+            return {
+                "title": "OpenAI API Key exposed in source code",
+                "body": "Your OpenAI API key has been written directly into the code. Attackers can extract this key to use your OpenAI quota, leading to unexpected charges or service suspension.",
+                "bullets": [
+                    "Allows unauthorized access to your OpenAI models and credits",
+                    "Can lead to huge API bill charges on your account",
+                    "Violates API security policies and can cause service termination",
+                ],
+                "fix_hint": "Move your OpenAI API key to a .env file and access it via environment variables (e.g., process.env.OPENAI_API_KEY). Revoke the leaked key immediately.",
+            }
+        elif "aws-access" in rule_lower or "aws" in rule_lower:
+            return {
+                "title": "AWS Access Key ID exposed in source code",
+                "body": "Your AWS credentials have been found in the source code. Anyone who accesses your repository can use these keys to perform actions on your AWS infrastructure, potentially spinning up expensive resources.",
+                "bullets": [
+                    "Attackers can control your AWS resources, databases, and servers",
+                    "Can lead to massive cloud bills and complete system compromise",
+                    "Violates AWS best practices and triggers immediate warnings from AWS Trust Advisor",
+                ],
+                "fix_hint": "Store AWS credentials securely in IAM roles or environment variables. Delete the exposed key in the AWS IAM Console immediately.",
+            }
+        elif "stripe" in rule_lower:
+            return {
+                "title": "Stripe Live API Key exposed in source code",
+                "body": "A live Stripe API key was found in the codebase. An attacker can use this key to make charges, access customer information, or initiate refunds without authorization.",
+                "bullets": [
+                    "Allows unauthorized access to customer records and transactions",
+                    "Risk of fraudulent transactions and unauthorized refunds",
+                    "Severe PCI compliance violation",
+                ],
+                "fix_hint": "Use Stripe restricted keys and store them in environment variables. Roll the exposed Stripe key in your Stripe dashboard immediately.",
+            }
+        return RULE_FALLBACKS["gitleaks"]
+        
     for keyword, data in RULE_FALLBACKS.items():
         if keyword in rule_lower:
             return data

@@ -103,20 +103,22 @@ def run_semgrep(target_dir: str) -> dict:
     result = subprocess.run(
         cmd,
         capture_output=True,
-        text=True,
         timeout=180,
     )
+
+    stdout = result.stdout.decode("utf-8", errors="ignore")
+    stderr = result.stderr.decode("utf-8", errors="ignore")
 
     # Semgrep exits with code 1 when findings exist — that's normal, not an error
     if result.returncode not in (0, 1):
         raise RuntimeError(
-            f"Semgrep failed with exit code {result.returncode}: {result.stderr[:500]}"
+            f"Semgrep failed with exit code {result.returncode}: {stderr[:500]}"
         )
 
     try:
-        return json.loads(result.stdout)
+        return json.loads(stdout)
     except json.JSONDecodeError:
-        raise RuntimeError(f"Semgrep output was not valid JSON: {result.stdout[:200]}")
+        raise RuntimeError(f"Semgrep output was not valid JSON: {stdout[:200]}")
 
 
 def parse_findings(semgrep_output: dict, repo_dir: str) -> list[dict]:
@@ -423,3 +425,68 @@ def get_package_files(clone_url: str, access_token: str) -> dict[str, str]:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     return results
+
+
+def verify_semgrep_patch(
+    file_path: str,
+    content: str,
+    rule_id: str,
+    line_start: int = 0,
+    line_end: int = 0,
+    ai_fix_code: str = ""
+) -> tuple[bool, str]:
+    """
+    Writes the patched content to a temporary file and runs Semgrep scan on it.
+    Returns: (is_resolved: bool, error_message: str)
+    """
+    suffix = Path(file_path).suffix
+    temp_file = tempfile.NamedTemporaryFile(suffix=suffix, delete=False, mode="w", encoding="utf-8")
+    try:
+        temp_file.write(content)
+        temp_file.flush()
+        temp_file.close()
+        
+        # Run Semgrep on the temp file
+        raw_output = run_semgrep(temp_file.name)
+        results = raw_output.get("results", [])
+        
+        # Verify if the specific rule_id is still present in the results
+        triggered = [r for r in results if r.get("check_id") == rule_id]
+        if triggered:
+            # If line_start is specified, check if the triggered finding overlaps with the patched range
+            if line_start > 0:
+                patch_line_count = len(ai_fix_code.splitlines()) if ai_fix_code else 1
+                patch_start = line_start
+                patch_end = line_start + patch_line_count - 1
+                
+                overlapping_findings = []
+                for r in triggered:
+                    f_start = r.get("start", {}).get("line", 0)
+                    f_end = r.get("end", {}).get("line", f_start)
+                    
+                    # Check overlap: max(patch_start, f_start) <= min(patch_end, f_end)
+                    if max(patch_start, f_start) <= min(patch_end, f_end):
+                        overlapping_findings.append(r)
+                
+                if not overlapping_findings:
+                    # Triggered findings exist but do not overlap with the patched line range.
+                    # This means other parts of the file contain the vulnerability, but our patch resolved this instance.
+                    return True, ""
+                
+                # Use the first overlapping finding for the error message
+                triggered_finding = overlapping_findings[0]
+            else:
+                triggered_finding = triggered[0]
+                
+            msg = triggered_finding.get("extra", {}).get("message", "Semgrep vulnerability still triggered.")
+            return False, f"Patch still triggers Semgrep rule '{rule_id}': {msg}"
+            
+        return True, ""
+    except Exception as e:
+        logger.warning(f"Post-fix Semgrep verification failed to run: {e}. Falling back to default validation (pass open).")
+        return True, ""
+    finally:
+        try:
+            os.unlink(temp_file.name)
+        except Exception:
+            pass

@@ -111,6 +111,12 @@ def get_file_content(access_token: str, full_name: str, file_path: str, ref: str
             return "const connectionString = 'postgresql://db_user:SuperSecretPassword123@localhost:5432/saas_db';"
         elif "admin" in file_path:
             return "@router.post('/admin/reset-db')\ndef reset_database():\n    db.clear_all()"
+        elif "openai" in file_path:
+            return "const openaiApiKey = 'sk-proj-a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8s9T0';"
+        elif "package.json" in file_path:
+            return '{\n  "dependencies": {\n    "express": "^4.18.2",\n    "pg": "^8.11.3",\n    "react": "^18.2.0"\n  }\n}'
+        elif "requirements.txt" in file_path:
+            return "requests==2.25.1\ndjango==3.2.1\n"
         return "import express;\nconst app = express();"
     repo = get_repo(access_token, full_name)
     try:

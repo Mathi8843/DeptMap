@@ -131,6 +131,52 @@ def apply_patch(
     return original_content.replace(code_snippet_strip, ai_fix_code_strip)
 
 
+def verify_patch_content(
+    file_path: str,
+    content: str,
+    rule_id: str,
+    original_snippet: str,
+    line_start: int = 0,
+    line_end: int = 0,
+    ai_fix_code: str = ""
+) -> tuple[bool, str]:
+    """
+    Validates that the proposed patch actually resolves the vulnerability.
+    Supports Gitleaks, Package Audits, and Semgrep static analysis rules.
+    """
+    import re
+    rule_lower = rule_id.lower()
+    
+    # 1. Gitleaks / Secret findings
+    if "gitleaks" in rule_lower or "api-key" in rule_lower or "hardcoded-secret" in rule_lower:
+        from app.services.gitleaks import RULES
+        # Compile Gitleaks regexes and verify no secrets are left in the patched lines
+        for rule_name, pattern in RULES.items():
+            if rule_name in rule_lower:
+                regex = re.compile(pattern)
+                if regex.search(content):
+                    return False, f"Verification failed: Hardcoded secret ({rule_name}) is still present in the patched code."
+        return True, ""
+        
+    # 2. Dependency Vulnerabilities
+    if "vulnerable-dependency" in rule_lower:
+        # Check that the original vulnerable version snippet is no longer present in the manifest file
+        if original_snippet and original_snippet.strip() in content:
+            return False, "Verification failed: The vulnerable package declaration is still present in the manifest file."
+        return True, ""
+        
+    # 3. Semgrep static analysis rules
+    from app.services.semgrep import verify_semgrep_patch
+    return verify_semgrep_patch(
+        file_path=file_path,
+        content=content,
+        rule_id=rule_id,
+        line_start=line_start,
+        line_end=line_end,
+        ai_fix_code=ai_fix_code
+    )
+
+
 @router.get("")
 async def list_issues(
     current_user_id: str = Depends(get_current_user_id),
@@ -197,7 +243,12 @@ async def dismiss_issue(issue_id: str, current_user_id: str = Depends(get_curren
 
 
 @router.post("/{issue_id}/fix")
-async def create_fix_pr(issue_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
+async def create_fix_pr(
+    issue_id: str,
+    bypass: bool = Query(False),
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
     """
     Create a GitHub Pull Request with the AI-generated fix applied.
     This is the "one-click fix" feature.
@@ -250,6 +301,81 @@ async def create_fix_pr(issue_id: str, current_user_id: str = Depends(get_curren
             line_start=issue.get("line_start", 0),
             line_end=issue.get("line_end", 0),
         )
+
+        if not bypass:
+            # Post-fix Verification Pipeline
+            verification_ok, error_details = verify_patch_content(
+                file_path=issue["file_path"],
+                content=fixed_content,
+                rule_id=issue["semgrep_rule_id"],
+                original_snippet=issue.get("code_snippet", ""),
+                line_start=issue.get("line_start", 0),
+                line_end=issue.get("line_end", 0),
+                ai_fix_code=issue.get("ai_fix_code", "")
+            )
+            
+            if not verification_ok:
+                # Try to regenerate the fix using Groq on-demand
+                from app.services.groq import explain_finding, get_client
+                regenerated = False
+                if get_client():
+                    logger.info(f"Fix failed validation. Attempting to regenerate fix using Groq for issue {issue_id}...")
+                    finding = {
+                        "semgrep_rule_id": issue["semgrep_rule_id"],
+                        "severity": issue["severity"],
+                        "file_path": issue["file_path"],
+                        "line_start": issue["line_start"],
+                        "line_end": issue["line_end"],
+                        "code_snippet": issue.get("code_snippet", ""),
+                        "_raw_message": issue.get("plain_english_body", ""),
+                        "_full_file_content": original_content,
+                    }
+                    try:
+                        # Clear title to bypass cache and force Groq call
+                        finding_for_groq = finding.copy()
+                        finding_for_groq["plain_english_title"] = ""
+                        
+                        groq_explanation = await explain_finding(finding_for_groq)
+                        new_ai_fix_code = groq_explanation.get("ai_fix_code")
+                        
+                        if new_ai_fix_code and new_ai_fix_code != issue.get("ai_fix_code"):
+                            logger.info(f"Regenerated new fix code from Groq: {new_ai_fix_code}")
+                            new_fixed_content = apply_patch(
+                                original_content=original_content,
+                                code_snippet=issue.get("code_snippet", ""),
+                                ai_fix_code=new_ai_fix_code,
+                                line_start=issue.get("line_start", 0),
+                                line_end=issue.get("line_end", 0),
+                            )
+                            new_ok, new_err = verify_patch_content(
+                                file_path=issue["file_path"],
+                                content=new_fixed_content,
+                                rule_id=issue["semgrep_rule_id"],
+                                original_snippet=issue.get("code_snippet", ""),
+                                line_start=issue.get("line_start", 0),
+                                line_end=issue.get("line_end", 0),
+                                ai_fix_code=new_ai_fix_code
+                            )
+                            if new_ok:
+                                logger.info(f"Regenerated fix passed verification!")
+                                fixed_content = new_fixed_content
+                                verification_ok = True
+                                regenerated = True
+                                # Update database issue with the working fix
+                                db.table("issues").update({
+                                    "ai_fix_code": new_ai_fix_code,
+                                    "plain_english_title": groq_explanation.get("plain_english_title", issue["plain_english_title"]),
+                                    "plain_english_body": groq_explanation.get("plain_english_body", issue["plain_english_body"]),
+                                    "impact_bullets": groq_explanation.get("impact_bullets", issue["impact_bullets"]),
+                                }).eq("id", issue_id).execute()
+                    except Exception as ex:
+                        logger.warning(f"Failed to regenerate fix using Groq: {ex}")
+                
+                if not verification_ok:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Fix verification failed: {error_details}"
+                    )
 
         # Create the PR
         pr_result = github_service.create_fix_pull_request(
