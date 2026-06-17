@@ -31,7 +31,7 @@ const MOCK_FALLBACK_REPOS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { repos, issues, connectRepo, triggerScan, scanLogs, scanProgress, isScanning } = useApp();
+  const { user, repos, issues, connectRepo, triggerScan, scanLogs, scanProgress, isScanning, scanStatus, showToast } = useApp();
 
   const [step, setStep] = useState(1);
   const [githubConnected, setGithubConnected] = useState(false);
@@ -39,7 +39,6 @@ export default function OnboardingPage() {
   const [selectedGenerator, setSelectedGenerator] = useState<string>("Lovable");
   const [scanStarted, setScanStarted] = useState(false);
   const [scanDone, setScanDone] = useState(false);
-  const [hasBeenScanning, setHasBeenScanning] = useState(false);
   
   // Real repositories fetched from user's GitHub account
   const [reposList, setReposList] = useState<any[]>([]);
@@ -48,7 +47,11 @@ export default function OnboardingPage() {
   // Auto-detect if user already authorized GitHub on mount
   useEffect(() => {
     const saved = getSavedUser();
-    if (saved && saved.has_github_token) {
+    const isMockToken = saved?.session_token === "mock-session-token";
+    const isProduction = process.env.NODE_ENV === "production";
+    
+    // Only auto-skip if github is connected and it's not a mock token in production
+    if (saved && saved.has_github_token && !(isMockToken && isProduction)) {
       setTimeout(() => {
         setGithubConnected(true);
         setStep(2);
@@ -58,17 +61,16 @@ export default function OnboardingPage() {
 
   // Synchronize scanStarted if the application is already scanning
   useEffect(() => {
-    if (isScanning) {
+    if (isScanning || scanStatus === "queued" || scanStatus === "running") {
       setTimeout(() => {
         setScanStarted(true);
-        setHasBeenScanning(true);
       }, 0);
     }
-  }, [isScanning]);
+  }, [isScanning, scanStatus]);
 
-  // Handle automatic transition to Step 4 when scan finishes
+  // Handle automatic transition to Step 4 when scan finishes successfully
   useEffect(() => {
-    if (hasBeenScanning && !isScanning) {
+    if (scanStatus === "completed") {
       setTimeout(() => {
         setScanDone(true);
       }, 0);
@@ -77,7 +79,7 @@ export default function OnboardingPage() {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [hasBeenScanning, isScanning]);
+  }, [scanStatus]);
 
   // Fetch repositories from backend once GitHub is connected
   useEffect(() => {
@@ -87,33 +89,37 @@ export default function OnboardingPage() {
         try {
           const fetched = await apiFetch("/repos/github-list");
           setReposList(fetched);
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to load GitHub repos:", err);
-          // Fallback to helpful placeholder structure if offline or error
-          setReposList(MOCK_FALLBACK_REPOS);
+          showToast(err.message || "Failed to load GitHub repositories. Please connect your GitHub account again.", "error");
+          setReposList([]);
+          
+          // Re-authenticate if token is missing or invalid
+          if (err.status === 400 || (err.message && (err.message.includes("token") || err.message.includes("authenticate")))) {
+            setGithubConnected(false);
+            setStep(1);
+          }
         } finally {
           setLoadingRepos(false);
         }
       };
       fetchGithubRepos();
     }
-  }, [githubConnected]);
+  }, [githubConnected, showToast]);
 
   const handleConnectGitHub = async () => {
     try {
       setStatusMessage("Retrieving authorization link from server...");
-      const data = await apiFetch("/auth/github");
+      const data = await apiFetch(`/auth/github?current_user_id=${user.id}`);
       if (data && data.auth_url) {
         window.location.href = data.auth_url;
       } else {
         throw new Error("No authorization URL returned from backend");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("GitHub authorization redirect failed:", err);
-      // Fallback for demo purposes
-      setGithubConnected(true);
-      setReposList(MOCK_FALLBACK_REPOS);
-      setTimeout(() => setStep(2), 600);
+      showToast(err.message || "Failed to retrieve GitHub connection link. Please check your network connection.", "error");
+      setStatusMessage("Authorize DebtMap on GitHub");
     }
   };
 
@@ -403,13 +409,25 @@ export default function OnboardingPage() {
                 >
                   ▶ Start Security Scan
                 </button>
+              ) : scanStatus === "failed" ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-3 py-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-[#ff5757] font-bold">
+                    <AlertTriangle size={18} /> Scan failed. Please check the terminal logs.
+                  </div>
+                  <button
+                    onClick={handleStartScan}
+                    className="w-full py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-mono text-[11px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer"
+                  >
+                    🔄 Retry Scan
+                  </button>
+                </div>
               ) : scanDone ? (
                 <div className="flex items-center justify-center gap-3 py-4 bg-[#b8ff57]/10 border border-[#b8ff57]/20 rounded-xl text-[#b8ff57] font-bold">
                   <Check size={18} /> Scan complete — loading results...
                 </div>
               ) : (
                 <div className="text-center text-sm text-[#44446a] font-mono animate-pulse">
-                  Scanning in progress...
+                  Scanning in progress... ({scanProgress}%)
                 </div>
               )}
             </div>

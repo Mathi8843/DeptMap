@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "@/lib/AppContext";
-import { X, GitBranch, Shield, Globe, Terminal } from "lucide-react";
+import { X, GitBranch, Shield, Globe, Terminal, Loader2, AlertTriangle } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface ConnectRepoModalProps {
   isOpen: boolean;
@@ -9,25 +10,85 @@ interface ConnectRepoModalProps {
 }
 
 export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalProps) {
-  const { connectRepo } = useApp();
-  const [fullName, setFullName] = useState("");
+  const { user, repos, connectRepo } = useApp();
+  const [githubRepos, setGithubRepos] = useState<any[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState("");
   const [language, setLanguage] = useState("TypeScript");
   const [generator, setGenerator] = useState("Lovable");
-  const [isPrivate, setIsPrivate] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Keep a stable ref for connected repo names so the effect doesn't re-run
+  // every time the repos array reference changes in context (avoids infinite loop).
+  const connectedNamesRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen || !user.has_github_token) return;
+    // Snapshot the currently connected names at the moment the modal opens.
+    connectedNamesRef.current = repos.map((r) => r.full_name);
+    const fetchRepos = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const list = await apiFetch("/repos/github-list");
+        setGithubRepos(list || []);
+
+        // Pre-select first unconnected repo using the stable ref (no dep needed)
+        if (list && list.length > 0) {
+          const available = list.filter(
+            (r: any) => !connectedNamesRef.current.includes(r.full_name)
+          );
+          if (available.length > 0) {
+            setSelectedRepo(available[0].full_name);
+          }
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to load repositories from GitHub.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRepos();
+    // Only re-run when the modal is opened or the github token status changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user.has_github_token]);
 
   if (!isOpen) return null;
 
+  const handleConnectGitHub = async () => {
+    try {
+      const data = await apiFetch(`/auth/github?current_user_id=${user.id}`);
+      if (data && data.auth_url) {
+        sessionStorage.setItem("auth_redirect", "/dashboard");
+        window.location.href = data.auth_url;
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to retrieve GitHub connection link.");
+    }
+  };
+
+  const connectedNames = repos.map((r) => r.full_name);
+  const availableRepos = githubRepos.filter((r) => !connectedNames.includes(r.full_name));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName || !fullName.includes("/")) {
-      alert("Please enter a repository name in the format 'username/repo-name'");
+    if (!selectedRepo) {
+      alert("Please select a repository to connect.");
       return;
     }
-    connectRepo(fullName, language, generator, isPrivate);
+    const repoInfo = githubRepos.find((r) => r.full_name === selectedRepo);
+    connectRepo(
+      selectedRepo,
+      repoInfo?.language || language,
+      generator,
+      repoInfo?.is_private ?? true
+    );
     onClose();
-    // reset form
-    setFullName("");
+    setSelectedRepo("");
   };
+
+  // Find info of the currently selected repo in dropdown
+  const selectedRepoInfo = githubRepos.find((r) => r.full_name === selectedRepo);
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
@@ -58,47 +119,84 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Repository Name */}
-          <div>
-            <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 mb-1.5">
-              GitHub Repo Path
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                placeholder="e.g. mathivanan/saas-app"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-slate-950/80 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
-              />
+        {/* Not Connected State */}
+        {!user.has_github_token && (
+          <div className="space-y-4 text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-center mx-auto text-indigo-400">
+              <GitBranch size={22} className="animate-pulse" />
             </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white">GitHub Account Not Connected</h3>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+                You must connect your GitHub account to fetch and import repositories.
+              </p>
+            </div>
+            <button
+              onClick={handleConnectGitHub}
+              className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg"
+            >
+              Connect GitHub Account
+            </button>
           </div>
+        )}
 
-          {/* Grid fields */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Primary Language */}
+        {/* Connected State Form */}
+        {user.has_github_token && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Repository Select */}
             <div>
               <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 mb-1.5">
-                Main Language
+                Select Repository
               </label>
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="w-full bg-slate-950/80 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
-              >
-                {["TypeScript", "Python", "JavaScript", "Go", "Rust", "Ruby", "HTML/CSS"].map((l) => (
-                  <option key={l} value={l} className="bg-slate-950 text-white">{l}</option>
-                ))}
-              </select>
+              
+              {loading && (
+                <div className="w-full bg-slate-950/40 border border-white/5 rounded-xl px-4 py-3 flex items-center gap-2.5 justify-center">
+                  <Loader2 className="animate-spin text-indigo-400" size={16} />
+                  <span className="text-xs text-slate-400 font-mono">Fetching repos from GitHub...</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 flex items-start gap-2.5 text-xs text-rose-400 leading-normal">
+                  <AlertTriangle size={15} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div>{error}</div>
+                    <button 
+                      type="button" 
+                      onClick={handleConnectGitHub}
+                      className="underline font-bold mt-1 text-[10px] block"
+                    >
+                      Re-authorize GitHub
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!loading && !error && availableRepos.length === 0 && (
+                <div className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-4 text-center text-xs text-slate-400 font-mono leading-relaxed">
+                  All repositories on your GitHub account are already connected!
+                </div>
+              )}
+
+              {!loading && !error && availableRepos.length > 0 && (
+                <select
+                  value={selectedRepo}
+                  onChange={(e) => setSelectedRepo(e.target.value)}
+                  className="w-full bg-slate-950/80 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+                >
+                  {availableRepos.map((r) => (
+                    <option key={r.full_name} value={r.full_name}>
+                      {r.full_name} ({r.is_private ? "Private" : "Public"})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* AI Generator Tool */}
             <div>
               <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 mb-1.5">
-                AI Coding Tool
+                AI Coding Tool used to build this
               </label>
               <select
                 value={generator}
@@ -110,45 +208,39 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
                 ))}
               </select>
             </div>
-          </div>
 
-          {/* Privacy Toggle */}
-          <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-white/5 rounded-xl">
-            <div className="flex items-center gap-2.5">
-              {isPrivate ? (
-                <Shield size={14} className="text-indigo-400" />
-              ) : (
-                <Globe size={14} className="text-emerald-400" />
-              )}
-              <div>
-                <div className="text-xs font-semibold text-white">Private Repository</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Restrict access to authenticated users</div>
+            {/* Repo Privacy Details Indicator */}
+            {selectedRepoInfo && (
+              <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-white/5 rounded-xl font-sans text-xs">
+                <div className="flex items-center gap-2.5">
+                  {selectedRepoInfo.is_private ? (
+                    <Shield size={14} className="text-indigo-400" />
+                  ) : (
+                    <Globe size={14} className="text-emerald-400" />
+                  )}
+                  <div>
+                    <div className="font-semibold text-white">
+                      {selectedRepoInfo.is_private ? "Private Repository" : "Public Repository"}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Detected language: {selectedRepoInfo.language || "Unknown"}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsPrivate(!isPrivate)}
-              className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${
-                isPrivate ? "bg-indigo-500" : "bg-slate-800"
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                  isPrivate ? "translate-x-4" : "translate-x-0"
-                }`}
-              />
-            </button>
-          </div>
+            )}
 
-          {/* Submit */}
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98]"
-          >
-            <Terminal size={12} />
-            Connect & Run Audit
-          </button>
-        </form>
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading || availableRepos.length === 0}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Terminal size={12} />
+              Connect & Run Audit
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

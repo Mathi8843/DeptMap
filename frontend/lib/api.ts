@@ -18,7 +18,7 @@ export function getSavedUser(): SavedUser | null {
   if (!userStr) return null;
   try {
     return JSON.parse(userStr);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -40,7 +40,7 @@ export function logoutUser() {
  */
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const user = getSavedUser();
-  const sessionToken = user?.session_token || "mock-session-token";
+  const sessionToken = user?.session_token;
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   
@@ -53,13 +53,19 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   // Construct URL
   const url = new URL(apiPath, apiUrl);
 
+  const headers: Record<string, string> = {
+    "Accept": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (sessionToken && sessionToken !== "cookie-session") {
+    headers["Authorization"] = `Bearer ${sessionToken}`;
+  }
+
   const response = await fetch(url.toString(), {
     ...options,
-    headers: {
-      "Accept": "application/json",
-      "Authorization": `Bearer ${sessionToken}`,
-      ...options.headers,
-    },
+    credentials: "include",
+    headers,
   });
 
   if (!response.ok) {

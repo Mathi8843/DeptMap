@@ -9,13 +9,14 @@
 
 CREATE TABLE IF NOT EXISTS public.users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    github_id       TEXT UNIQUE NOT NULL,
+    github_id       TEXT UNIQUE,
     email           TEXT NOT NULL,
     name            TEXT,
     avatar_url      TEXT,
     github_access_token TEXT,  -- Store encrypted in production
     plan            TEXT NOT NULL DEFAULT 'free'
                         CHECK (plan IN ('free', 'pro', 'team', 'enterprise')),
+    plan_expires_at TIMESTAMPTZ,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/lib/AppContext";
 import ConnectRepoModal from "./ConnectRepoModal";
 import {
@@ -11,6 +11,7 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, repos, issues, upgradePlan, theme, setTheme, logout } = useApp();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
@@ -26,22 +27,28 @@ export default function Sidebar() {
     }
   };
 
-  const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, section: "overview" },
-    { 
-      label: "Issues", 
-      href: "/issues", 
-      icon: AlertTriangle, 
-      section: "overview", 
-      badge: openIssues.length,
-      isCriticalBadge: criticalOpen > 0
-    },
-    { label: "Packages", href: "/packages", icon: Package, section: "overview" },
-    { label: "Trend", href: "/trend", icon: TrendingUp, section: "overview" },
-    { label: "SOC 2 Report", href: "/soc2", icon: Shield, section: "overview" },
-    { label: "Repositories", href: "/repos", icon: GitBranch, section: "manage" },
-    { label: "Settings", href: "/settings", icon: Settings, section: "manage" },
-  ];
+  const isAdmin = user.email === "mathi@debtmap.io" || user.email === "admin@debtmap.io" || user.email?.endsWith("@debtmap.io");
+
+  const navItems = isAdmin 
+    ? [
+        { label: "System Insights", href: "/admin", icon: LayoutDashboard, section: "admin" }
+      ]
+    : [
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, section: "overview" },
+        { 
+          label: "Issues", 
+          href: "/issues", 
+          icon: AlertTriangle, 
+          section: "overview", 
+          badge: openIssues.length,
+          isCriticalBadge: criticalOpen > 0
+        },
+        { label: "Packages", href: "/packages", icon: Package, section: "overview" },
+        { label: "Trend", href: "/trend", icon: TrendingUp, section: "overview" },
+        { label: "SOC 2 Report", href: "/soc2", icon: Shield, section: "overview" },
+        { label: "Repositories", href: "/repos", icon: GitBranch, section: "manage" },
+        { label: "Settings", href: "/settings", icon: Settings, section: "manage" },
+      ];
 
   return (
     <aside className="w-64 flex-shrink-0 bg-bg-panel border-r border-border-subtle flex flex-col h-full overflow-y-auto">
@@ -75,7 +82,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-6 space-y-6">
-        {(["overview", "manage"] as const).map((section) => {
+        {(isAdmin ? (["admin"] as const) : (["overview", "manage"] as const)).map((section) => {
           const items = navItems.filter((i) => i.section === section);
           return (
             <div key={section} className="space-y-1">
@@ -118,52 +125,54 @@ export default function Sidebar() {
         })}
 
         {/* Repos quick access */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-6 mb-2">
-            <span className="font-mono text-[10px] font-bold tracking-[2px] uppercase text-text-muted">
-              Workspaces
-            </span>
-            <button 
-              onClick={() => setConnectModalOpen(true)}
-              className="text-text-muted hover:text-indigo-500 transition-colors cursor-pointer"
-              title="Connect repository"
-            >
-              <Plus size={14} />
-            </button>
+        {!isAdmin && repos.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-6 mb-2">
+              <span className="font-mono text-[10px] font-bold tracking-[2px] uppercase text-text-muted">
+                Workspaces
+              </span>
+              <button 
+                onClick={() => setConnectModalOpen(true)}
+                className="text-text-muted hover:text-indigo-500 transition-colors cursor-pointer"
+                title="Connect repository"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            <div className="max-h-[160px] overflow-y-auto px-3 space-y-0.5">
+              {repos.map((repo) => {
+                const name = repo.full_name.split("/")[1];
+                const cnt = issues.filter((i) => i.repo_id === repo.id && i.status === "open").length;
+                return (
+                  <Link
+                    key={repo.id}
+                    href={`/repos`}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-text-sub hover:text-text-main hover:bg-border-subtle transition-all animate-fade-in"
+                  >
+                    {repo.is_private ? (
+                      <Lock size={12} className="text-text-muted flex-shrink-0" />
+                    ) : (
+                      <Globe size={12} className="text-text-muted flex-shrink-0" />
+                    )}
+                    <span className="flex-1 truncate font-mono text-[11px]">{name}</span>
+                    {cnt > 0 && (
+                      <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500">
+                        {cnt}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-          <div className="max-h-[160px] overflow-y-auto px-3 space-y-0.5">
-            {repos.map((repo) => {
-              const name = repo.full_name.split("/")[1];
-              const cnt = issues.filter((i) => i.repo_id === repo.id && i.status === "open").length;
-              return (
-                <Link
-                  key={repo.id}
-                  href={`/repos`}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-text-sub hover:text-text-main hover:bg-border-subtle transition-all animate-fade-in"
-                >
-                  {repo.is_private ? (
-                    <Lock size={12} className="text-text-muted flex-shrink-0" />
-                  ) : (
-                    <Globe size={12} className="text-text-muted flex-shrink-0" />
-                  )}
-                  <span className="flex-1 truncate font-mono text-[11px]">{name}</span>
-                  {cnt > 0 && (
-                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-500">
-                      {cnt}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+        )}
       </nav>
 
       {/* User profile footer */}
       <div className="p-5 border-t border-border-subtle space-y-4">
-        {user.plan === "free" && (
+        {user.plan === "free" && !isAdmin && (
           <button
-            onClick={() => upgradePlan("pro")}
+            onClick={() => router.push("/settings?upgrade=pro")}
             className="w-full flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold tracking-[1px] uppercase py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10 active:scale-95"
           >
             <Zap size={11} /> Upgrade to Pro

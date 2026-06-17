@@ -4,8 +4,9 @@ Handles JWT token generation, verification, and FastAPI dependencies.
 """
 from datetime import datetime, timedelta, timezone
 import logging
+import uuid
 import jwt
-from fastapi import Depends, HTTPException, Security
+from fastapi import HTTPException, Request, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.config import get_settings
 
@@ -23,6 +24,29 @@ def create_session_token(user_id: str) -> str:
         "iat": datetime.now(timezone.utc),
     }
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+def create_oauth_state(user_id: str | None = None) -> str:
+    """Create a short-lived signed state token for GitHub OAuth redirects."""
+    payload = {
+        "purpose": "github_oauth_state",
+        "sub": user_id or "none",
+        "nonce": uuid.uuid4().hex,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+def verify_oauth_state(state: str) -> str | None:
+    """Verify GitHub OAuth state and return the optional linked user_id."""
+    try:
+        payload = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
+        if payload.get("purpose") != "github_oauth_state":
+            raise HTTPException(status_code=400, detail="Invalid OAuth state")
+        user_id = payload.get("sub")
+        return None if not user_id or user_id == "none" else user_id
+    except jwt.PyJWTError as e:
+        logger.warning(f"OAuth state verification failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
 
 def verify_session_token(token: str) -> str:
     """
@@ -42,14 +66,17 @@ def verify_session_token(token: str) -> str:
         logger.warning(f"JWT verification failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid session token")
 
-def get_current_user_id(credentials: HTTPAuthorizationCredentials = Security(security)) -> str:
+def get_current_user_id(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Security(security),
+) -> str:
     """
     FastAPI dependency to secure endpoints.
     Extracts the Bearer token from the request and resolves it to a user_id.
     """
-    if not credentials:
-        # Fallback to query param in development for tests, or raise 401
-        # Let's strictly require header credentials to enforce security.
+    token = credentials.credentials if credentials else request.cookies.get("debtmap_session")
+
+    if not token:
         raise HTTPException(status_code=401, detail="Not authenticated: Bearer token missing")
         
-    return verify_session_token(credentials.credentials)
+    return verify_session_token(token)

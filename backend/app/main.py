@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, repos, scans, issues, packages, trend, soc2, webhooks
+from app.routers import auth, repos, scans, issues, packages, trend, soc2, webhooks, admin
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -41,8 +41,8 @@ app = FastAPI(
     title="DebtMap API",
     description="AI-powered code security scanner for non-technical founders",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
     lifespan=lifespan,
 )
 
@@ -72,6 +72,7 @@ app.include_router(packages.router)
 app.include_router(trend.router)
 app.include_router(soc2.router)
 app.include_router(webhooks.router)
+app.include_router(admin.router)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
@@ -81,7 +82,7 @@ async def root():
         "app": "DebtMap API",
         "version": "1.0.0",
         "status": "online",
-        "docs": "/docs",
+        "docs": None if settings.is_production else "/docs",
     }
 
 

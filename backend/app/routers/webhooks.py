@@ -113,21 +113,6 @@ async def handle_push_event(data: dict, db) -> dict:
             "log_messages": [f"[SYSTEM] Webhook triggered scan for push to {branch}..."],
         }).execute()
 
-        # Launch background scan (import here to avoid circular imports at module load)
-        from app.routers.scans import run_scan_pipeline
-
-        # Get user's GitHub token
-        user_res = db.table("users").select("github_access_token").eq("id", repo["user_id"]).execute()
-        encrypted_token = user_res.data[0].get("github_access_token", "") if user_res.data else ""
-        access_token = decrypt_token(encrypted_token)
-
-        asyncio.create_task(run_scan_pipeline(
-            scan_id=scan_id,
-            repo={"id": repo["id"], "full_name": repo["full_name"]},
-            access_token=access_token,
-            db=db,
-        ))
-
         queued_scans.append(scan_id)
         logger.info(f"Queued scan {scan_id} for {full_name} (push by {data.get('pusher', {}).get('name', 'unknown')})")
 

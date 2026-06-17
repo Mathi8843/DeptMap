@@ -1,15 +1,63 @@
 "use client";
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Loader2 } from "lucide-react";
+import { useApp } from "@/lib/AppContext";
+import { apiFetch } from "@/lib/api";
 
 function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { login } = useApp();
   const [status, setStatus] = useState("Authenticating you with GitHub...");
   const [error, setError] = useState<string | null>(null);
+  const exchangeAttempted = useRef(false);
 
   useEffect(() => {
+    if (exchangeAttempted.current) return;
+    exchangeAttempted.current = true;
+
+    const authSuccess = searchParams.get("auth") === "success";
+    
+    // 1. Production Cookie Session Redirect Flow
+    if (authSuccess) {
+      const fetchProfileAndLogin = async () => {
+        try {
+          setStatus("Restoring session profile...");
+          const profile = await apiFetch("/auth/me");
+          
+          const userData = {
+            id: profile.id,
+            name: profile.name,
+            email: profile.email,
+            avatar_url: profile.avatar_url,
+            plan: profile.plan,
+            session_token: "cookie-session",
+            has_github_token: profile.has_github_token
+          };
+
+          login(userData);
+
+          setTimeout(() => {
+            setStatus("Authentication successful! Redirecting...");
+          }, 0);
+
+          const timer = setTimeout(() => {
+            const redirectPath = sessionStorage.getItem("auth_redirect") || 
+              (profile.email === "mathi@debtmap.io" || profile.email === "admin@debtmap.io" || profile.email?.endsWith("@debtmap.io") ? "/admin" : "/onboarding");
+            sessionStorage.removeItem("auth_redirect");
+            router.push(redirectPath);
+          }, 1000);
+          return () => clearTimeout(timer);
+        } catch (err: any) {
+          console.error("Failed to fetch profile on auth success:", err);
+          setError("Failed to fetch user profile after authentication. Please try signing in again.");
+        }
+      };
+      fetchProfileAndLogin();
+      return;
+    }
+
     const userId = searchParams.get("user_id");
     const name = searchParams.get("name");
     const email = searchParams.get("email");
@@ -18,38 +66,45 @@ function AuthCallbackInner() {
     const sessionToken = searchParams.get("session_token");
     const hasGithubToken = searchParams.get("has_github_token") === "true";
 
+    // 2. Query Params Flow (Development fallback)
     if (userId && email) {
-      // Save user profile to localStorage directly
-      localStorage.setItem("debtmap_user", JSON.stringify({
+      const userData = {
         id: userId,
         name: name || "User",
         email: email,
         avatar_url: avatarUrl || null,
-        plan: plan || "free",
+        plan: (plan || "free") as any,
         session_token: sessionToken || undefined,
         has_github_token: hasGithubToken
-      }));
+      };
+
+      login(userData);
 
       setTimeout(() => {
-        setStatus("Authentication successful! Redirecting to onboarding...");
+        setStatus("Authentication successful! Redirecting...");
       }, 0);
       
       const timer = setTimeout(() => {
-        router.push("/onboarding");
+        const redirectPath = sessionStorage.getItem("auth_redirect") || 
+          (email === "mathi@debtmap.io" || email === "admin@debtmap.io" || email.endsWith("@debtmap.io") ? "/admin" : "/onboarding");
+        sessionStorage.removeItem("auth_redirect");
+        router.push(redirectPath);
       }, 1000);
       return () => clearTimeout(timer);
     }
 
     const code = searchParams.get("code");
+    const state = searchParams.get("state") || "";
     if (!code) {
       setError("No authorization code found from GitHub. Please try signing in again.");
       return;
     }
 
+    // 3. Frontend Exchange Code Flow
     const exchangeCode = async () => {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(`${apiUrl}/api/auth/github/callback?code=${code}`);
+        const response = await fetch(`${apiUrl}/api/auth/github/callback?code=${code}&state=${encodeURIComponent(state)}`);
         
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
@@ -58,8 +113,7 @@ function AuthCallbackInner() {
 
         const data = await response.json();
         
-        // Save user profile to localStorage
-        localStorage.setItem("debtmap_user", JSON.stringify({
+        const userData = {
           id: data.user_id,
           name: data.name,
           email: data.email,
@@ -67,15 +121,19 @@ function AuthCallbackInner() {
           plan: data.plan,
           session_token: data.session_token,
           has_github_token: true
-        }));
+        };
+
+        login(userData);
 
         setTimeout(() => {
-          setStatus("Authentication successful! Redirecting to onboarding...");
+          setStatus("Authentication successful! Redirecting...");
         }, 0);
         
-        // Brief delay for premium user feel
         const timer = setTimeout(() => {
-          router.push("/onboarding");
+          const redirectPath = sessionStorage.getItem("auth_redirect") || 
+            (data.email === "mathi@debtmap.io" || data.email === "admin@debtmap.io" || data.email?.endsWith("@debtmap.io") ? "/admin" : "/onboarding");
+          sessionStorage.removeItem("auth_redirect");
+          router.push(redirectPath);
         }, 1000);
         return () => clearTimeout(timer);
 
@@ -86,7 +144,7 @@ function AuthCallbackInner() {
     };
 
     exchangeCode();
-  }, [searchParams, router]);
+  }, [searchParams, router, login]);
 
   return (
     <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl">

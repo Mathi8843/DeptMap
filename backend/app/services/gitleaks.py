@@ -154,7 +154,7 @@ def run_regex_fallback_scanner(repo_dir: str) -> list[dict]:
                 continue
             
             # Simple text extension check (skip image, zip, pdf, etc.)
-            ext = os.path.splitext(file).lower()
+            ext = os.path.splitext(file)[1].lower()
             if ext in {".png", ".jpg", ".jpeg", ".gif", ".ico", ".zip", ".pdf", ".tar", ".gz", ".mp3", ".mp4", ".woff", ".woff2", ".eot", ".ttf"}:
                 continue
                 

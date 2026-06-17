@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { apiFetch, getSavedUser, saveUser, logoutUser, SavedUser } from "./api";
 
 export interface Repo {
@@ -74,9 +74,11 @@ interface AppContextType {
   removeToast: (id: string) => void;
   triggerWebhookAlert: (channel: string, message: string, type: WebhookAlert["type"]) => void;
   
+  isInitializing: boolean;
   isScanning: boolean;
   scanProgress: number;
   scanLogs: string[];
+  scanStatus: "idle" | "queued" | "running" | "completed" | "failed";
   triggerScan: (repoId?: string) => Promise<void>;
   
   connectRepo: (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan?: boolean) => void;
@@ -93,16 +95,18 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const EMPTY_USER: SavedUser = {
+  id: "",
+  name: "",
+  email: "",
+  avatar_url: null,
+  plan: "free",
+  session_token: undefined,
+  has_github_token: false
+};
+
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<SavedUser>({
-    id: "00000000-0000-0000-0000-000000000000",
-    name: "Mathivanan G",
-    email: "mathi@debtmap.io",
-    avatar_url: null,
-    plan: "pro" as const,
-    session_token: "mock-session-token",
-    has_github_token: true
-  });
+  const [user, setUser] = useState<SavedUser>(() => EMPTY_USER);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -115,10 +119,25 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   const [soc2Report, setSoc2Report] = useState<any>(null);
   const [trendData, setTrendData] = useState<any[]>([]);
   
+  // App initialization states
+  const [isInitializing, setIsInitializing] = useState(true);
+  
   // Scanning States
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanLogs, setScanLogs] = useState<string[]>([]);
+  const [scanStatus, setScanStatus] = useState<"idle" | "queued" | "running" | "completed" | "failed">("idle");
+
+  // Stable refs so useCallback closures can read latest values without re-creating the callback
+  const isScanningRef = useRef(false);
+  const reposRef = useRef<Repo[]>([]);
+  // triggerScanRef lets connectRepo call triggerScan before it is declared,
+  // avoiding the circular-dependency / temporal-dead-zone issue.
+  const triggerScanRef = useRef<(repoId?: string) => Promise<void>>(async () => {});
+
+  // Keep refs in sync with state — these useEffects must come AFTER the ref declarations above
+  useEffect(() => { reposRef.current = repos; }, [repos]);
+  useEffect(() => { isScanningRef.current = isScanning; }, [isScanning]);
 
   // Apply theme class to HTML root
   const setTheme = (t: "dark" | "light") => {
@@ -143,47 +162,107 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   }, [theme]);
   
-  // Load saved user from localstorage on mount
+  // Unified authentication and data loading initialization on mount
   useEffect(() => {
-    const saved = getSavedUser();
-    if (saved) {
-      setUser(saved);
-    } else {
-      // Save default user initially to trigger auto-creation
-      const defaultUser: SavedUser = {
-        id: "00000000-0000-0000-0000-000000000000",
-        name: "Mathivanan G",
-        email: "mathi@debtmap.io",
-        avatar_url: null,
-        plan: "pro" as const,
-        session_token: "mock-session-token",
-        has_github_token: true
-      };
-      setUser(defaultUser);
-      localStorage.setItem("debtmap_user", JSON.stringify(defaultUser));
-    }
+    const initAuth = async () => {
+      setIsInitializing(true);
+      
+      // 1. Try to load saved user from localStorage for instant UI rendering
+      const saved = getSavedUser();
+      if (saved) {
+        setUser(saved);
+      } else {
+        setUser(EMPTY_USER);
+      }
+
+      // 2. Validate current session with the backend (check if cookie or token is valid)
+      try {
+        const profile = await apiFetch("/auth/me");
+        const updatedUser: SavedUser = {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          avatar_url: profile.avatar_url,
+          plan: profile.plan,
+          session_token: saved?.session_token || "cookie-session",
+          has_github_token: profile.has_github_token
+        };
+        setUser(updatedUser);
+        saveUser(updatedUser);
+
+        // 3. Load user dashboard data
+        const dbRepos = await apiFetch("/repos");
+        setRepos(dbRepos);
+        
+        const dbIssues = await apiFetch("/issues");
+        const formattedIssues = dbIssues.map((i: any) => ({
+          id: i.id,
+          repo_id: i.repo_id,
+          repo_name: i.repos?.full_name?.split("/")[1] || "repo",
+          semgrep_rule_id: i.semgrep_rule_id,
+          severity: i.severity,
+          file_path: i.file_path,
+          line_start: i.line_start,
+          line_end: i.line_end,
+          code_snippet: i.code_snippet || "",
+          plain_english_title: i.plain_english_title || i.semgrep_rule_id,
+          plain_english_body: i.plain_english_body || "A security issue has been found.",
+          impact_bullets: i.impact_bullets || [],
+          ai_fix_code: i.ai_fix_code || "",
+          status: i.status,
+          fix_pr_url: i.fix_pr_url,
+          created_at: i.created_at
+        }));
+        setIssues(formattedIssues);
+        
+        const dbPackages = await apiFetch("/packages");
+        const formattedPackages = dbPackages.map((p: any) => ({
+          id: p.id,
+          package_name: p.package_name,
+          package_manager: p.package_manager,
+          status: p.status,
+          exists_in_registry: p.exists_in_registry,
+          weekly_downloads: p.weekly_downloads,
+          reason: p.reason,
+          alternative_name: p.alternative_name
+        }));
+        setPackages(formattedPackages);
+
+        try {
+          const dbSoc2 = await apiFetch("/soc2");
+          setSoc2Report(dbSoc2);
+        } catch (soc2Err) {
+          console.error("Failed to fetch SOC 2 report:", soc2Err);
+        }
+
+        try {
+          const dbTrend = await apiFetch("/trend");
+          setTrendData(dbTrend);
+        } catch (trendErr) {
+          console.error("Failed to fetch trend data:", trendErr);
+        }
+      } catch (err: any) {
+        console.error("Session verification failed on mount:", err);
+        // If unauthorized (401), clear session details
+        if (err.status === 401 || (err.message && err.message.includes("401"))) {
+          setUser(EMPTY_USER);
+          localStorage.removeItem("debtmap_user");
+        }
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
-  // Fetch initial data from FastAPI backend when user is loaded
-  const fetchData = async () => {
+  // Fetch initial data from FastAPI backend when user is loaded (e.g. reload on-demand)
+  const fetchData = useCallback(async () => {
     try {
-      // Retrieve profile details to check plan and ensure user exists
-      const profile = await apiFetch("/auth/me");
-      setUser((prev) => ({
-        ...prev,
-        id: profile.id,
-        name: profile.name,
-        email: profile.email,
-        avatar_url: profile.avatar_url,
-        plan: profile.plan,
-        has_github_token: profile.has_github_token
-      }));
-
       const dbRepos = await apiFetch("/repos");
       setRepos(dbRepos);
       
       const dbIssues = await apiFetch("/issues");
-      // Format issues to match the frontend shape (mapping snake_case to camelCase where necessary)
       const formattedIssues = dbIssues.map((i: any) => ({
         id: i.id,
         repo_id: i.repo_id,
@@ -202,9 +281,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         fix_pr_url: i.fix_pr_url,
         created_at: i.created_at
       }));
-      console.log(formattedIssues);
       setIssues(formattedIssues);
-      
       
       const dbPackages = await apiFetch("/packages");
       const formattedPackages = dbPackages.map((p: any) => ({
@@ -219,7 +296,6 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }));
       setPackages(formattedPackages);
 
-      // Fetch compliance and trend data
       try {
         const dbSoc2 = await apiFetch("/soc2");
         setSoc2Report(dbSoc2);
@@ -236,29 +312,23 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     } catch (err) {
       console.error("Failed to fetch dashboard data from backend:", err);
     }
-  };
-
-  useEffect(() => {
-    if (user && user.id) {
-      fetchData();
-    }
-  }, [user.id]);
+  }, []);
   
   // Toast helpers
-  const showToast = (message: string, type: Toast["type"]) => {
+  const showToast = useCallback((message: string, type: Toast["type"]) => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
-  };
+  }, []);
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
   // Webhook trigger
-  const triggerWebhookAlert = (channel: string, message: string, type: WebhookAlert["type"]) => {
+  const triggerWebhookAlert = useCallback((channel: string, message: string, type: WebhookAlert["type"]) => {
     const id = `w_${Math.random().toString(36).substring(2, 9)}`;
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setWebhookAlerts((prev) => [
@@ -266,7 +336,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       ...prev.slice(0, 14)
     ]);
     showToast(`Incoming Alert sent to ${channel}: "${message.slice(0, 45)}..."`, "info");
-  };
+  }, [showToast]);
 
   // Recalculate repo health score dynamically from backend counts (or we can fallback to calculate locally)
   const recalculateHealthScores = (currentIssues: Issue[], currentRepos: Repo[]) => {
@@ -331,7 +401,7 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
   };
 
   // Connect Repository
-  const connectRepo = async (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan = true) => {
+  const connectRepo = useCallback(async (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan = true) => {
     try {
       showToast(`Connecting repository ${fullName}...`, "info");
       const newRepo = await apiFetch(`/repos?github_repo_full_name=${encodeURIComponent(fullName)}&generator=${encodeURIComponent(generator)}`, {
@@ -354,33 +424,36 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
       }]);
       showToast(`Repository ${fullName} connected!${autoScan ? " Starting automated code audit..." : ""}`, "info");
       
-      // Auto-trigger a scan for the new repo
+      // Auto-trigger a scan — call through the ref to avoid circular dep with triggerScan
       if (autoScan) {
-        triggerScan(newRepo.id);
+        triggerScanRef.current(newRepo.id);
       }
     } catch (err: any) {
       showToast(err.message || "Failed to connect repository", "error");
     }
-  };
+  }, [showToast]);
 
   // Real Audit Scanner Polling
-  const triggerScan = async (repoId?: string) => {
-    if (isScanning) return;
+  const triggerScan = useCallback(async (repoId?: string) => {
+    // Use ref to avoid stale closure — no need to include isScanning in deps
+    if (isScanningRef.current) return;
 
     let scanRepoId = repoId;
     if (!scanRepoId) {
-      if (repos.length > 0) {
-        scanRepoId = repos[0].id;
+      const currentRepos = reposRef.current;
+      if (currentRepos.length > 0) {
+        scanRepoId = currentRepos[0].id;
       } else {
         showToast("No repository connected to scan.", "error");
         return;
       }
     }
 
-    const targetRepo = repos.find((r) => r.id === scanRepoId);
+    const targetRepo = reposRef.current.find((r) => r.id === scanRepoId);
     const repoName = targetRepo ? targetRepo.full_name : "selected repository";
 
     setIsScanning(true);
+    setScanStatus("queued");
     setScanProgress(0);
     setScanLogs([`[SYSTEM] Starting scan process on backend for ${repoName}...`]);
 
@@ -391,25 +464,37 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
       const scanId = scanResult.scan_id;
 
-      // Set up a polling interval to fetch progress
+      // Guard flag — prevents the completion/failure handlers from firing more than once
+      // if the interval ticks again before clearInterval() takes effect.
+      let scanFinished = false;
+
+      // Poll for progress every 1.5 seconds
       const pollInterval = setInterval(async () => {
+        // If already handled, silently skip remaining ticks
+        if (scanFinished) return;
         try {
           const statusResult = await apiFetch(`/scans/${scanId}/status`);
           setScanProgress(statusResult.progress || 0);
-          
+          setScanStatus(statusResult.status || "running");
+
           if (statusResult.log_messages && statusResult.log_messages.length > 0) {
             setScanLogs(statusResult.log_messages);
           }
 
           if (statusResult.status === "completed") {
+            scanFinished = true;
             clearInterval(pollInterval);
             setIsScanning(false);
+            setScanStatus("completed");
             showToast(`Scan complete for ${repoName}!`, "success");
-            triggerWebhookAlert("#security", `Auditor scan finished for ${repoName}. Health score: ${repos.find(r => r.id === scanRepoId)?.health_score || 100}/100.`, "slack");
+            const healthScore = reposRef.current.find((r) => r.id === scanRepoId)?.health_score || 100;
+            triggerWebhookAlert("#security", `Auditor scan finished for ${repoName}. Health score: ${healthScore}/100.`, "slack");
             fetchData(); // Reload issues, packages and repos from backend
           } else if (statusResult.status === "failed") {
+            scanFinished = true;
             clearInterval(pollInterval);
             setIsScanning(false);
+            setScanStatus("failed");
             showToast(`Scan failed for ${repoName}. Check terminal logs.`, "error");
             fetchData();
           }
@@ -420,9 +505,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
 
     } catch (err: any) {
       setIsScanning(false);
+      setScanStatus("failed");
       showToast(err.message || "Failed to trigger scan", "error");
     }
-  };
+  }, [showToast, triggerWebhookAlert, fetchData]);
+
+  // Keep triggerScanRef in sync so connectRepo can call it without a circular dep
+  useEffect(() => { triggerScanRef.current = triggerScan; }, [triggerScan]);
 
   // Create GitHub Fix PR
   const fixIssueSimulate = async (issueId: string): Promise<boolean> => {
@@ -558,25 +647,29 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const login = (userData: SavedUser) => {
+  const login = useCallback((userData: SavedUser) => {
     saveUser(userData);
     setUser(userData);
     showToast(`Welcome back, ${userData.name}!`, "success");
-  };
+    // Trigger data loading immediately after login
+    fetchData();
+  }, [showToast, fetchData]);
 
-  const logout = () => {
+  const logout = useCallback(async () => {
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Failed to call logout endpoint:", err);
+    }
     logoutUser();
-    setUser({
-      id: "00000000-0000-0000-0000-000000000000",
-      name: "Mathivanan G",
-      email: "mathi@debtmap.io",
-      avatar_url: null,
-      plan: "pro",
-      session_token: "mock-session-token",
-      has_github_token: true
-    });
+    setUser(EMPTY_USER);
+    setRepos([]);
+    setIssues([]);
+    setPackages([]);
+    setSoc2Report(null);
+    setTrendData([]);
     showToast("Logged out successfully.", "info");
-  };
+  }, [showToast]);
 
   return (
     <AppContext.Provider
@@ -592,9 +685,11 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         showToast,
         removeToast,
         triggerWebhookAlert,
+        isInitializing,
         isScanning,
         scanProgress,
         scanLogs,
+        scanStatus,
         triggerScan,
         connectRepo,
         upgradePlan,

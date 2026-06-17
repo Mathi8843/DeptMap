@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/AppContext";
+import { useRouter } from "next/navigation";
 import { Lock, Download, Share2, Shield, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, CreditCard, ShieldCheck } from "lucide-react";
 import { PLAN_LIMITS } from "@/lib/plan-limits";
 
@@ -13,6 +14,7 @@ const statusConfig = {
 
 export default function Soc2Page() {
   const { user, upgradePlan, showToast, soc2Report } = useApp();
+  const router = useRouter();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [expandedControl, setExpandedControl] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function Soc2Page() {
 
   const handleUpgradePayment = () => {
     setIsCheckoutOpen(false);
-    upgradePlan("team");
+    router.push("/settings?upgrade=team");
   };
 
   // 1. LOCKED VIEW

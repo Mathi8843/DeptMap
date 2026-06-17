@@ -2,11 +2,13 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useApp } from "@/lib/AppContext";
-import { RefreshCw, Download, AlertTriangle, ShieldAlert, CheckCircle, ArrowUpRight, Terminal, Bell, MessageSquare, Mail } from "lucide-react";
+import { RefreshCw, Download, AlertTriangle, ShieldAlert, CheckCircle, ArrowUpRight, Terminal, Bell, MessageSquare, Mail, GitBranch } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { apiFetch } from "@/lib/api";
 
 export default function DashboardPage() {
   const { 
+    user,
     issues, 
     repos, 
     overallScore, 
@@ -17,6 +19,18 @@ export default function DashboardPage() {
     packages,
     webhookAlerts
   } = useApp();
+
+  const handleConnectGitHub = async () => {
+    try {
+      const data = await apiFetch(`/auth/github?current_user_id=${user.id}`);
+      if (data && data.auth_url) {
+        sessionStorage.setItem("auth_redirect", "/dashboard");
+        window.location.href = data.auth_url;
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to retrieve GitHub connection link.");
+    }
+  };
 
   const openIssues = issues.filter((i) => i.status === "open");
   const critical = openIssues.filter((i) => i.severity === "critical");
@@ -80,6 +94,25 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* GitHub Connection Request Banner */}
+      {!user.has_github_token && (
+        <div className="glass-panel border-l-4 border-l-indigo-500 rounded-2xl p-5 flex gap-4 items-start glow-indigo/5 animate-fade-in">
+          <GitBranch className="text-indigo-500 dark:text-indigo-400 flex-shrink-0 mt-0.5" size={20} />
+          <div className="flex-1 min-w-0 space-y-1">
+            <h4 className="text-sm font-bold text-text-main">GitHub Account Not Connected</h4>
+            <p className="text-xs text-text-sub leading-relaxed">
+              Please connect your GitHub account to import and scan your repositories.
+            </p>
+          </div>
+          <button 
+            onClick={handleConnectGitHub}
+            className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-[1px] text-[#b8ff57] hover:underline flex-shrink-0 mt-0.5 cursor-pointer"
+          >
+            Connect GitHub <ArrowUpRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Critical Alert Banners */}
       {critical.length > 0 && (

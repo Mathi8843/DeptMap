@@ -1,9 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";
-import { Check, X, Shield, CreditCard, Bell, HelpCircle, AlertCircle, Zap } from "lucide-react";
+import { Check, X, Shield, CreditCard, Bell, HelpCircle, AlertCircle, Zap, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import { PLAN_LIMITS } from "@/lib/plan-limits";
+import { apiFetch } from "@/lib/api";
 
 const plans = [
   {
@@ -72,9 +73,129 @@ const plans = [
 ];
 
 export default function SettingsPage() {
-  const { user, upgradePlan, showToast } = useApp();
+  const { user, upgradePlan, showToast, login } = useApp();
   const [selectedPlanKey, setSelectedPlanKey] = useState<typeof user.plan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [activePaymentTab, setActivePaymentTab] = useState<"razorpay" | "coupon">("razorpay");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [paying, setPaying] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const upgradePlanParam = params.get("upgrade");
+      if (upgradePlanParam === "pro" || upgradePlanParam === "team" || upgradePlanParam === "enterprise") {
+        setSelectedPlanKey(upgradePlanParam);
+        setIsCheckoutOpen(true);
+      }
+    }
+  }, []);
+
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleRazorpayPayment = async () => {
+    setPaying(true);
+    const isLoaded = await loadRazorpay();
+    if (!isLoaded) {
+      showToast("Razorpay SDK failed to load. Are you connected to the internet?", "error");
+      setPaying(false);
+      return;
+    }
+
+    try {
+      const orderData = await apiFetch("/auth/razorpay/order", { method: "POST" });
+      
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "DebtMap Pro",
+        description: "Upgrade workspace to Pro tier",
+        order_id: orderData.order_id,
+        handler: async function (response: any) {
+          setPaying(true);
+          try {
+            const verifyRes = await apiFetch("/auth/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+             });
+             if (verifyRes.success) {
+               login({
+                 ...user,
+                 plan: "pro"
+               });
+               showToast("Subscription upgraded to Pro successfully!", "success");
+               setIsCheckoutOpen(false);
+             }
+          } catch (err: any) {
+            showToast(err.message || "Payment verification failed", "error");
+          } finally {
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setPaying(false);
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+        },
+        theme: {
+          color: "#6366f1",
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+    } catch (err: any) {
+      showToast(err.message || "Failed to initiate Razorpay checkout", "error");
+      setPaying(false);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      showToast("Please enter a coupon code", "warning");
+      return;
+    }
+    setApplyingCoupon(true);
+    try {
+      const result = await apiFetch("/auth/coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim() }),
+      });
+      if (result.success) {
+        login({
+          ...user,
+          plan: "pro"
+        });
+        showToast(result.message, "success");
+        setIsCheckoutOpen(false);
+        setCouponCode("");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to apply coupon code", "error");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
   
   const [notifications, setNotifications] = useState({
     emailCritical: true,
@@ -309,7 +430,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Simulated Billing Checkout Modal Popup */}
+      {/* Real Billing Checkout Modal Popup */}
       {isCheckoutOpen && activePlanDetails && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setIsCheckoutOpen(false)} />
@@ -317,10 +438,32 @@ export default function SettingsPage() {
             <div className="flex justify-between items-center pb-2 border-b border-white/5">
               <div className="flex items-center gap-2">
                 <CreditCard size={18} className="text-indigo-400" />
-                <span className="text-xs font-mono font-bold text-white">CHECKOUT SIMULATOR</span>
+                <span className="text-xs font-mono font-bold text-white">UPGRADE ACCOUNT</span>
               </div>
               <button onClick={() => setIsCheckoutOpen(false)} className="text-slate-500 hover:text-white">
                 <X size={16} />
+              </button>
+            </div>
+
+            {/* Payment Options Tabs */}
+            <div className="flex bg-white/5 rounded-xl p-1 gap-1">
+              <button
+                onClick={() => setActivePaymentTab("razorpay")}
+                className={clsx(
+                  "flex-1 py-2 rounded-lg font-mono text-[9px] uppercase tracking-[1px] font-bold transition-all cursor-pointer",
+                  activePaymentTab === "razorpay" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+                )}
+              >
+                Razorpay
+              </button>
+              <button
+                onClick={() => setActivePaymentTab("coupon")}
+                className={clsx(
+                  "flex-1 py-2 rounded-lg font-mono text-[9px] uppercase tracking-[1px] font-bold transition-all cursor-pointer",
+                  activePaymentTab === "coupon" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+                )}
+              >
+                Coupon Code
               </button>
             </div>
 
@@ -333,27 +476,45 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2.5">
-                <div className="text-[10px] text-slate-500 uppercase font-mono">Card Details</div>
-                <input
-                  type="text"
-                  disabled
-                  value="••••  ••••  ••••  4242"
-                  className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-400"
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input type="text" disabled value="12/29" className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400" />
-                  <input type="text" disabled value="•••" className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400" />
+              {activePaymentTab === "razorpay" ? (
+                <div className="space-y-3.5">
+                  <div className="text-xs text-slate-400 leading-relaxed">
+                    Pay securely using Razorpay. Supports Cards, Netbanking, UPI, and Wallets.
+                  </div>
+                  <button
+                    onClick={handleRazorpayPayment}
+                    disabled={paying}
+                    className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-500/50 text-white font-mono text-[9px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {paying && <Loader2 className="animate-spin" size={12} />}
+                    {paying ? "Processing Order..." : `Pay ${activePlanDetails.price} via Razorpay`}
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label className="block font-mono text-[9px] uppercase tracking-[1px] text-slate-500">
+                      Enter Promo Code
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ONE_WEEK"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-indigo-500/50 uppercase"
+                    />
+                  </div>
+                  <button
+                    onClick={handleApplyCoupon}
+                    disabled={applyingCoupon}
+                    className="w-full py-3.5 bg-[#b8ff57] hover:bg-[#d4ff8a] text-black font-mono text-[9px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-[#b8ff57]/10 active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {applyingCoupon && <Loader2 className="animate-spin text-black" size={12} />}
+                    {applyingCoupon ? "Applying Coupon..." : "Apply Coupon"}
+                  </button>
+                </div>
+              )}
             </div>
-
-            <button
-              onClick={handleCheckoutComplete}
-              className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[9px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-indigo-500/10 active:scale-[0.98]"
-            >
-              Authorize Payment (Simulated)
-            </button>
           </div>
         </div>
       )}

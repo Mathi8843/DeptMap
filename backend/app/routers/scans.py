@@ -13,7 +13,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 
 from app.database import get_db
 from app.services import semgrep as semgrep_service
@@ -29,9 +29,9 @@ router = APIRouter(prefix="/api/scans", tags=["scans"])
 
 @router.post("")
 async def trigger_scan(
+    background_tasks: BackgroundTasks,
     repo_id: str = Query(...),
     current_user_id: str = Depends(get_current_user_id),
-    background_tasks: BackgroundTasks = None,
     db=Depends(get_db),
 ):
     """
@@ -70,15 +70,8 @@ async def trigger_scan(
         "log_messages": ["[SYSTEM] Scan queued. Starting engine..."],
     }).execute()
 
-    # Launch background scan
-    if background_tasks:
-        background_tasks.add_task(
-            run_scan_pipeline,
-            scan_id=scan_id,
-            repo=repo,
-            access_token=access_token,
-            db=db,
-        )
+    # Schedule the scan pipeline as a background task
+    background_tasks.add_task(run_scan_pipeline, scan_id, repo, access_token, db)
 
     return {"scan_id": scan_id, "status": "queued"}
 

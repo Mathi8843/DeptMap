@@ -3,16 +3,19 @@ Authentication router.
 Handles GitHub OAuth login flow and user session creation via Supabase.
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
+from supabase import create_client, Client
 from app.config import get_settings
 from app.database import get_db
 from app.services import github as github_service
 from app.services import (
     encrypt_token,
     create_session_token,
+    create_oauth_state,
+    verify_oauth_state,
     get_current_user_id,
 )
 
@@ -32,13 +35,35 @@ class EmailSignUpRequest(BaseModel):
     name: str
 
 
+class UpgradePlanRequest(BaseModel):
+    plan: str
+
+
+class CouponRequest(BaseModel):
+    code: str
+
+
+class RazorpayVerifyRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
 @router.get("/github")
-async def github_login():
+async def github_login(
+    current_user_id: str = Query(None, description="Optional user ID to link to"),
+):
     """Redirect user to GitHub OAuth authorization page."""
+    # Clean up empty or Javascript/undefined string values
+    if not current_user_id or current_user_id.strip() in ("", "undefined", "null"):
+        current_user_id = None
+        
+    state_param = create_oauth_state(current_user_id)
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"
         f"?client_id={settings.github_client_id}"
         f"&scope=repo,user:email"
+        f"&state={state_param}"
     )
     return {"auth_url": github_auth_url}
 
@@ -47,6 +72,7 @@ async def github_login():
 async def github_callback(
     request: Request,
     code: str = Query(..., description="OAuth code from GitHub"),
+    state: str = Query(..., description="Signed OAuth state parameter"),
     db=Depends(get_db),
 ):
     """
@@ -67,17 +93,40 @@ async def github_callback(
         name = gh_user.get("name") or gh_user.get("login")
         avatar_url = gh_user.get("avatar_url")
 
+        linked_user_id = verify_oauth_state(state)
+        if linked_user_id == "00000000-0000-0000-0000-000000000000":
+            linked_user_id = None
+
         # Step 3: Encrypt the token and upsert user in Supabase
         encrypted_token = encrypt_token(github_access_token)
+        existing_user = None
+
+        # Check if this github_id is already registered to a user
         result_existing = db.table("users").select("*").eq("github_id", github_id).execute()
-        existing_user = result_existing.data[0] if result_existing.data else None
+        existing_github_user = result_existing.data[0] if result_existing.data else None
+
+        # Link directly if state contains a valid signed user_id
+        if linked_user_id:
+            if existing_github_user and existing_github_user["id"] != linked_user_id:
+                raise ValueError("This GitHub account is already linked to another user profile.")
+            result_state = db.table("users").select("*").eq("id", linked_user_id).execute()
+            existing_user = result_state.data[0] if result_state.data else None
+        else:
+            if existing_github_user:
+                existing_user = existing_github_user
+
+        if not existing_user and email:
+            # Link account if same email exists
+            result_email = db.table("users").select("*").eq("email", email).execute()
+            existing_user = result_email.data[0] if result_email.data else None
 
         if existing_user:
             user_id = existing_user["id"]
             db.table("users").update({
+                "github_id": github_id,
                 "github_access_token": encrypted_token,
-                "name": name,
-                "avatar_url": avatar_url,
+                "name": name or existing_user.get("name"),
+                "avatar_url": avatar_url or existing_user.get("avatar_url"),
             }).eq("id", user_id).execute()
         else:
             result = db.table("users").insert({
@@ -105,20 +154,32 @@ async def github_callback(
                 "session_token": session_token,
             }
 
-        # If direct browser redirect, pass session info to frontend callback via query params
+        # If direct browser redirect, keep the session out of the URL in production.
         # Note: raw github_access_token is NEVER passed back to the client.
-        from urllib.parse import urlencode
-        params = {
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "avatar_url": avatar_url or "",
-            "plan": existing_user["plan"] if existing_user else "free",
-            "session_token": session_token,
-            "has_github_token": "true",
-        }
-        redirect_url = f"{settings.frontend_url}/auth/callback?{urlencode(params)}"
-        return RedirectResponse(url=redirect_url)
+        if settings.is_production:
+            response = RedirectResponse(url=f"{settings.frontend_url}/auth/callback?auth=success")
+            response.set_cookie(
+                key="debtmap_session",
+                value=session_token,
+                httponly=True,
+                secure=True,
+                samesite="none",
+                max_age=60 * 60 * 24 * 30,
+            )
+            return response
+        else:
+            # In development, fall back to URL query parameters because browsers block cross-port cookies on http://localhost
+            import urllib.parse
+            query_params = urllib.parse.urlencode({
+                "user_id": user_id,
+                "email": email,
+                "name": name,
+                "avatar_url": avatar_url or "",
+                "plan": existing_user["plan"] if existing_user else "free",
+                "session_token": session_token,
+                "has_github_token": "true"
+            })
+            return RedirectResponse(url=f"{settings.frontend_url}/auth/callback?{query_params}")
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -134,33 +195,23 @@ async def get_current_user(
 ):
     """Get current user profile including plan and connected repos count."""
     result = db.table("users").select("*").eq("id", current_user_id).execute()
-    user_data = result.data[0] if result.data else None
-    if not user_data:
-        # Create a default user profile for ease of testing
-        try:
-            import uuid
-            try:
-                profile_uuid = str(uuid.UUID(current_user_id))
-            except ValueError:
-                profile_uuid = str(uuid.uuid4())
-                
-            db.table("users").insert({
-                "id": profile_uuid,
-                "github_id": "mock_github_id_" + profile_uuid[:8],
-                "email": "mathi@debtmap.io",
-                "name": "Mathivanan G",
-                "avatar_url": None,
-                "github_access_token": encrypt_token("mock_github_token"),
-                "plan": "pro",
-            }).execute()
-            
-            result = db.table("users").select("*").eq("id", profile_uuid).execute()
-            user_data = result.data[0] if result.data else None
-        except Exception as e:
-            logger.error(f"Failed to auto-create user: {e}")
-            raise HTTPException(status_code=404, detail="User not found")
+    user = result.data[0] if result.data else None
+    if not user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
 
-    user = user_data
+    # Check if temporary plan has expired
+    plan_expires_at = user.get("plan_expires_at")
+    if plan_expires_at:
+        from datetime import datetime, timezone
+        try:
+            expires_at = datetime.fromisoformat(plan_expires_at.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expires_at and user["plan"] != "free":
+                # Automatically demote to free
+                db.table("users").update({"plan": "free", "plan_expires_at": None}).eq("id", user["id"]).execute()
+                user["plan"] = "free"
+        except Exception as e:
+            logger.error(f"Error checking plan expiration: {e}")
+
     repos_count = db.table("repos").select("id", count="exact").eq("user_id", user["id"]).execute()
 
     return {
@@ -176,7 +227,7 @@ async def get_current_user(
 
 
 @router.post("/signup")
-async def email_signup(payload: EmailSignUpRequest, db=Depends(get_db)):
+async def email_signup(payload: EmailSignUpRequest, response: Response, db=Depends(get_db)):
     """
     Sign up a new user using Supabase Auth.
     Creates both the auth credentials and the public.users record.
@@ -191,7 +242,17 @@ async def email_signup(payload: EmailSignUpRequest, db=Depends(get_db)):
                 }
             }
         }
-        auth_response = db.auth.sign_up(credentials)
+        # Use an isolated client for auth so we don't mutate the shared db client
+        auth_client = create_client(settings.supabase_url, settings.supabase_service_role_key)
+        # Use admin API to create user and auto-confirm email, avoiding confirmation email blockers
+        auth_response = auth_client.auth.admin.create_user({
+            "email": payload.email,
+            "password": payload.password,
+            "email_confirm": True,
+            "user_metadata": {
+                "name": payload.name
+            }
+        })
         if not auth_response.user:
             raise HTTPException(status_code=400, detail="Failed to create user account.")
             
@@ -202,17 +263,25 @@ async def email_signup(payload: EmailSignUpRequest, db=Depends(get_db)):
             "id": user_id,
             "email": payload.email,
             "name": payload.name,
-            "github_access_token": encrypt_token("mock_github_token"),
+            "github_access_token": None,
             "plan": "free"
         }).execute()
         
         session_token = create_session_token(user_id)
+        response.set_cookie(
+            key="debtmap_session",
+            value=session_token,
+            httponly=True,
+            secure=settings.is_production,
+            samesite="none" if settings.is_production else "lax",
+            max_age=60 * 60 * 24 * 30,
+        )
         return {
             "user_id": user_id,
             "email": payload.email,
             "name": payload.name,
             "plan": "free",
-            "session_token": session_token,
+            "session_token": "cookie-session" if settings.is_production else session_token,
             "message": "Registration successful. Please sign in."
         }
     except Exception as e:
@@ -221,14 +290,16 @@ async def email_signup(payload: EmailSignUpRequest, db=Depends(get_db)):
 
 
 @router.post("/signin")
-async def email_signin(payload: EmailAuthRequest, db=Depends(get_db)):
+async def email_signin(payload: EmailAuthRequest, response: Response, db=Depends(get_db)):
     """Sign in an existing user with email and password via Supabase Auth."""
     try:
         credentials = {
             "email": payload.email,
             "password": payload.password
         }
-        auth_response = db.auth.sign_in_with_password(credentials)
+        # Use an isolated client for auth so we don't mutate the shared db client
+        auth_client = create_client(settings.supabase_url, settings.supabase_service_role_key)
+        auth_response = auth_client.auth.sign_in_with_password(credentials)
         if not auth_response.user:
             raise HTTPException(status_code=400, detail="Invalid email or password.")
             
@@ -247,7 +318,7 @@ async def email_signin(payload: EmailAuthRequest, db=Depends(get_db)):
                 "id": user_id,
                 "email": email,
                 "name": name,
-                "github_access_token": encrypt_token("mock_github_token"),
+                "github_access_token": None,
                 "plan": "free"
             }).execute()
             profile = {
@@ -258,13 +329,167 @@ async def email_signin(payload: EmailAuthRequest, db=Depends(get_db)):
             }
             
         session_token = create_session_token(profile["id"])
+        response.set_cookie(
+            key="debtmap_session",
+            value=session_token,
+            httponly=True,
+            secure=settings.is_production,
+            samesite="none" if settings.is_production else "lax",
+            max_age=60 * 60 * 24 * 30,
+        )
         return {
             "user_id": profile["id"],
             "email": profile["email"],
             "name": profile["name"],
             "plan": profile["plan"],
-            "session_token": session_token
+            "session_token": "cookie-session" if settings.is_production else session_token
         }
     except Exception as e:
         logger.exception("Email signin failed")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/upgrade")
+async def upgrade_plan(
+    payload: UpgradePlanRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
+    """Downgrade the current user's plan. Paid upgrades must go through billing verification."""
+    if payload.plan not in ["free", "pro", "team", "enterprise"]:
+        raise HTTPException(status_code=400, detail="Invalid plan name")
+
+    if payload.plan != "free":
+        raise HTTPException(status_code=403, detail="Paid upgrades must be completed through checkout")
+    
+    result = db.table("users").update({"plan": "free", "plan_expires_at": None}).eq("id", current_user_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"success": True, "plan": "free"}
+
+
+@router.post("/coupon")
+async def apply_coupon(
+    payload: CouponRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
+    """Apply a subscription coupon code. 'ONE_WEEK' rewards 1 week of Pro."""
+    from datetime import datetime, timedelta, timezone
+    code = payload.code.strip()
+    if code != "ONE_WEEK":
+        raise HTTPException(status_code=400, detail="Invalid coupon code")
+        
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    
+    result = db.table("users").update({
+        "plan": "pro",
+        "plan_expires_at": expires_at
+    }).eq("id", current_user_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {
+        "success": True,
+        "plan": "pro",
+        "plan_expires_at": expires_at,
+        "message": "Coupon applied! You have 1 week of Pro subscription."
+    }
+
+
+@router.post("/razorpay/order")
+async def create_razorpay_order(
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
+    """Create a Razorpay order for Pro subscription (₹4,000)."""
+    import uuid
+    import httpx
+    amount_paise = 400000
+    
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        if settings.app_env != "production":
+            return {
+                "order_id": "order_mock_" + uuid.uuid4().hex[:12],
+                "amount": amount_paise,
+                "currency": "INR",
+                "key": "mock_razorpay_key"
+            }
+        raise HTTPException(status_code=500, detail="Razorpay configuration missing on server")
+        
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.razorpay.com/v1/orders",
+                auth=(settings.razorpay_key_id, settings.razorpay_key_secret),
+                json={
+                    "amount": amount_paise,
+                    "currency": "INR",
+                    "receipt": f"receipt_{current_user_id[:8]}",
+                    "payment_capture": 1
+                }
+            )
+            if response.status_code != 200:
+                raise HTTPException(status_code=400, detail=f"Razorpay order failed: {response.text}")
+            order_data = response.json()
+            return {
+                "order_id": order_data["id"],
+                "amount": order_data["amount"],
+                "currency": order_data["currency"],
+                "key": settings.razorpay_key_id
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to communicate with Razorpay: {str(e)}")
+
+
+@router.post("/razorpay/verify")
+async def verify_razorpay_payment(
+    payload: RazorpayVerifyRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
+    """Verify Razorpay payment signature and upgrade to Pro."""
+    import hmac
+    import hashlib
+
+    if payload.razorpay_order_id.startswith("order_mock_"):
+        if settings.is_production:
+            raise HTTPException(status_code=400, detail="Mock payments are not accepted in production")
+        db.table("users").update({"plan": "pro", "plan_expires_at": None}).eq("id", current_user_id).execute()
+        return {"success": True, "plan": "pro"}
+        
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        raise HTTPException(status_code=500, detail="Razorpay keys missing on server")
+        
+    msg = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}"
+    generated_signature = hmac.new(
+        settings.razorpay_key_secret.encode("utf-8"),
+        msg.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(generated_signature, payload.razorpay_signature):
+        raise HTTPException(status_code=400, detail="Signature verification failed")
+        
+    result = db.table("users").update({
+        "plan": "pro",
+        "plan_expires_at": None
+    }).eq("id", current_user_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"success": True, "plan": "pro"}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Log out current user by deleting the session cookie."""
+    response.delete_cookie(
+        key="debtmap_session",
+        secure=settings.is_production,
+        samesite="none" if settings.is_production else "lax",
+    )
+    return {"success": True}
