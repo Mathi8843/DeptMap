@@ -236,7 +236,7 @@ export default function SettingsPage() {
   const activePlanDetails = plans.find((p) => p.key === selectedPlanKey);
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-fade-in">
       {/* Header */}
       <div className="space-y-1">
         <h1 className="font-display font-extrabold text-3xl text-text-main tracking-wide">

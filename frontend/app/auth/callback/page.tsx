@@ -194,7 +194,7 @@ export default function AuthCallbackPage() {
   return (
     <div 
       style={{ background: "radial-gradient(circle at 50% 30%, #15102a 0%, #06060c 60%)" }}
-      className="min-h-screen text-[#eeeeff] flex flex-col items-center justify-center p-6"
+      className="min-h-screen text-[#eeeeff] flex flex-col items-center justify-center p-4 sm:p-6"
     >
       <Suspense fallback={
         <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl flex flex-col items-center justify-center min-h-[200px]">

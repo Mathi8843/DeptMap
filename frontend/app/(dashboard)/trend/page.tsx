@@ -51,7 +51,7 @@ export default function TrendPage() {
 
   if (!hasHistory) {
     return (
-      <div className="p-8 max-w-5xl mx-auto space-y-6 animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
         <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-500 glow-indigo/10 mb-4">
           <TrendingUpIcon size={28} />
         </div>
@@ -64,7 +64,7 @@ export default function TrendPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
       <div className="space-y-1">
         <h1 className="font-display font-extrabold text-3xl text-text-main tracking-wide">

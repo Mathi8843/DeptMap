@@ -194,7 +194,7 @@ export default function LandingPage() {
       className="min-h-screen text-[#eeeeff] font-sans"
     >
       {/* Nav */}
-      <nav className="border-b border-white/5 px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
+      <nav className="border-b border-white/5 px-4 sm:px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#b8ff57] flex items-center justify-center font-bold text-black text-sm">D</div>
           <span className="font-bold text-base tracking-wide text-white">DebtMap</span>
@@ -213,15 +213,15 @@ export default function LandingPage() {
         </Link>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Hero */}
-        <section className="pt-20 pb-16 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <section className="pt-12 sm:pt-20 pb-12 sm:pb-16 grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-16 items-center">
           <div className="space-y-8">
             <div className="flex items-center gap-3">
               <div className="w-8 h-px bg-[#b8ff57]/50" />
               <span className="font-mono text-[10px] uppercase tracking-[3px] text-[#b8ff57]">AI Code Security · June 2026</span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
               Your vibe-coded app<br />
               <span className="text-[#b8ff57]">has vulnerabilities.</span><br />
               <span className="text-[#44446a]">We fix them.</span>
@@ -249,7 +249,7 @@ export default function LandingPage() {
             <div id="crisis" className="grid grid-cols-2 gap-px bg-white/5 border border-white/5 rounded-xl overflow-hidden">
               {STATS.map((s) => (
                 <div key={s.val} className="bg-[#0d0d1a] px-4 py-4">
-                  <div className="text-2xl font-extrabold text-[#b8ff57] leading-none mb-1">{s.val}</div>
+                  <div className="text-lg sm:text-2xl font-extrabold text-[#b8ff57] leading-none mb-1">{s.val}</div>
                   <div className="text-[11px] text-[#44446a] leading-snug">{s.label}</div>
                 </div>
               ))}
@@ -350,10 +350,10 @@ export default function LandingPage() {
         </section>
 
         {/* Features */}
-        <section id="features" className="py-16 border-t border-white/5">
+        <section id="features" className="py-10 sm:py-16 border-t border-white/5">
           <div className="mb-12">
             <div className="font-mono text-[9px] uppercase tracking-[3px] text-[#44446a] mb-3">What DebtMap Does</div>
-            <h2 className="text-4xl font-extrabold">
+            <h2 className="text-2xl sm:text-4xl font-extrabold">
               Security built for <span className="text-[#b8ff57]">non-developers</span>
             </h2>
           </div>
@@ -373,10 +373,10 @@ export default function LandingPage() {
         </section>
 
         {/* Example Issue — what it actually looks like */}
-        <section className="py-16 border-t border-white/5">
-          <div className="mb-10">
+        <section className="py-10 sm:py-16 border-t border-white/5">
+          <div className="mb-6 sm:mb-10">
             <div className="font-mono text-[9px] uppercase tracking-[3px] text-[#44446a] mb-3">Example — What You See</div>
-            <h2 className="text-4xl font-extrabold">
+            <h2 className="text-2xl sm:text-4xl font-extrabold">
               Plain English. <span className="text-[#b8ff57]">Not jargon.</span>
             </h2>
           </div>
@@ -426,10 +426,10 @@ export default function LandingPage() {
         </section>
 
         {/* Pricing */}
-        <section id="pricing" className="py-16 border-t border-white/5">
+        <section id="pricing" className="py-10 sm:py-16 border-t border-white/5">
           <div className="mb-12">
             <div className="font-mono text-[9px] uppercase tracking-[3px] text-[#44446a] mb-3">Pricing</div>
-            <h2 className="text-4xl font-extrabold">
+            <h2 className="text-2xl sm:text-4xl font-extrabold">
               Priced per <span className="text-[#b8ff57]">repository.</span>
             </h2>
             <p className="text-[#8888bb] mt-3 max-w-xl">Not per developer seat. "How many apps do I have?" is a question any founder can answer.</p>
@@ -450,7 +450,7 @@ export default function LandingPage() {
                 <div className="mb-5">
                   <div className="font-mono text-[10px] uppercase tracking-[2px] text-[#44446a] mb-2">{plan.name}</div>
                   <div>
-                    <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                    <span className="text-2xl sm:text-4xl font-extrabold text-white">{plan.price}</span>
                     <span className="text-sm text-[#44446a]">{plan.per}</span>
                   </div>
                   <p className="text-xs text-[#8888bb] mt-2">{plan.who}</p>
@@ -484,12 +484,12 @@ export default function LandingPage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-16 border-t border-white/5 text-center">
+        <section className="py-10 sm:py-16 border-t border-white/5 text-center">
           <div className="inline-flex items-center gap-2 bg-[#ff5757]/10 border border-[#ff5757]/20 rounded-full px-4 py-1.5 mb-6">
             <div className="w-1.5 h-1.5 rounded-full bg-[#ff5757] animate-pulse" />
             <span className="font-mono text-[10px] uppercase tracking-[2px] text-[#ff5757]">91.5% of vibe-coded apps are vulnerable right now</span>
           </div>
-          <h2 className="text-4xl font-extrabold mb-4">
+          <h2 className="text-2xl sm:text-4xl font-extrabold mb-4">
             Is yours one of them?
           </h2>
           <p className="text-[#8888bb] mb-8 max-w-lg mx-auto">

@@ -173,7 +173,7 @@ export default function OnboardingPage() {
       className="min-h-screen text-[#eeeeff] flex flex-col"
     >
       {/* Top bar */}
-      <div className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
+      <div className="border-b border-white/5 px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#b8ff57] flex items-center justify-center font-bold text-black text-sm">D</div>
           <span className="font-bold text-base text-white">DebtMap</span>
@@ -184,9 +184,9 @@ export default function OnboardingPage() {
       </div>
 
       {/* Step Progress Bar */}
-      <div className="border-b border-white/5 px-6 py-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-0">
+      <div className="border-b border-white/5 px-4 sm:px-6 py-4">
+        <div className="max-w-2xl mx-auto overflow-x-auto">
+          <div className="flex items-center gap-0 min-w-[400px] sm:min-w-0">
             {STEPS.map((s, i) => (
               <React.Fragment key={s.id}>
                 <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
@@ -215,7 +215,7 @@ export default function OnboardingPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
         <div className="w-full max-w-2xl">
 
           {/* STEP 1 — Connect GitHub */}
@@ -223,7 +223,7 @@ export default function OnboardingPage() {
             <div className="space-y-8 animate-fade-in text-center">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[3px] text-[#44446a] mb-3">Step 1 of 4</div>
-                <h1 className="text-4xl font-extrabold mb-4">Connect your GitHub account</h1>
+                <h1 className="text-2xl sm:text-4xl font-extrabold mb-4">Connect your GitHub account</h1>
                 <p className="text-[#8888bb] text-lg max-w-md mx-auto">
                   We need read access to your repositories to scan for security vulnerabilities.
                 </p>
@@ -247,7 +247,7 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                 {[
                   { icon: Shield, label: "Read-only access" },
                   { icon: Lock, label: "No code stored" },
@@ -267,7 +267,7 @@ export default function OnboardingPage() {
             <div className="space-y-8 animate-fade-in">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[3px] text-[#44446a] mb-3">Step 2 of 4</div>
-                <h1 className="text-4xl font-extrabold mb-4">Select a repository to scan</h1>
+                <h1 className="text-2xl sm:text-4xl font-extrabold mb-4">Select a repository to scan</h1>
                 <p className="text-[#8888bb]">Choose the app you want to audit. You can add more repositories later.</p>
               </div>
 
@@ -352,7 +352,7 @@ export default function OnboardingPage() {
             <div className="space-y-8 animate-fade-in">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[3px] text-[#44446a] mb-3">Step 3 of 4</div>
-                <h1 className="text-4xl font-extrabold mb-4">Running your first security scan</h1>
+                <h1 className="text-2xl sm:text-4xl font-extrabold mb-4">Running your first security scan</h1>
                 <p className="text-[#8888bb]">
                   We're scanning your code with Semgrep and checking all dependencies against npm/PyPI registries.
                 </p>
@@ -438,21 +438,21 @@ export default function OnboardingPage() {
             <div className="space-y-8 animate-fade-in">
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[3px] text-[#44446a] mb-3">Step 4 of 4</div>
-                <h1 className="text-4xl font-extrabold mb-4">
+                <h1 className="text-2xl sm:text-4xl font-extrabold mb-4">
                   Your scan is <span className="text-[#b8ff57]">complete.</span>
                 </h1>
                 <p className="text-[#8888bb]">We found issues in your repository. Here's a summary:</p>
               </div>
 
               {/* Quick summary */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 {[
                   { val: healthScore, label: "Health Score", color: healthScore < 50 ? "text-[#ff5757]" : healthScore < 85 ? "text-[#ffaa33]" : "text-[#b8ff57]" },
                   { val: openIssuesCount, label: "Open Issues", color: openIssuesCount > 0 ? "text-[#ffaa33]" : "text-[#b8ff57]" },
                   { val: criticalCount, label: "Critical — Fix Now", color: criticalCount > 0 ? "text-[#ff5757]" : "text-[#44446a]" },
                 ].map((s) => (
-                  <div key={s.label} className="bg-[#0d0d1a] border border-white/8 rounded-xl p-4 text-center">
-                    <div className={`text-3xl font-extrabold ${s.color} mb-1`}>{s.val}</div>
+                  <div key={s.label} className="bg-[#0d0d1a] border border-white/8 rounded-xl p-2 sm:p-4 text-center">
+                    <div className={`text-xl sm:text-3xl font-extrabold ${s.color} mb-1`}>{s.val}</div>
                     <div className="font-mono text-[9px] uppercase tracking-[1px] text-[#44446a]">{s.label}</div>
                   </div>
                 ))}
