@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     frontend_url: str = "http://localhost:3000"
+    allowed_origins: str = ""
 
     # Supabase
     supabase_url: str

@@ -51,13 +51,13 @@ app = FastAPI(
 # Add ALLOWED_ORIGINS=https://a.com,https://b.com to backend .env to extend
 # without a code change.
 _extra_origins: list[str] = [
-    o.strip()
+    o.strip().rstrip("/")
     for o in (settings.allowed_origins or "").split(",")
     if o.strip()
 ]
 
 _allowed_origins: list[str] = list({
-    settings.frontend_url,          # FRONTEND_URL env var on Render
+    settings.frontend_url.rstrip("/"),          # FRONTEND_URL env var on Render
     "http://localhost:3000",
     "http://localhost:3001",
     "https://dept-map.vercel.app",  # production Vercel deployment
