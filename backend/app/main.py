@@ -47,17 +47,29 @@ app = FastAPI(
 )
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
-# Allow the Next.js frontend to call this API
+# Build the list of allowed origins from hard-coded values + env config.
+# Add ALLOWED_ORIGINS=https://a.com,https://b.com to backend .env to extend
+# without a code change.
+_extra_origins: list[str] = [
+    o.strip()
+    for o in (settings.allowed_origins or "").split(",")
+    if o.strip()
+]
+
+_allowed_origins: list[str] = list({
+    settings.frontend_url,          # FRONTEND_URL env var on Render
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://dept-map.vercel.app",  # production Vercel deployment
+    "https://debtmap.io",
+    "https://www.debtmap.io",
+    "https://app.debtmap.io",
+    *_extra_origins,
+})
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.frontend_url,
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "https://debtmap.io",
-        "https://www.debtmap.io",
-        "https://app.debtmap.io",
-    ],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
