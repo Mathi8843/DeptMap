@@ -58,7 +58,16 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     ...(options.headers as Record<string, string>),
   };
 
-  if (sessionToken && sessionToken !== "cookie-session") {
+  // Only send the Authorization header when we have a real JWT.
+  // "cookie-session" means the session lives in an httpOnly cookie that is
+  // transmitted automatically via credentials:"include" — do NOT echo it as
+  // a Bearer token because the backend will reject it as an invalid JWT.
+  const isRealJwt =
+    sessionToken &&
+    sessionToken !== "cookie-session" &&
+    sessionToken !== "mock-session-token";
+
+  if (isRealJwt) {
     headers["Authorization"] = `Bearer ${sessionToken}`;
   }
 

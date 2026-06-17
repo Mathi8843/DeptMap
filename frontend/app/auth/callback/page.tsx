@@ -95,6 +95,14 @@ function AuthCallbackInner() {
 
     const code = searchParams.get("code");
     const state = searchParams.get("state") || "";
+    const oauthError = searchParams.get("error");
+
+    // User cancelled GitHub OAuth — send them back to home cleanly
+    if (oauthError) {
+      router.replace("/?cancelled=1");
+      return;
+    }
+
     if (!code) {
       setError("No authorization code found from GitHub. Please try signing in again.");
       return;

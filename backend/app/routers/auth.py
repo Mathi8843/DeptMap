@@ -281,7 +281,7 @@ async def email_signup(payload: EmailSignUpRequest, response: Response, db=Depen
             "email": payload.email,
             "name": payload.name,
             "plan": "free",
-            "session_token": "cookie-session" if settings.is_production else session_token,
+            "session_token": session_token,
             "message": "Registration successful. Please sign in."
         }
     except Exception as e:
@@ -342,7 +342,7 @@ async def email_signin(payload: EmailAuthRequest, response: Response, db=Depends
             "email": profile["email"],
             "name": profile["name"],
             "plan": profile["plan"],
-            "session_token": "cookie-session" if settings.is_production else session_token
+            "session_token": session_token
         }
     except Exception as e:
         logger.exception("Email signin failed")

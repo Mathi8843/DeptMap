@@ -243,11 +243,13 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
         }
       } catch (err: any) {
         console.error("Session verification failed on mount:", err);
-        // If unauthorized (401), clear session details
-        if (err.status === 401 || (err.message && err.message.includes("401"))) {
-          setUser(EMPTY_USER);
-          localStorage.removeItem("debtmap_user");
-        }
+        // Any auth failure (401, 403, network) means no valid session.
+        // Clear all stale data so the UI never shows mock/old user info.
+        setUser(EMPTY_USER);
+        setRepos([]);
+        setIssues([]);
+        setPackages([]);
+        localStorage.removeItem("debtmap_user");
       } finally {
         setIsInitializing(false);
       }
