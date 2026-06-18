@@ -37,15 +37,54 @@ SEVERITY_MAP: dict[str, SeverityLevel] = {
     "NOTE": "low",
 }
 
+EXCLUDE_DIRS = [
+    "node_modules", ".git", ".next", "dist", "build",
+    "__pycache__", ".pytest_cache", "venv", ".venv",
+    "coverage", ".nyc_output", "target",  # Java/Rust build dirs
+]
+
+def delete_junk_dirs(repo_dir: str):
+    """
+    Delete junk directories (e.g. build artifacts, virtual environments)
+    to minimize file tree size and memory footprint before scanning.
+    """
+    for root, dirs, _ in os.walk(repo_dir, topdown=True):
+        for d in list(dirs):
+            if d in EXCLUDE_DIRS:
+                full = os.path.join(root, d)
+                shutil.rmtree(full, ignore_errors=True)
+                dirs.remove(d)  # don't recurse into deleted dirs
+
+SKIP_EXTENSIONS = (
+    ".min.js", ".min.css", ".map", ".lock",
+    "package-lock.json", "pnpm-lock.yaml",
+    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
+    ".woff", ".woff2", ".ttf", ".eot",
+    ".zip", ".tar", ".gz", ".pdf", ".db",
+)
+
+def _should_skip_file(path: str) -> bool:
+    """
+    Check if a file should be skipped from reading/enrichment (e.g. binaries, minified/generated files).
+    """
+    return path.lower().endswith(SKIP_EXTENSIONS)
+
 
 def clone_repo(clone_url: str, access_token: str, dest_dir: str) -> None:
     """
     Clone a GitHub repository using the user's access token for auth.
     Uses HTTPS with token embedded in URL (standard GitHub auth method).
+    Uses depth=1 and filter=blob:none for high speed and minimal memory/disk usage.
     """
     # Inject token into clone URL: https://token@github.com/owner/repo.git
     auth_url = clone_url.replace("https://", f"https://{access_token}@")
-    git.Repo.clone_from(auth_url, dest_dir, depth=1)  # shallow clone for speed
+    git.Repo.clone_from(
+        auth_url,
+        dest_dir,
+        depth=1,                     # only latest commit
+        filter="blob:none",          # skip file blobs until needed
+        no_single_branch=False,
+    )
 
 
 def _get_semgrep_command(target_dir: str) -> list[str]:
@@ -268,13 +307,16 @@ def _enrich_with_file_context(findings: list[dict], repo_dir: str) -> list[dict]
         # 1. Full source file
         full_content = ""
         if os.path.exists(abs_path):
-            try:
-                with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
-                    full_content = f.read(MAX_FILE_CHARS)
-                    if len(full_content) == MAX_FILE_CHARS:
-                        full_content += "\n... [file truncated for context window]"
-            except Exception as e:
-                logger.warning(f"Could not read full file {abs_path}: {e}")
+            if _should_skip_file(abs_path):
+                full_content = "(Binary or generated file — skipped)"
+            else:
+                try:
+                    with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
+                        full_content = f.read(MAX_FILE_CHARS)
+                        if len(full_content) == MAX_FILE_CHARS:
+                            full_content += "\n... [file truncated for context window]"
+                except Exception as e:
+                    logger.warning(f"Could not read full file {abs_path}: {e}")
 
         finding["_full_file_content"] = full_content
 
@@ -290,6 +332,8 @@ def _enrich_with_file_context(findings: list[dict], repo_dir: str) -> list[dict]
                 for ext in extensions:
                     candidate = os.path.join(repo_dir, (rel_path + ext).replace("/", os.sep))
                     if os.path.exists(candidate):
+                        if _should_skip_file(candidate):
+                            break
                         try:
                             with open(candidate, "r", encoding="utf-8", errors="ignore") as f:
                                 content = f.read(MAX_FILE_CHARS)
@@ -381,6 +425,9 @@ async def scan_repository(
 
         # Step 1: Clone
         clone_repo(clone_url, access_token, repo_dir)
+
+        # Delete junk directories (node_modules, .git, build artifacts) to save disk and memory
+        delete_junk_dirs(repo_dir)
 
         # Step 2: Scan
         raw_output = run_semgrep(repo_dir)
