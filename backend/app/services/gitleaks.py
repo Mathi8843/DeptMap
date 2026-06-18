@@ -194,19 +194,12 @@ def run_regex_fallback_scanner(repo_dir: str) -> list[dict]:
     return findings
 
 
-async def scan_repository(
-    full_name: str,
-    clone_url: str,
-    access_token: str,
-) -> list[dict]:
+def scan_dir(repo_dir: str, full_name: str, access_token: str = None) -> list[dict]:
     """
-    Clones the repository and runs Gitleaks secret scanner.
+    Scan an existing directory with Gitleaks (no cloning).
     Falls back to a Python-based regex scanner if Gitleaks is not available.
     """
     if access_token == "mock_github_token":
-        import asyncio
-        await asyncio.sleep(1.0)  # simulate scanner delay
-        
         if "saas-app" in full_name:
             return [
                 {
@@ -229,6 +222,90 @@ async def scan_repository(
             ]
         return []
 
+    # Parent dir of repo_dir is where we can put the report file
+    temp_dir = os.path.dirname(repo_dir) if repo_dir else tempfile.gettempdir()
+
+    # Run secrets scanning
+    raw_findings = []
+    scanner_used = "Gitleaks binary"
+    
+    try:
+        raw_findings = run_gitleaks(repo_dir, temp_dir)
+    except Exception as e:
+        logger.warning(f"Gitleaks runner failed or was unavailable: {e}. Falling back to Python regex scanner...")
+        raw_findings = run_regex_fallback_scanner(repo_dir)
+        scanner_used = "built-in Python regex engine"
+        
+    logger.info(f"Secret scan completed with {scanner_used}. Found {len(raw_findings)} leak(s).")
+
+    # Parse raw findings into issues schema
+    findings = []
+    for item in raw_findings:
+        rel_path = item.get("File", "").replace("\\", "/")
+        start_line = item.get("StartLine", 1)
+        end_line = item.get("EndLine", start_line)
+        
+        # Extract actual lines of code from disk
+        code_lines = ""
+        local_file_path = os.path.join(repo_dir, rel_path.replace("/", os.sep))
+        if os.path.exists(local_file_path):
+            try:
+                with open(local_file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    file_lines = f.readlines()
+                    if 1 <= start_line <= len(file_lines):
+                        code_lines = "".join(file_lines[start_line - 1 : end_line])
+            except Exception as e:
+                logger.warning(f"Could not read code lines for secret finding: {e}")
+                
+        if not code_lines:
+            code_lines = item.get("Match", "")
+
+        rule_id = f"gitleaks.{item.get('RuleID', 'secret')}"
+        
+        # Extract full file content for AI context
+        full_content = ""
+        if os.path.exists(local_file_path):
+            try:
+                with open(local_file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    full_content = f.read(8000)
+                    if len(full_content) == 8000:
+                        full_content += "\n... [file truncated for context window]"
+            except Exception as e:
+                logger.warning(f"Could not read full file context: {e}")
+
+        findings.append({
+            "semgrep_rule_id": rule_id,
+            "severity": "critical",
+            "file_path": rel_path,
+            "line_start": start_line,
+            "line_end": end_line,
+            "code_snippet": code_lines,
+            "plain_english_title": "",
+            "plain_english_body": "",
+            "impact_bullets": [],
+            "ai_fix_code": code_lines,
+            "_raw_message": f"Secret detected: {item.get('Description', 'Hardcoded credential')}",
+            "_full_file_content": full_content,
+            "_related_files": [],
+        })
+
+    return findings
+
+
+async def scan_repository(
+    full_name: str,
+    clone_url: str,
+    access_token: str,
+) -> list[dict]:
+    """
+    Clones the repository and runs Gitleaks secret scanner.
+    Falls back to a Python-based regex scanner if Gitleaks is not available.
+    """
+    if access_token == "mock_github_token":
+        import asyncio
+        await asyncio.sleep(1.0)  # simulate scanner delay
+        return scan_dir("", full_name, access_token)
+
     # Create isolated temp dir for Gitleaks scan
     temp_dir = tempfile.mkdtemp(
         prefix=f"debtmap_gitleaks_{full_name.replace('/', '_')}_",
@@ -243,70 +320,7 @@ async def scan_repository(
         clone_repo(clone_url, access_token, repo_dir)
 
         # Run secrets scanning
-        raw_findings = []
-        scanner_used = "Gitleaks binary"
-        
-        try:
-            raw_findings = run_gitleaks(repo_dir, temp_dir)
-        except Exception as e:
-            logger.warning(f"Gitleaks runner failed or was unavailable: {e}. Falling back to Python regex scanner...")
-            raw_findings = run_regex_fallback_scanner(repo_dir)
-            scanner_used = "built-in Python regex engine"
-            
-        logger.info(f"Secret scan completed with {scanner_used}. Found {len(raw_findings)} leak(s).")
-
-        # Parse raw findings into issues schema
-        findings = []
-        for item in raw_findings:
-            rel_path = item.get("File", "").replace("\\", "/")
-            start_line = item.get("StartLine", 1)
-            end_line = item.get("EndLine", start_line)
-            
-            # Extract actual lines of code from disk
-            code_lines = ""
-            local_file_path = os.path.join(repo_dir, rel_path.replace("/", os.sep))
-            if os.path.exists(local_file_path):
-                try:
-                    with open(local_file_path, "r", encoding="utf-8", errors="ignore") as f:
-                        file_lines = f.readlines()
-                        if 1 <= start_line <= len(file_lines):
-                            code_lines = "".join(file_lines[start_line - 1 : end_line])
-                except Exception as e:
-                    logger.warning(f"Could not read code lines for secret finding: {e}")
-                    
-            if not code_lines:
-                code_lines = item.get("Match", "")
-
-            rule_id = f"gitleaks.{item.get('RuleID', 'secret')}"
-            
-            # Extract full file content for AI context
-            full_content = ""
-            if os.path.exists(local_file_path):
-                try:
-                    with open(local_file_path, "r", encoding="utf-8", errors="ignore") as f:
-                        full_content = f.read(8000)
-                        if len(full_content) == 8000:
-                            full_content += "\n... [file truncated for context window]"
-                except Exception as e:
-                    logger.warning(f"Could not read full file context: {e}")
-
-            findings.append({
-                "semgrep_rule_id": rule_id,
-                "severity": "critical",
-                "file_path": rel_path,
-                "line_start": start_line,
-                "line_end": end_line,
-                "code_snippet": code_lines,
-                "plain_english_title": "",
-                "plain_english_body": "",
-                "impact_bullets": [],
-                "ai_fix_code": code_lines,
-                "_raw_message": f"Secret detected: {item.get('Description', 'Hardcoded credential')}",
-                "_full_file_content": full_content,
-                "_related_files": [],
-            })
-
-        return findings
+        return scan_dir(repo_dir, full_name, access_token)
 
     finally:
         # Clean up temp dir

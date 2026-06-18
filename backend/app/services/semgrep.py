@@ -419,10 +419,10 @@ async def scan_repository(
         dir=settings.scan_temp_dir if os.path.exists(settings.scan_temp_dir) else None,
     )
 
-    try:
-        repo_dir = os.path.join(temp_dir, "repo")
-        os.makedirs(repo_dir, exist_ok=True)
+    repo_dir = os.path.join(temp_dir, "repo")
+    os.makedirs(repo_dir, exist_ok=True)
 
+    try:
         # Step 1: Clone
         clone_repo(clone_url, access_token, repo_dir)
 
@@ -436,19 +436,19 @@ async def scan_repository(
         findings = parse_findings(raw_output, repo_dir)
 
         # Step 4: Enrich each finding with full file context + imported file context
-        # MUST happen before shutil.rmtree — repo_dir will be deleted in finally block
         findings = _enrich_with_file_context(findings, repo_dir)
 
         return findings, repo_dir
 
-    finally:
-        # Always clean up — repos can be large
+    except Exception as e:
+        # Clean up temp dir ONLY on failure. On success, the caller is responsible for cleaning up.
         shutil.rmtree(temp_dir, ignore_errors=True)
+        raise e
 
 
-def get_package_files(clone_url: str, access_token: str) -> dict[str, str]:
+def read_package_files(repo_dir: str, access_token: str = None) -> dict[str, str]:
     """
-    Clone repo and extract just package manifest files.
+    Read package manifest files directly from an already-cloned directory.
     """
     if access_token == "mock_github_token":
         return {
@@ -456,22 +456,36 @@ def get_package_files(clone_url: str, access_token: str) -> dict[str, str]:
         }
 
     target_files = ["package.json", "requirements.txt", "Pipfile", "pyproject.toml"]
-    temp_dir = tempfile.mkdtemp(prefix="debtmap_pkgs_")
     results = {}
 
+    if not repo_dir:
+        return results
+
+    for fname in target_files:
+        fpath = Path(repo_dir) / fname
+        if fpath.exists():
+            try:
+                results[fname] = fpath.read_text(encoding="utf-8", errors="ignore")
+            except Exception as e:
+                logger.warning(f"Could not read package file {fpath}: {e}")
+
+    return results
+
+
+def get_package_files(clone_url: str, access_token: str) -> dict[str, str]:
+    """
+    Clone repo and extract just package manifest files.
+    """
+    if access_token == "mock_github_token":
+        return read_package_files("", access_token)
+
+    temp_dir = tempfile.mkdtemp(prefix="debtmap_pkgs_")
     try:
         repo_dir = os.path.join(temp_dir, "repo")
         clone_repo(clone_url, access_token, repo_dir)
-
-        for fname in target_files:
-            fpath = Path(repo_dir) / fname
-            if fpath.exists():
-                results[fname] = fpath.read_text(encoding="utf-8", errors="ignore")
-
+        return read_package_files(repo_dir, access_token)
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-
-    return results
 
 
 def verify_semgrep_patch(

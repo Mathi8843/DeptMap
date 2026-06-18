@@ -11,6 +11,8 @@ The scan pipeline runs as a background task to avoid HTTP timeout:
 import asyncio
 import logging
 import uuid
+import os
+import shutil
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
@@ -20,6 +22,7 @@ from app.services import semgrep as semgrep_service
 from app.services import gitleaks as gitleaks_service
 from app.services import groq as groq_service
 from app.services import registry as registry_service
+from app.services import github as github_service
 from app.services.scorer import calculate_scores_by_severity
 from app.services import decrypt_token, get_current_user_id
 
@@ -55,6 +58,22 @@ async def trigger_scan(
         raise HTTPException(status_code=400, detail="GitHub access token missing — re-authenticate")
 
     access_token = decrypt_token(encrypted_token)
+
+    # Fetch latest repo size from GitHub to prevent OOM on large repositories
+    size_kb = 0
+    try:
+        meta = github_service.get_repo_metadata(access_token, repo["full_name"])
+        size_kb = meta.get("size_kb", 0)
+    except Exception as e:
+        logger.warning(f"Could not fetch repo size from GitHub: {e}")
+
+    if size_kb > 500_000:  # 500MB uncompressed
+        raise HTTPException(status_code=400, detail=(
+            f"Repo is {size_kb//1024}MB — too large for free plan. "
+            "Upgrade to Pro for large repo support."
+        ))
+    elif size_kb > 100_000:
+        logger.warning(f"Large repo ({size_kb//1024}MB): {repo['full_name']}")
 
     # Create scan record
     scan_id = str(uuid.uuid4())
@@ -142,49 +161,56 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         clone_url = f"https://github.com/{repo['full_name']}.git"
 
         log("[SEMGREP] Running static analysis with --config=auto rules...", 15)
-        findings, _ = await semgrep_service.scan_repository(
+        findings, repo_dir = await semgrep_service.scan_repository(
             full_name=repo["full_name"],
             clone_url=clone_url,
             access_token=access_token,
         )
         log(f"[SEMGREP] Scan complete. Found {len(findings)} potential issues.", 40)
 
-        # ── Step 1.5: Secret Detection (Gitleaks) ───────────────────────────
-        log("[GITLEAKS] Running secret detection...", 40)
-        try:
-            secret_findings = await gitleaks_service.scan_repository(
-                full_name=repo["full_name"],
-                clone_url=clone_url,
-                access_token=access_token,
-            )
-            findings.extend(secret_findings)
-            log(f"[GITLEAKS] Secret scan complete. Found {len(secret_findings)} secret(s).", 44)
-        except Exception as e:
-            log(f"[GITLEAKS] Secret scan failed (non-fatal): {e}", 44)
-
-        # ── Step 1.8: Dependency Audit (npm audit + pip-audit + Registry) ───
-        log("[REGISTRY] Auditing packages for vulnerabilities and registry check...", 44)
+        # We wrap the remaining directory-dependent operations in a try-finally
+        # to ensure the directory is cleaned up under any circumstances.
         package_results = []
         try:
-            package_files = semgrep_service.get_package_files(
-                clone_url=clone_url,
-                access_token=access_token,
-            )
-            audit_res = await registry_service.audit_packages(
-                package_files=package_files,
-                clone_url=clone_url,
-                access_token=access_token,
-            )
-            package_results = audit_res.get("packages", [])
-            package_issues = audit_res.get("issues", [])
-            
-            # Add package issues to the findings list so they can be explained by Groq and saved in the issues table!
-            findings.extend(package_issues)
-            
-            dangerous_count = sum(1 for p in package_results if p["status"] == "dangerous")
-            log(f"[REGISTRY] Dependency audit complete. Found {len(package_issues)} package issues. {dangerous_count} dangerous package(s).", 48)
-        except Exception as e:
-            log(f"[REGISTRY] Dependency audit failed (non-fatal): {e}", 48)
+            # ── Step 1.5: Secret Detection (Gitleaks) ───────────────────────────
+            log("[GITLEAKS] Running secret detection...", 40)
+            try:
+                secret_findings = gitleaks_service.scan_dir(
+                    repo_dir=repo_dir,
+                    full_name=repo["full_name"],
+                    access_token=access_token,
+                )
+                findings.extend(secret_findings)
+                log(f"[GITLEAKS] Secret scan complete. Found {len(secret_findings)} secret(s).", 44)
+            except Exception as e:
+                log(f"[GITLEAKS] Secret scan failed (non-fatal): {e}", 44)
+
+            # ── Step 1.8: Dependency Audit (npm audit + pip-audit + Registry) ───
+            log("[REGISTRY] Auditing packages for vulnerabilities and registry check...", 44)
+            try:
+                package_files = semgrep_service.read_package_files(
+                    repo_dir=repo_dir,
+                    access_token=access_token,
+                )
+                audit_res = await registry_service.audit_packages(
+                    package_files=package_files,
+                    clone_url=clone_url,
+                    access_token=access_token,
+                )
+                package_results = audit_res.get("packages", [])
+                package_issues = audit_res.get("issues", [])
+                
+                # Add package issues to the findings list so they can be explained by Groq and saved in the issues table!
+                findings.extend(package_issues)
+                
+                dangerous_count = sum(1 for p in package_results if p["status"] == "dangerous")
+                log(f"[REGISTRY] Dependency audit complete. Found {len(package_issues)} package issues. {dangerous_count} dangerous package(s).", 48)
+            except Exception as e:
+                log(f"[REGISTRY] Dependency audit failed (non-fatal): {e}", 48)
+        finally:
+            if repo_dir:
+                temp_dir_to_clean = os.path.dirname(repo_dir)
+                shutil.rmtree(temp_dir_to_clean, ignore_errors=True)
 
         # ── Step 2: Groq enrichment ─────────────────────────────────────────
         if findings:
