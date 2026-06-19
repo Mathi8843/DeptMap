@@ -15,17 +15,23 @@ function timeAgo(dateStr: string) {
 }
 
 export default function ReposPage() {
-  const { repos, issues, triggerScan } = useApp();
+  const { repos, issues, triggerScan, isScanning, scanLogs, scanProgress, scanStatus } = useApp();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [activeScanningRepo, setActiveScanningRepo] = useState<string | null>(null);
 
-  // Terminal State
+  // Terminal State — static CLI for manual commands
   const [terminalInput, setTerminalInput] = useState("");
   const [terminalLogs, setTerminalLogs] = useState<string[]>([
     "DebtMap Workspace CLI Console v1.0",
     'Type "help" to view list of available audit commands.',
     ""
   ]);
+
+  // Merge real scan logs from AppContext into the terminal display whenever a scan is active
+  // scanLogs comes from AppContext polling /api/scans/{id}/status → log_messages in DB
+  const displayLogs: string[] = isScanning || scanStatus === "completed" || scanStatus === "failed"
+    ? scanLogs
+    : terminalLogs;
   
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -41,10 +47,10 @@ export default function ReposPage() {
     return { text: "text-rose-500 dark:text-rose-400", stroke: "stroke-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" };
   };
 
-  // Auto-scroll terminal
+  // Auto-scroll terminal whenever logs update (real scan logs or manual CLI logs)
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [terminalLogs]);
+  }, [displayLogs]);
 
   // Terminal commands handling
   const handleTerminalSubmit = (e: React.FormEvent) => {
@@ -257,22 +263,54 @@ export default function ReposPage() {
         <div className="bg-[#030308] border border-border-subtle rounded-2xl overflow-hidden font-mono text-xs flex flex-col h-[280px] shadow-2xl">
           {/* Header */}
           <div className="bg-black/40 px-5 py-3 border-b border-border-subtle flex items-center justify-between">
-            <span className="text-slate-400 font-bold tracking-wide text-[10px]">DEBTMAP INTERACTIVE CLI</span>
-            <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[9px] text-slate-600">ONLINE</span>
+            <span className="text-slate-400 font-bold tracking-wide text-[10px]">
+              {isScanning ? "DEBTMAP LIVE SCAN" : "DEBTMAP INTERACTIVE CLI"}
+            </span>
+            <div className="flex items-center gap-2">
+              {isScanning && (
+                <div className="flex items-center gap-2">
+                  <div className="w-20 h-1 bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      style={{ width: `${scanProgress}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-emerald-400 font-mono">{scanProgress}%</span>
+                </div>
+              )}
+              {scanStatus === "completed" && !isScanning && (
+                <span className="text-[9px] text-emerald-400 font-mono">SCAN COMPLETE</span>
+              )}
+              {scanStatus === "failed" && !isScanning && (
+                <span className="text-[9px] text-rose-400 font-mono">SCAN FAILED</span>
+              )}
+              <div className="flex gap-1 items-center">
+                <span className={`w-1.5 h-1.5 rounded-full ${isScanning ? "bg-emerald-500 animate-pulse" : "bg-slate-600"}`} />
+                <span className="text-[9px] text-slate-600">{isScanning ? "SCANNING" : "ONLINE"}</span>
+              </div>
             </div>
           </div>
 
           {/* Logs */}
           <div className="flex-1 p-5 overflow-y-auto space-y-1.5 select-text text-emerald-400 text-xs leading-relaxed">
-            {terminalLogs.map((log, index) => (
-              <div 
-                key={index} 
+            {displayLogs.map((log, index) => (
+              <div
+                key={index}
                 className={clsx(
+                  // Manual CLI command styling
                   log.startsWith("$") && "text-slate-100 font-bold",
                   log.includes("Vulnerability") && "text-rose-400",
-                  log.includes("running:") && "text-slate-500 italic"
+                  log.includes("running:") && "text-slate-500 italic",
+                  // Real scan log prefix styling
+                  log.startsWith("[SEMGREP]") && "text-cyan-400",
+                  log.startsWith("[GITLEAKS]") && "text-purple-400",
+                  log.startsWith("[GROQ]") && "text-yellow-400",
+                  log.startsWith("[REGISTRY]") && "text-blue-400",
+                  log.startsWith("[SCORER]") && "text-emerald-400",
+                  log.startsWith("[DB]") && "text-slate-400",
+                  log.startsWith("[SYSTEM]") && "text-slate-300",
+                  log.startsWith("[SUCCESS]") && "text-emerald-300 font-bold",
+                  log.startsWith("[ERROR]") && "text-rose-400 font-bold",
                 )}
               >
                 {log}
@@ -281,15 +319,16 @@ export default function ReposPage() {
             <div ref={terminalEndRef} />
           </div>
 
-          {/* Input field */}
+          {/* Input field — disabled during active scan */}
           <form onSubmit={handleTerminalSubmit} className="bg-black/50 px-5 py-3 border-t border-border-subtle flex items-center gap-2">
             <span className="text-slate-100 font-bold">$</span>
             <input
               type="text"
-              placeholder='Type a command like "help", "semgrep", "npm audit" or "git log" and press Enter...'
+              placeholder={isScanning ? "Scan in progress — live logs above..." : 'Type a command like "help", "semgrep", "npm audit" or "git log" and press Enter...'}
               value={terminalInput}
               onChange={(e) => setTerminalInput(e.target.value)}
-              className="flex-1 bg-transparent border-none focus:outline-none text-white text-xs"
+              disabled={isScanning}
+              className="flex-1 bg-transparent border-none focus:outline-none text-white text-xs disabled:opacity-40 disabled:cursor-not-allowed"
             />
           </form>
         </div>
