@@ -15,7 +15,7 @@ import logging
 import os
 import shutil
 import subprocess
-import tempfile
+import tempfile, os
 from pathlib import Path
 from typing import Literal
 
@@ -100,7 +100,7 @@ def _get_semgrep_command(target_dir: str) -> list[str]:
         "--json",
         "--no-git-ignore",
         "--timeout", "60",
-        "--max-memory", "1000",
+        "--max-memory", "300",
     ]
 
     if platform.system() != "Windows":
@@ -132,32 +132,25 @@ def _get_semgrep_command(target_dir: str) -> list[str]:
 
 
 def run_semgrep(target_dir: str) -> dict:
-    """
-    Run Semgrep on a directory and return the raw JSON output.
-    Automatically selects the correct command for Linux/Mac/Windows.
-    """
     cmd = _get_semgrep_command(target_dir)
-    logger.info(f"Running: {' '.join(cmd[:4])}...")
-
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        timeout=180,
-    )
-
-    stdout = result.stdout.decode("utf-8", errors="ignore")
-    stderr = result.stderr.decode("utf-8", errors="ignore")
-
-    # Semgrep exits with code 1 when findings exist — that's normal, not an error
-    if result.returncode not in (0, 1):
-        raise RuntimeError(
-            f"Semgrep failed with exit code {result.returncode}: {stderr[:500]}"
-        )
+    
+    # Write output to temp file — avoids buffering in RAM
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
+        output_path = f.name
 
     try:
-        return json.loads(stdout)
-    except json.JSONDecodeError:
-        raise RuntimeError(f"Semgrep output was not valid JSON: {stdout[:200]}")
+        result = subprocess.run(
+            cmd,
+            stdout=open(output_path, "w"),
+            stderr=subprocess.PIPE,
+            timeout=180,
+        )
+        if result.returncode not in (0, 1):
+            raise RuntimeError(f"Semgrep failed: {result.stderr.decode()[:500]}")
+        with open(output_path, "r") as f:
+            return json.load(f)
+    finally:
+        os.unlink(output_path)
 
 
 def parse_findings(semgrep_output: dict, repo_dir: str) -> list[dict]:

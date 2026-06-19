@@ -14,7 +14,6 @@ import tempfile
 from pathlib import Path
 
 from app.config import get_settings
-from app.services.semgrep import clone_repo
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -292,36 +291,4 @@ def scan_dir(repo_dir: str, full_name: str, access_token: str = None) -> list[di
     return findings
 
 
-async def scan_repository(
-    full_name: str,
-    clone_url: str,
-    access_token: str,
-) -> list[dict]:
-    """
-    Clones the repository and runs Gitleaks secret scanner.
-    Falls back to a Python-based regex scanner if Gitleaks is not available.
-    """
-    if access_token == "mock_github_token":
-        import asyncio
-        await asyncio.sleep(1.0)  # simulate scanner delay
-        return scan_dir("", full_name, access_token)
 
-    # Create isolated temp dir for Gitleaks scan
-    temp_dir = tempfile.mkdtemp(
-        prefix=f"debtmap_gitleaks_{full_name.replace('/', '_')}_",
-        dir=settings.scan_temp_dir if os.path.exists(settings.scan_temp_dir) else None,
-    )
-
-    try:
-        repo_dir = os.path.join(temp_dir, "repo")
-        os.makedirs(repo_dir, exist_ok=True)
-
-        # Clone repository
-        clone_repo(clone_url, access_token, repo_dir)
-
-        # Run secrets scanning
-        return scan_dir(repo_dir, full_name, access_token)
-
-    finally:
-        # Clean up temp dir
-        shutil.rmtree(temp_dir, ignore_errors=True)

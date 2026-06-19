@@ -17,11 +17,8 @@ import os
 import sys
 import platform
 import subprocess
-import tempfile
-import shutil
 from typing import Literal
 import httpx
-from app.services.semgrep import clone_repo
 
 logger = logging.getLogger(__name__)
 
@@ -416,29 +413,8 @@ async def audit_packages(
             "url": "https://github.com/advisories/GHSA-4wrr-w3cr-w9g4",
             "cwe": ["CWE-601"],
         }]
-    elif clone_url and access_token:
-        # Real Scan: Clone repo to run CLI scans
-        temp_dir = tempfile.mkdtemp(prefix="debtmap_dep_audit_")
-        try:
-            repo_dir = os.path.join(temp_dir, "repo")
-            os.makedirs(repo_dir, exist_ok=True)
-            clone_repo(clone_url, access_token, repo_dir)
-            
-            # Run npm audit
-            if "package.json" in package_files:
-                npm_audit_raw = _run_npm_audit(repo_dir)
-                if npm_audit_raw:
-                    vulns_by_npm_pkg = parse_npm_audit_results(npm_audit_raw)
-                    
-            # Run pip-audit
-            if "requirements.txt" in package_files:
-                pip_audit_raw = _run_pip_audit(repo_dir)
-                if pip_audit_raw:
-                    vulns_by_pypi_pkg = parse_pip_audit_results(pip_audit_raw)
-        except Exception as e:
-            logger.error(f"CLI dependency audit failed: {e}")
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+    # No fallback clone — the repo is already cloned in the scan pipeline.
+    # CLI audits (npm audit, pip-audit) are skipped when package_files are empty.
 
     # 3. Merge vulnerability details and construct issues
     package_results = []

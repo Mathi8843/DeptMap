@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import sys
+from datetime import datetime, timezone, timedelta
 
 # Ensure current directory is in PYTHONPATH so app imports resolve
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +27,17 @@ async def poll_and_run_scans():
     
     while True:
         try:
+            # Stale scan guard: mark running scans >10 min as failed
+            cutoff = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+            stale_res = db.table("scans").select("*").eq("status", "running").lt("triggered_at", cutoff).execute()
+            for scan in (stale_res.data or []):
+                sid = scan["id"]
+                logger.warning(f"Stale scan {sid} running for over 10 minutes — marking as failed")
+                db.table("scans").update({
+                    "status": "failed",
+                    "log_messages": (scan.get("log_messages") or []) + ["[SYSTEM TIMEOUT] Scan exceeded 10-minute limit and was terminated."],
+                }).eq("id", sid).execute()
+
             res = db.table("scans").select("*").eq("status", "queued").execute()
             queued_scans = res.data or []
             
