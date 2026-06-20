@@ -286,7 +286,7 @@ async def create_fix_pr(
 
     try:
         # Get original file content to do a proper replacement
-        original_content = github_service.get_file_content(
+        original_content = await github_service.get_file_content_async(
             access_token=access_token,
             full_name=repo["full_name"],
             file_path=issue["file_path"],
@@ -378,7 +378,7 @@ async def create_fix_pr(
                     )
 
         # Create the PR
-        pr_result = github_service.create_fix_pull_request(
+        pr_result = await github_service.create_fix_pull_request_async(
             access_token=access_token,
             full_name=repo["full_name"],
             file_path=issue["file_path"],

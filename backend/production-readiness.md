@@ -77,25 +77,30 @@
 
 ## 🟠 High (Performance Degradation or Data Integrity Risk)
 
-- [ ] **7. Synchronous PyGithub in async context**
+- [x] **7. Synchronous PyGithub in async context**
       `backend/app/services/github.py:61-210`
       `get_github_client()`, `get_repo()`, `get_file_content()`,
       `create_fix_pull_request()` use the synchronous PyGithub library,
       blocking the event loop on every GitHub API call.
-      **Fix:** Replace PyGithub with `httpx.AsyncClient` calls to the
-      GitHub REST API, or run PyGithub calls in a thread pool executor.
+      **Fix:** Added 4 `_async` wrapper functions (`get_repo_metadata_async`,
+      `list_user_repos_async`, `get_file_content_async`,
+      `create_fix_pull_request_async`) that run the sync PyGithub calls in
+      the default thread pool executor. Updated all callers in `repos.py`,
+      `scans.py`, and `issues.py` to `await` the wrappers. Uses `functools.partial`
+      for multi-arg functions. No new dependencies.
 
-- [ ] **8. Webhook signature verification only in production**
-      `backend/app/routers/webhooks.py:61`
+- [x] **8. Webhook signature verification only in production**
+      `backend/app/routers/webhooks.py:63`
       ```python
       if settings.is_production and not verify_github_signature(...):
       ```
       In non-production environments, webhooks are accepted without
       signature verification. Any exposed dev deployment is trivially
       exploitable.
-      **Fix:** Always verify webhook signatures. Remove the
-      `settings.is_production` guard. If a secret isn't configured, log
-      a startup warning but still verify if one exists.
+      **Fix:** Removed the `settings.is_production and ` guard.
+      Signature is now verified in every environment. The Issue #5 fix
+      already logs a CRITICAL warning on startup if the webhook secret
+      is the default value.
 
 - [ ] **9. Supabase client singleton without connection management**
       `backend/app/database.py:11-22`
@@ -236,10 +241,10 @@
 | Severity | Total | Completed |
 |----------|-------|-----------|
 | 🔴 Critical | 6 | 6 |
-| 🟠 High | 5 | 0 |
+| 🟠 High | 5 | 2 |
 | 🟡 Medium | 7 | 0 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **6** |
+| **Total** | **23** | **8** |
 
 ---
 

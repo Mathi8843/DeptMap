@@ -60,7 +60,7 @@ async def github_webhook(
     raw_body = await request.body()
 
     # Reject unverified webhooks
-    if settings.is_production and not verify_github_signature(raw_body, x_hub_signature_256):
+    if not verify_github_signature(raw_body, x_hub_signature_256):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     event = x_github_event or "unknown"

@@ -3,7 +3,9 @@ GitHub API service.
 Handles: OAuth exchange, repo metadata fetch, file content access, PR creation.
 Uses PyGithub library wrapping the GitHub REST API.
 """
+import asyncio
 import httpx
+from functools import partial
 from github import Github, Auth, GithubException
 from github.Repository import Repository as GHRepo
 from app.config import get_settings
@@ -251,3 +253,46 @@ def list_user_repos(access_token: str) -> list[dict]:
             "updated_at": repo.updated_at.isoformat() if repo.updated_at else None,
         })
     return repos[:50]  # Return max 50 most recently updated
+
+
+# ─── Async wrappers (run sync PyGithub calls in thread pool) ──────────────
+
+async def get_repo_metadata_async(access_token: str, full_name: str) -> dict:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, get_repo_metadata, access_token, full_name)
+
+
+async def list_user_repos_async(access_token: str) -> list[dict]:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, list_user_repos, access_token)
+
+
+async def get_file_content_async(access_token: str, full_name: str, file_path: str, ref: str = "main") -> str:
+    loop = asyncio.get_event_loop()
+    fn = partial(get_file_content, access_token, full_name, file_path, ref)
+    return await loop.run_in_executor(None, fn)
+
+
+async def create_fix_pull_request_async(
+    access_token: str,
+    full_name: str,
+    file_path: str,
+    original_content: str,
+    fixed_content: str,
+    issue_title: str,
+    issue_id: str,
+    base_branch: str = "main",
+) -> dict:
+    loop = asyncio.get_event_loop()
+    fn = partial(
+        create_fix_pull_request,
+        access_token,
+        full_name,
+        file_path,
+        original_content,
+        fixed_content,
+        issue_title,
+        issue_id,
+        base_branch,
+    )
+    return await loop.run_in_executor(None, fn)

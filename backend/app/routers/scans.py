@@ -66,7 +66,7 @@ async def trigger_scan(
     # Fetch latest repo size from GitHub to prevent OOM on large repositories
     size_kb = 0
     try:
-        meta = github_service.get_repo_metadata(access_token, repo["full_name"])
+        meta = await github_service.get_repo_metadata_async(access_token, repo["full_name"])
         size_kb = meta.get("size_kb", 0)
     except Exception as e:
         logger.warning(f"Could not fetch repo size from GitHub: {e}")

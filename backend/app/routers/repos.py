@@ -47,7 +47,7 @@ async def connect_repo(
 
     # Fetch metadata from GitHub
     try:
-        meta = github_service.get_repo_metadata(access_token, github_repo_full_name)
+        meta = await github_service.get_repo_metadata_async(access_token, github_repo_full_name)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Cannot access repository: {str(e)}")
 
@@ -88,7 +88,7 @@ async def list_github_repos(current_user_id: str = Depends(get_current_user_id),
     access_token = decrypt_token(encrypted_token)
 
     try:
-        repos = github_service.list_user_repos(access_token)
+        repos = await github_service.list_user_repos_async(access_token)
         return repos
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list repos: {str(e)}")
