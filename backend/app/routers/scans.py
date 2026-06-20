@@ -137,6 +137,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
     """
     The actual scan pipeline — runs in background.
     Updates progress and log_messages in DB throughout.
+    Wraps the entire pipeline in a 10-minute timeout.
     """
     logs_list = []
     # Initialize logs list from DB
@@ -154,7 +155,8 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         db.table("scans").update(update_data).eq("id", scan_id).execute()
         logger.info(f"[Scan {scan_id[:8]}] {msg}")
 
-    try:
+    async def _run_pipeline():
+        """Inner pipeline body — wrapped with asyncio.wait_for for overall timeout."""
         db.table("scans").update({"status": "running", "progress": 5}).eq("id", scan_id).execute()
 
         # ── Step 1: Clone + Semgrep ─────────────────────────────────────────
@@ -346,6 +348,16 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
 
         log(f"[SUCCESS] Scan complete. Health score: {scores['health_score']}/100. Issues: {len(enriched_findings)} found.", 100)
 
+    try:
+        await asyncio.wait_for(_run_pipeline(), timeout=600)
+    except asyncio.TimeoutError:
+        logger.error(f"Scan {scan_id[:8]} timed out after 10 minutes")
+        db.table("scans").update({
+            "status": "failed",
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "error_message": "Scan timed out after 10 minutes",
+        }).eq("id", scan_id).execute()
+        log("[TIMEOUT] Scan exceeded 10-minute limit and was terminated.", 100)
     except Exception as e:
         logger.exception(f"Scan pipeline failed for scan_id={scan_id}")
         error_msg = f"[ERROR] Scan failed: {str(e)}"

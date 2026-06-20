@@ -126,32 +126,36 @@
       carries the same request ID for correlation. `/health` endpoint
       verifies Supabase connectivity (from Issue #9). No new dependencies.
 
-- [ ] **11. Scan pipeline has no overall timeout**
-      `backend/app/routers/scans.py:135-355`
-      No timeout on `git clone`. No timeout on npm/pip audit. No timeout
-      on the pipeline as a whole. A single stuck step blocks the event
-      loop indefinitely.
-      **Fix:** Add `asyncio.wait_for()` or timeout context managers to
-      every blocking step. Add a pipeline-level timeout (e.g., 10
-      minutes). The stale-scan guard in `worker.py` already exists —
-      extend to cover this.
+- [x] **11. Scan pipeline has no overall timeout**
+      `backend/app/routers/scans.py:136-356`
+      No timeout on `git clone`. No timeout on the pipeline as a whole.
+      A stuck step blocks the scan thread indefinitely.
+      **Fix:** Wrapped the pipeline body in `asyncio.wait_for(_run_pipeline(),
+      timeout=600)`. If any step (including git clone, which had no timeout)
+      exceeds 10 minutes cumulatively, `asyncio.TimeoutError` is raised,
+      caught, and the scan is marked as failed with "Scan timed out after
+      10 minutes". Individual sub-step timeouts (semgrep 180s, gitleaks 120s,
+      npm 40s, pip 50s, groq 30s) remain as fine-grained guards.
 
 ---
 
 ## 🟡 Medium (Should Fix Before Significant Production Load)
 
-- [ ] **12. Token in clone URL may appear in error logs**
+- [x] **12. Token in clone URL may appear in error logs**
       `backend/app/services/semgrep.py:80`
       Even with the URL-based approach, if the clone fails, GitPython may
       emit the auth URL (with token) in logs and stderr.
-      **Fix:** Screenshot or redact credentials in log messages. Use the
-      credential approach from #3 to prevent this at the source.
+      **Fix:** Already resolved by Issue #3 (GIT_ASKPASS). The `clone_url`
+      is now `f"https://github.com/{repo['full_name']}.git"` — no token
+      embedded. The token lives only in the temp askpass script, never in
+      the clone URL, Git subprocess args, or Git error output.
 
-- [ ] **13. Unused dependencies in requirements**
+- [x] **13. Unused dependencies in requirements**
       `backend/requirements.txt:9,13`
-      `anthropic==0.40.0` and `slowapi==0.1.9` are listed but never
-      imported. Each unused package is a potential CVE vector.
-      **Fix:** Remove unused packages from `requirements.txt`.
+      `anthropic==0.40.0` was listed but never imported. (`slowapi==0.1.9`
+      is now used — Issue #4 wired it up for rate limiting.)
+      **Fix:** Removed `anthropic==0.40.0` from `requirements.txt`.
+      `slowapi` retained as it is actively used.
 
 - [ ] **14. Dockerfile not production-ready**
       `backend/Dockerfile:1-22`
@@ -248,9 +252,9 @@
 |----------|-------|-----------|
 | 🔴 Critical | 6 | 6 |
 | 🟠 High | 5 | 4 |
-| 🟡 Medium | 7 | 0 |
+| 🟡 Medium | 7 | 3 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **10** |
+| **Total** | **23** | **13** |
 
 ---
 
