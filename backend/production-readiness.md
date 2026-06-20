@@ -42,32 +42,36 @@
       Token is written to a temp script, git reads it via stdin, script is
       deleted after clone. Token never appears in any command-line arg.
 
-- [ ] **4. No rate limiting on any endpoint**
+- [x] **4. No rate limiting on any endpoint**
       `backend/requirements.txt:13` (slowapi listed but unused)
       Auth endpoints (`/signin`, `/signup`) are open to brute force. Scan
       trigger is open to resource exhaustion. Webhook endpoint is open to
       flooding.
-      **Fix:** Implement rate limiting middleware (use `slowapi` already in
-      requirements, or a custom ASGI middleware). Tiered limits: auth
-      endpoints aggressive, webhooks moderate, read endpoints lenient.
+      **Fix:** Wired up `slowapi` (already in requirements). Added
+      `app/rate_limit.py` with proxy-aware IP extraction. Tiered limits:
+      signup 5/min, signin 10/min, scan trigger 10/min, OAuth 20/min,
+      webhook 30/min, all others 100/min default.
 
-- [ ] **5. Default secrets with validation only in production**
+- [x] **5. Default secrets with validation only in production**
       `backend/app/config.py:39,53-60`
       `secret_key` defaults to `"change-this-in-production"`. The model
       validator that catches this only fires when `app_env == "production"`.
       Deploying with `app_env=development` (or any other value) bypasses
       validation — JWT tokens are forgeable, webhooks are spoofable.
-      **Fix:** Run the secret validation always, not just in production.
-      Add a startup-time check that warns loudly if defaults are present.
+      **Fix:** Removed `app_env == "production"` guard. Validator now runs
+      in every environment. In production, raises `ValueError` (hard block).
+      In non-production, logs `CRITICAL` warning on every startup.
 
-- [ ] **6. Admin authorization is email-based only**
+- [x] **6. Admin authorization is email-based only**
       `backend/app/routers/admin.py:13-24`
       Anyone with an `@debtmap.io` email becomes admin. No MFA, no role
       hierarchy, no audit log. The `/api/admin/insights` endpoint returns
       all users, repos, scans, and issues — massive data leak surface.
-      **Fix:** Add a secondary admin verification (e.g., a flag in the
-      `users` table, or a separate `admin_users` table). Audit all admin
-      actions. Do not rely solely on email domain.
+      **Fix:** Added `is_admin BOOLEAN DEFAULT FALSE` to the `users` table.
+      Replaced email-based `check_admin_user` with a DB column lookup. The
+      `ADMIN_EMAILS` list and email domain suffix check were removed. Run
+      the SQL migration (`supabase_schema.sql:192`) to grant admin to
+      existing users.
 
 ---
 
@@ -231,11 +235,11 @@
 
 | Severity | Total | Completed |
 |----------|-------|-----------|
-| 🔴 Critical | 6 | 3 |
+| 🔴 Critical | 6 | 6 |
 | 🟠 High | 5 | 0 |
 | 🟡 Medium | 7 | 0 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **3** |
+| **Total** | **23** | **6** |
 
 ---
 

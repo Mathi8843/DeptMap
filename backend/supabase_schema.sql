@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     plan            TEXT NOT NULL DEFAULT 'free'
                         CHECK (plan IN ('free', 'pro', 'team', 'enterprise')),
     plan_expires_at TIMESTAMPTZ,
+    is_admin        BOOLEAN DEFAULT FALSE,
     created_at      TIMESTAMPTZ DEFAULT now(),
     updated_at      TIMESTAMPTZ DEFAULT now()
 );
@@ -190,3 +191,13 @@ CREATE POLICY "scans_own_data" ON public.scans
 -- ALTER TABLE public.scans
 --   ADD CONSTRAINT scans_status_check
 --     CHECK (status IN ('queued', 'running', 'completed', 'failed', 'retrying'));
+
+-- ═══════════════════════════════════════════════════════════════
+-- Issue #6 Migration (run once after schema is created)
+-- ═══════════════════════════════════════════════════════════════
+-- ALTER TABLE public.users
+--   ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+--
+-- -- Grant admin to existing admin emails:
+-- UPDATE public.users SET is_admin = TRUE
+-- WHERE email IN ('mathi@debtmap.io', 'admin@debtmap.io');

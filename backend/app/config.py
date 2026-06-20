@@ -2,6 +2,7 @@
 DebtMap Backend Configuration
 Loads all settings from .env file via pydantic-settings
 """
+import logging
 from functools import lru_cache
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -51,12 +52,22 @@ class Settings(BaseSettings):
         return self.app_env == "production"
 
     @model_validator(mode="after")
-    def validate_production_secrets(self) -> "Settings":
-        if self.app_env == "production":
-            if self.secret_key == "change-this-in-production":
-                raise ValueError("secret_key must be changed in production mode!")
-            if self.github_webhook_secret == "debtmap-webhook-secret":
-                raise ValueError("github_webhook_secret must be changed in production mode!")
+    def validate_secrets(self) -> "Settings":
+        """Validate sensitive defaults in any environment — not just production."""
+        logger = logging.getLogger(__name__)
+
+        if self.secret_key == "change-this-in-production":
+            msg = "SECRET_KEY is still set to the default value — JWT tokens can be forged!"
+            if self.is_production:
+                raise ValueError(msg.replace(" — ", " — production: "))
+            logger.critical("🔴 %s Set SECRET_KEY in .env to a random 64-char string.", msg)
+
+        if self.github_webhook_secret == "debtmap-webhook-secret":
+            msg = "GITHUB_WEBHOOK_SECRET is still set to the default value — webhooks can be spoofed!"
+            if self.is_production:
+                raise ValueError(msg.replace(" — ", " — production: "))
+            logger.critical("🔴 %s Set GITHUB_WEBHOOK_SECRET in .env to a random value.", msg)
+
         return self
 
 

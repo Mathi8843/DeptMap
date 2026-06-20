@@ -10,17 +10,13 @@ from app.services import get_current_user_id
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-ADMIN_EMAILS = ["mathi@debtmap.io", "admin@debtmap.io"]
-
 def check_admin_user(current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
-    """Dependency helper to verify the user is an administrator."""
-    user_res = db.table("users").select("email").eq("id", current_user_id).execute()
+    """Dependency helper to verify the user has admin privileges via DB flag."""
+    user_res = db.table("users").select("is_admin").eq("id", current_user_id).execute()
     if not user_res.data:
         raise HTTPException(status_code=401, detail="User profile not found")
     
-    email = user_res.data[0].get("email", "")
-    # Restrict to configured admin emails or domain
-    if email not in ADMIN_EMAILS and not email.endswith("@debtmap.io"):
+    if not user_res.data[0].get("is_admin"):
         raise HTTPException(status_code=403, detail="Access denied: Administrator permissions required")
     return current_user_id
 
