@@ -2,11 +2,12 @@
 Scans router.
 Handles triggering and monitoring security scans.
 
-The scan pipeline runs as a background task to avoid HTTP timeout:
-1. Receive scan request → create scan record (status: queued)
+Data flow:
+1. Receive scan request → create scan record in DB (status: queued)
 2. Return scan_id immediately
-3. Background task: clone → semgrep → groq → registry → save results
-4. Frontend polls GET /api/scans/{scan_id}/status for progress
+3. Background worker (worker.py) polls DB, picks up the scan
+4. Worker executes pipeline in a thread: clone → semgrep → groq → registry → save results
+5. Frontend polls GET /api/scans/{scan_id}/status for progress
 """
 import asyncio
 import logging
@@ -15,7 +16,7 @@ import os
 import shutil
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.database import get_db
 from app.services import semgrep as semgrep_service
@@ -32,7 +33,6 @@ router = APIRouter(prefix="/api/scans", tags=["scans"])
 
 @router.post("")
 async def trigger_scan(
-    background_tasks: BackgroundTasks,
     repo_id: str = Query(...),
     current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db),
@@ -40,6 +40,7 @@ async def trigger_scan(
     """
     Trigger a security scan for a repository.
     Returns immediately with a scan_id — use status endpoint to poll progress.
+    The actual scan execution is handled asynchronously by the background worker (worker.py).
     """
     # Fetch repo from DB
     repo_result = db.table("repos").select("*").eq("id", repo_id).eq("user_id", current_user_id).execute()
@@ -75,7 +76,7 @@ async def trigger_scan(
     elif size_kb > 100_000:
         logger.warning(f"Large repo ({size_kb//1024}MB): {repo['full_name']}")
 
-    # Create scan record
+    # Create scan record — the background worker picks this up from the DB
     scan_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
@@ -88,9 +89,6 @@ async def trigger_scan(
         "progress": 0,
         "log_messages": ["[SYSTEM] Scan queued. Starting engine..."],
     }).execute()
-
-    # Schedule the scan pipeline as a background task
-    background_tasks.add_task(run_scan_pipeline, scan_id, repo, access_token, db)
 
     return {"scan_id": scan_id, "status": "queued"}
 
@@ -353,3 +351,21 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", scan_id).execute()
         log(error_msg, 100)
+
+
+def run_scan_sync(scan_id: str, repo: dict, access_token: str) -> None:
+    """
+    Synchronous wrapper around the async scan pipeline.
+    Called by the background worker from a thread pool.
+    Creates a fresh event loop for this thread.
+    """
+    from app.database import get_supabase
+    db = get_supabase()
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(
+            run_scan_pipeline(scan_id=scan_id, repo=repo, access_token=access_token, db=db)
+        )
+    finally:
+        loop.close()
