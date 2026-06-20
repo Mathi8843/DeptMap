@@ -224,12 +224,18 @@
       and `ContextFilter` with contextvars for automatic request ID
       injection into every log line.
 
-- [ ] **21. Admin insights endpoint returns all records**
+- [x] **21. Admin insights endpoint returns all records**
       `backend/app/routers/admin.py:35-78`
       No pagination on users, repos, scans, or issues queries. Will fail
       as data grows.
-      **Fix:** Add `limit` and `offset` query params. Add server-side
-      pagination to all table queries.
+      **Fix:** Added `limit` (default 500, max 5000) and `offset` (default 0)
+      query params. All 4 Supabase queries use `.range(offset, offset+limit-1)`
+      with `count="exact"` for accurate totals. `stats.*` fields now use the
+      exact `count` from the DB, not `len(data)`. `recent_scans` uses DB-level
+      `.order("triggered_at", desc=True)` + `.range()` + client cap at 10 rows.
+      Breakdowns (plans, languages, scan_status, issue_severity, issue_status)
+      are computed from the paginated sample — increase `limit` for better
+      accuracy. Response shape unchanged; frontend needs no changes.
 
 - [ ] **22. `allowed_origins` parsing is fragile**
       `backend/app/main.py:53-57`
@@ -258,12 +264,12 @@
 | Severity | Total | Completed |
 |----------|-------|-----------|
 | 🔴 Critical | 6 | 6 |
-| 🟠 High | 5 | 4 |
-| 🟡 Medium | 7 | 3 |
-| 🟢 Low | 5 | 0 |
-| **Total** | **23** | **13** |
+| 🟠 High | 5 | 5 |
+| 🟡 Medium | 8 | 5 |
+| 🟢 Low | 5 | 2 |
+| **Total** | **24** | **18** |
 
 ---
 
 *Generated: 2026-06-20 by backend-architect analysis*
-*Last updated: 2026-06-20*
+*Last updated: 2026-06-20 (Issues 16, 18, 19, 20, 21 completed)*
