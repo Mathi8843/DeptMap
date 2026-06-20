@@ -175,12 +175,15 @@
       **Fix:** Set up Alembic for async migrations. Version all schema
       changes. Automate migration runs in CI/deploy.
 
-- [ ] **16. Silently caught exceptions**
+- [x] **16. Silently caught exceptions**
       `backend/app/services/semgrep.py:120` (WSL check), `backend/app/routers/scans.py:185-186,208-209` (Gitleaks/Registry errors)
       Several try/except blocks use `pass` or log at low severity.
       Failures in background tasks can go unnoticed.
-      **Fix:** Log every caught exception at `WARNING` or higher with the
-      traceback. Use structured logging for error monitoring.
+      **Fix:** Added `logger.warning(msg, exc_info=True)` to Gitleaks error
+      (`scans.py:188`), Registry error (`scans.py:211`), and crypto decryption
+      fallback (`crypto.py:36`). Added `logger.debug` to WSL check fallback
+      (`semgrep.py:161`). Cleanup-only swallows (`os.unlink`, `shutil.rmtree`)
+      kept as-is since they are expected to fail on some systems.
 
 - [ ] **17. CORS includes Vercel preview deployments**
       `backend/app/main.py:63`
@@ -190,32 +193,36 @@
       **Fix:** Restrict to explicit production domains, or remove the
       Vercel wildcard and use the `ALLOWED_ORIGINS` env var for previews.
 
-- [ ] **18. No graceful shutdown for background tasks**
+- [x] **18. No graceful shutdown for background tasks**
       `backend/app/main.py:24-36`
       No SIGTERM/SIGINT handler to wait for in-flight scans or re-queue
       them before shutdown.
-      **Fix:** Register signal handlers that set a shutdown flag, wait
-      for running scans (with timeout), and mark interrupted scans as
-      "queued" for the worker.
+      **Fix:** Resolved by Issues #1–#2 architecture change. Scans no longer
+      run as `BackgroundTasks` in the web server — they run in a separate
+      worker process (`worker.py`). The worker already has full graceful
+      shutdown: SIGTERM/SIGINT handlers re-queue in-flight scans in the DB
+      for pickup on restart. The uvicorn web server natively drains in-flight
+      HTTP requests on SIGTERM. No additional handling needed.
 
-- [ ] **19. Client-side admin detection duplicated**
+- [x] **19. Client-side admin detection duplicated**
       `frontend/app/page.tsx`, `frontend/app/auth/callback/page.tsx`,
       `frontend/lib/AppContext.tsx`
       Admin email checks are duplicated in the frontend alongside the
       backend check. This is cosmetic but creates two sources of truth.
-      **Fix:** Remove client-side admin checks. Use the backend
-      `/api/admin/insights` endpoint as the single source of truth.
-      The frontend should derive admin status from the user profile, not
-      from local email string matching.
+      **Fix:** Added `"is_admin"` boolean to all 5 backend response dicts
+      (`/api/auth/me`, GitHub callback JSON + dev URL params, signup, signin).
+      Frontend `SavedUser` interface and `EMPTY_USER` updated with
+      `is_admin?: boolean`. All 7 email-based checks replaced with
+      `user.is_admin`. Redirect flows now use the API's `is_admin` field.
 
 ---
 
 ## 🟢 Low (Nice-to-Have Improvements)
 
-- [ ] **20. No request ID / correlation IDs on logs**
-      Impossible to trace a single request's log lines across services.
-      **Fix:** Add a middleware that injects a UUID request ID into the
-      logging context.
+- [x] **20. No request ID / correlation IDs on logs**
+      Issue already resolved by Issue #10. Added `RequestIDMiddleware`
+      and `ContextFilter` with contextvars for automatic request ID
+      injection into every log line.
 
 - [ ] **21. Admin insights endpoint returns all records**
       `backend/app/routers/admin.py:35-78`

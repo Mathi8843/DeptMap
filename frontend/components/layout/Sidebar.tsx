@@ -27,7 +27,7 @@ export default function Sidebar() {
     }
   };
 
-  const isAdmin = user.email === "mathi@debtmap.io" || user.email === "admin@debtmap.io" || user.email?.endsWith("@debtmap.io");
+  const isAdmin = user.is_admin;
 
   const navItems = isAdmin 
     ? [

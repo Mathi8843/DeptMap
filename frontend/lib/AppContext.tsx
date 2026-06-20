@@ -102,7 +102,8 @@ const EMPTY_USER: SavedUser = {
   avatar_url: null,
   plan: "free",
   session_token: undefined,
-  has_github_token: false
+  has_github_token: false,
+  is_admin: false
 };
 
 export function AppContextProvider({ children }: { children: React.ReactNode }) {
@@ -185,7 +186,8 @@ export function AppContextProvider({ children }: { children: React.ReactNode }) 
           avatar_url: profile.avatar_url,
           plan: profile.plan,
           session_token: saved?.session_token || "cookie-session",
-          has_github_token: profile.has_github_token
+          has_github_token: profile.has_github_token,
+          is_admin: profile.is_admin,
         };
         setUser(updatedUser);
         saveUser(updatedUser);

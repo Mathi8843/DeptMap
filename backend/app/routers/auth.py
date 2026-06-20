@@ -156,6 +156,7 @@ async def github_callback(
                 "avatar_url": avatar_url,
                 "plan": existing_user["plan"] if existing_user else "free",
                 "session_token": session_token,
+                "is_admin": existing_user.get("is_admin", False) if existing_user else False,
             }
 
         # If direct browser redirect, keep the session out of the URL in production.
@@ -181,7 +182,8 @@ async def github_callback(
                 "avatar_url": avatar_url or "",
                 "plan": existing_user["plan"] if existing_user else "free",
                 "session_token": session_token,
-                "has_github_token": "true"
+                "has_github_token": "true",
+                "is_admin": "true" if (existing_user and existing_user.get("is_admin")) else "false",
             })
             return RedirectResponse(url=f"{settings.frontend_url}/auth/callback?{query_params}")
 
@@ -227,6 +229,7 @@ async def get_current_user(
         "repos_count": repos_count.count or 0,
         "created_at": user["created_at"],
         "has_github_token": bool(user.get("github_access_token")),
+        "is_admin": user.get("is_admin", False),
     }
 
 
@@ -287,6 +290,7 @@ async def email_signup(request: Request, payload: EmailSignUpRequest, response: 
             "name": payload.name,
             "plan": "free",
             "session_token": session_token,
+            "is_admin": False,
             "message": "Registration successful. Please sign in."
         }
     except Exception as e:
@@ -348,7 +352,8 @@ async def email_signin(request: Request, payload: EmailAuthRequest, response: Re
             "email": profile["email"],
             "name": profile["name"],
             "plan": profile["plan"],
-            "session_token": session_token
+            "session_token": session_token,
+            "is_admin": profile.get("is_admin", False),
         }
     except Exception as e:
         logger.exception("Email signin failed")

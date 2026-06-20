@@ -34,5 +34,6 @@ def decrypt_token(encrypted_token: str) -> str:
         f = _get_fernet()
         return f.decrypt(encrypted_token.encode("utf-8")).decode("utf-8")
     except Exception:
+        logger.warning("Failed to decrypt token with Fernet, falling back to raw string", exc_info=True)
         # If decryption fails (e.g. key changed or token was unencrypted), return as is
         return encrypted_token

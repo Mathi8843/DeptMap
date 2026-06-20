@@ -10,6 +10,7 @@ export interface SavedUser {
   plan: "free" | "pro" | "team" | "enterprise";
   session_token?: string;
   has_github_token?: boolean;
+  is_admin?: boolean;
 }
 
 export function getSavedUser(): SavedUser | null {

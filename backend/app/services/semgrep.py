@@ -159,6 +159,7 @@ def _get_semgrep_command(target_dir: str) -> list[str]:
                 wsl_path = f"/mnt/{drive}{wsl_path[2:]}"
             return ["wsl", "semgrep"] + semgrep_args + [wsl_path]
     except (FileNotFoundError, subprocess.TimeoutExpired):
+        logger.debug("WSL not available, falling back to Docker for Semgrep")
         pass
 
     # Windows: fallback to Docker

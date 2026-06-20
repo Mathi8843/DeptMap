@@ -186,6 +186,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                 findings.extend(secret_findings)
                 log(f"[GITLEAKS] Secret scan complete. Found {len(secret_findings)} secret(s).", 44)
             except Exception as e:
+                logger.warning("Gitleaks scan failed", exc_info=True)
                 log(f"[GITLEAKS] Secret scan failed (non-fatal): {e}", 44)
 
             # ── Step 1.8: Dependency Audit (npm audit + pip-audit + Registry) ───
@@ -209,6 +210,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                 dangerous_count = sum(1 for p in package_results if p["status"] == "dangerous")
                 log(f"[REGISTRY] Dependency audit complete. Found {len(package_issues)} package issues. {dangerous_count} dangerous package(s).", 48)
             except Exception as e:
+                logger.warning("Dependency audit failed", exc_info=True)
                 log(f"[REGISTRY] Dependency audit failed (non-fatal): {e}", 48)
         finally:
             if repo_dir:

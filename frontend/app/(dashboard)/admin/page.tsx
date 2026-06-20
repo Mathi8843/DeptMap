@@ -72,7 +72,7 @@ export default function AdminPage() {
   }, []);
 
   // Guard check for admin credentials
-  const isAdmin = user.email === "mathi@debtmap.io" || user.email === "admin@debtmap.io" || user.email.endsWith("@debtmap.io");
+  const isAdmin = user.is_admin;
 
   if (!isAdmin) {
     return (

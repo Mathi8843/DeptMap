@@ -33,7 +33,8 @@ function AuthCallbackInner() {
             avatar_url: profile.avatar_url,
             plan: profile.plan,
             session_token: "cookie-session",
-            has_github_token: profile.has_github_token
+            has_github_token: profile.has_github_token,
+            is_admin: profile.is_admin,
           };
 
           login(userData);
@@ -44,7 +45,7 @@ function AuthCallbackInner() {
 
           const timer = setTimeout(() => {
             const redirectPath = sessionStorage.getItem("auth_redirect") || 
-              (profile.email === "mathi@debtmap.io" || profile.email === "admin@debtmap.io" || profile.email?.endsWith("@debtmap.io") ? "/admin" : "/onboarding");
+              (profile.is_admin ? "/admin" : "/onboarding");
             sessionStorage.removeItem("auth_redirect");
             router.push(redirectPath);
           }, 1000);
@@ -65,6 +66,7 @@ function AuthCallbackInner() {
     const plan = searchParams.get("plan");
     const sessionToken = searchParams.get("session_token");
     const hasGithubToken = searchParams.get("has_github_token") === "true";
+    const isAdmin = searchParams.get("is_admin") === "true";
 
     // 2. Query Params Flow (Development fallback)
     if (userId && email) {
@@ -75,7 +77,8 @@ function AuthCallbackInner() {
         avatar_url: avatarUrl || null,
         plan: (plan || "free") as any,
         session_token: sessionToken || undefined,
-        has_github_token: hasGithubToken
+        has_github_token: hasGithubToken,
+        is_admin: isAdmin,
       };
 
       login(userData);
@@ -86,7 +89,7 @@ function AuthCallbackInner() {
       
       const timer = setTimeout(() => {
         const redirectPath = sessionStorage.getItem("auth_redirect") || 
-          (email === "mathi@debtmap.io" || email === "admin@debtmap.io" || email.endsWith("@debtmap.io") ? "/admin" : "/onboarding");
+          (isAdmin ? "/admin" : "/onboarding");
         sessionStorage.removeItem("auth_redirect");
         router.push(redirectPath);
       }, 1000);
@@ -128,7 +131,8 @@ function AuthCallbackInner() {
           avatar_url: data.avatar_url,
           plan: data.plan,
           session_token: data.session_token,
-          has_github_token: true
+          has_github_token: true,
+          is_admin: data.is_admin,
         };
 
         login(userData);
@@ -139,7 +143,7 @@ function AuthCallbackInner() {
         
         const timer = setTimeout(() => {
           const redirectPath = sessionStorage.getItem("auth_redirect") || 
-            (data.email === "mathi@debtmap.io" || data.email === "admin@debtmap.io" || data.email?.endsWith("@debtmap.io") ? "/admin" : "/onboarding");
+            (data.is_admin ? "/admin" : "/onboarding");
           sessionStorage.removeItem("auth_redirect");
           router.push(redirectPath);
         }, 1000);

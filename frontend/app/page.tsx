@@ -163,10 +163,10 @@ export default function LandingPage() {
           avatar_url: null,
           plan: loginData.plan,
           session_token: loginData.session_token,
-          has_github_token: false
+          has_github_token: false,
+          is_admin: loginData.is_admin,
         });
-        const isAdminSignup = loginData.email === "mathi@debtmap.io" || loginData.email === "admin@debtmap.io" || loginData.email?.endsWith("@debtmap.io");
-        router.push(isAdminSignup ? "/admin" : "/onboarding");
+        router.push(loginData.is_admin ? "/admin" : "/onboarding");
       } else {
         login({
           id: data.user_id,
@@ -175,10 +175,10 @@ export default function LandingPage() {
           avatar_url: null,
           plan: data.plan,
           session_token: data.session_token,
-          has_github_token: false
+          has_github_token: false,
+          is_admin: data.is_admin,
         });
-        const isAdminSignin = data.email === "mathi@debtmap.io" || data.email === "admin@debtmap.io" || data.email?.endsWith("@debtmap.io");
-        router.push(isAdminSignin ? "/admin" : "/dashboard");
+        router.push(data.is_admin ? "/admin" : "/dashboard");
       }
     } catch (err: any) {
       console.error(err);
