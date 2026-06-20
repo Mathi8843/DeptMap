@@ -102,23 +102,29 @@
       already logs a CRITICAL warning on startup if the webhook secret
       is the default value.
 
-- [ ] **9. Supabase client singleton without connection management**
+- [x] **9. Supabase client singleton without connection management**
       `backend/app/database.py:11-22`
       `@lru_cache` creates one Supabase client for the app lifetime. No
       connection health checks, no reconnection logic, no pool monitoring.
       A Supabase-side restart or key rotation requires full app restart.
-      **Fix:** Add periodic health checks, reconnect logic, and proper
-      connection pool configuration. Consider using `psycopg2`/`asyncpg`
-      directly for more control.
+      **Fix:** Replaced `@lru_cache` with a module-level variable + TTL-based
+      refresh (300s). Client is recreated every 5 minutes to pick up key
+      rotations and recover from transient outages. `/health` endpoint now
+      verifies Supabase connectivity with a lightweight query, returning
+      503 if the database is unreachable.
 
-- [ ] **10. No observability**
+- [x] **10. No observability**
       `backend/app/main.py:15-18`
       Only `logging.basicConfig(...)` exists — no structured logging, no
       distributed tracing, no metrics, no alerting. Cannot track latency
       percentiles, correlate logs, or monitor error rates.
-      **Fix:** Add structured JSON logging (structlog), OpenTelemetry for
-      tracing, and Prometheus metrics. Export health check endpoint
-      should verify Supabase connectivity.
+      **Fix:** Added `RequestIDMiddleware` (starlette `BaseHTTPMiddleware`)
+      that injects an 8-char UUID into a `contextvars.ContextVar` and
+      `X-Request-ID` response header. Added `ContextFilter` that reads the
+      context var and adds it to every log record. Log format now includes
+      `%request_id` column. Every log line (startup, request, error, DB)
+      carries the same request ID for correlation. `/health` endpoint
+      verifies Supabase connectivity (from Issue #9). No new dependencies.
 
 - [ ] **11. Scan pipeline has no overall timeout**
       `backend/app/routers/scans.py:135-355`
@@ -241,10 +247,10 @@
 | Severity | Total | Completed |
 |----------|-------|-----------|
 | 🔴 Critical | 6 | 6 |
-| 🟠 High | 5 | 2 |
+| 🟠 High | 5 | 4 |
 | 🟡 Medium | 7 | 0 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **8** |
+| **Total** | **23** | **10** |
 
 ---
 

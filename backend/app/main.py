@@ -3,10 +3,16 @@ DebtMap FastAPI Application
 Main entry point — registers all routers, configures CORS, rate limiting, and sets up middleware.
 """
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from app.database import get_db
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -15,10 +21,39 @@ from app.rate_limit import limiter
 from app.routers import auth, repos, scans, issues, packages, trend, soc2, webhooks, admin
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
+
+class ContextFilter(logging.Filter):
+    """Injects request_id from context var into every log record."""
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = request_id_var.get()
+        return True
+
+
+request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Adds a short request ID to every request for log correlation."""
+    async def dispatch(self, request: Request, call_next):
+        rid = uuid.uuid4().hex[:8]
+        request_id_var.set(rid)
+        request.scope["request_id"] = rid
+
+        logger.info("→ %s %s", request.method, request.url.path)
+        start = time.time()
+        response = await call_next(request)
+        duration_ms = int((time.time() - start) * 1000)
+        logger.info("← %s %s — %d (%dms)", request.method, request.url.path, response.status_code, duration_ms)
+
+        response.headers["X-Request-ID"] = rid
+        return response
+
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    format="%(asctime)s | %(levelname)-8s | %(request_id)-8s | %(name)s | %(message)s",
 )
+logging.getLogger().addFilter(ContextFilter())
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -70,6 +105,7 @@ _allowed_origins: list[str] = list({
     *_extra_origins,
 })
 
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
@@ -107,9 +143,14 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    """Used by Railway/Render for deployment health checks."""
-    return {"status": "healthy"}
+async def health_check(db=Depends(get_db)):
+    """Used by Railway/Render for deployment health checks. Verifies Supabase connectivity."""
+    try:
+        db.table("users").select("id").limit(1).execute()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error("Health check failed — database unreachable", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Database unreachable: {str(e)}")
 
 
 # ─── Dev Server ───────────────────────────────────────────────────────────────
