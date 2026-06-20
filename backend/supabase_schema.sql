@@ -47,13 +47,16 @@ CREATE TABLE IF NOT EXISTS public.scans (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repo_id         UUID NOT NULL REFERENCES public.repos(id) ON DELETE CASCADE,
     status          TEXT NOT NULL DEFAULT 'queued'
-                        CHECK (status IN ('queued', 'running', 'completed', 'failed')),
+                        CHECK (status IN ('queued', 'running', 'completed', 'failed', 'retrying')),
     triggered_at    TIMESTAMPTZ DEFAULT now(),
     completed_at    TIMESTAMPTZ,
     findings_count  INTEGER DEFAULT 0,
     trigger_source  TEXT DEFAULT 'manual',   -- 'manual' | 'webhook:push:main'
     progress        INTEGER DEFAULT 0,
-    log_messages    JSONB DEFAULT '[]'::jsonb
+    log_messages    JSONB DEFAULT '[]'::jsonb,
+    retry_count     INTEGER DEFAULT 0,        -- number of retries attempted
+    heartbeat_at    TIMESTAMPTZ,              -- last worker heartbeat (for crash detection)
+    error_message   TEXT                      -- last error detail for debugging
 );
 
 CREATE INDEX IF NOT EXISTS idx_scans_repo_id ON public.scans(repo_id);
@@ -174,3 +177,16 @@ CREATE POLICY "scans_own_data" ON public.scans
             WHERE user_id = auth.uid()
         )
     );
+
+-- ═══════════════════════════════════════════════════════════════
+-- Issue #2 Migration (run once after schema is created)
+-- ═══════════════════════════════════════════════════════════════
+-- ALTER TABLE public.scans
+--   ADD COLUMN IF NOT EXISTS retry_count  INTEGER DEFAULT 0,
+--   ADD COLUMN IF NOT EXISTS heartbeat_at TIMESTAMPTZ,
+--   ADD COLUMN IF NOT EXISTS error_message TEXT;
+--
+-- ALTER TABLE public.scans DROP CONSTRAINT IF EXISTS scans_status_check;
+-- ALTER TABLE public.scans
+--   ADD CONSTRAINT scans_status_check
+--     CHECK (status IN ('queued', 'running', 'completed', 'failed', 'retrying'));

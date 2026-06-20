@@ -9,24 +9,26 @@
 
 ## 🔴 Critical (Will Cause Outages or Breaches)
 
-- [ ] **1. Background tasks block the event loop**
+- [x] **1. Background tasks block the event loop**
       `backend/app/routers/scans.py:93`
       Scans run in-process via FastAPI `BackgroundTasks`. A single scan
       (clone + Semgrep + Gitleaks + npm/pip audit + Groq) blocks the event
       loop for minutes. With 2+ concurrent scans the server becomes
       unresponsive.
-      **Fix:** Replace with a proper task queue (Celery, RQ, or Bull with
-      Redis). Scans should be enqueued as persistent jobs and executed by
-      dedicated worker processes.
+      **Fix:** Removed `BackgroundTasks`. Web server only writes DB record.
+      `worker.py` now polls DB and executes scans in a thread pool
+      (concurrency cap of 3). Deploy `python worker.py` as a separate
+      background service.
 
 - [ ] **2. No task persistence — scans lost on restart**
-      `backend/app/routers/scans.py:93`
-      `BackgroundTasks` are in-memory. Server crash, restart, or deploy
-      during a scan silently kills it. No retry mechanism for transient
-      failures, no dead-letter queue.
-      **Fix:** Use a persistent task queue (same fix as #1). The worker
-      already exists (`worker.py`) but competes with the web process —
-      unify them into a queue-based model.
+      `backend/worker.py`
+      Worker crash mid-scan leaves scan stuck as `"running"` until stale
+      guard (10 min). No retry for transient failures. No heartbeat to
+      detect worker death quickly. No graceful shutdown.
+      **Fix:** Add `heartbeat_at`, `retry_count`, `error_message` columns
+      to scans table. Worker updates heartbeat every 5s. Startup recovery
+      re-queues stale running scans. Graceful shutdown re-queues in-flight
+      scans. Retry logic fixed to use persisted `retry_count`.
 
 - [ ] **3. GitHub access token leaked via subprocess args**
       `backend/app/services/semgrep.py:80`
@@ -229,13 +231,13 @@
 
 | Severity | Total | Completed |
 |----------|-------|-----------|
-| 🔴 Critical | 6 | 0 |
+| 🔴 Critical | 6 | 1 |
 | 🟠 High | 5 | 0 |
 | 🟡 Medium | 7 | 0 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **0** |
+| **Total** | **23** | **1** |
 
 ---
 
 *Generated: 2026-06-20 by backend-architect analysis*
-*Last updated: —*
+*Last updated: 2026-06-20*
