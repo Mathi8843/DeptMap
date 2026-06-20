@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from app.config import get_settings
 from app.database import get_db
+from app.rate_limit import limiter
 from app.services import decrypt_token
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ def verify_github_signature(payload: bytes, signature: str | None) -> bool:
 
 
 @router.post("/github")
+@limiter.limit("30/minute")
 async def github_webhook(
     request: Request,
     x_github_event: str = Header(None, alias="X-GitHub-Event"),

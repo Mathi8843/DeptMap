@@ -16,9 +16,10 @@ import os
 import shutil
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.database import get_db
+from app.rate_limit import limiter
 from app.services import semgrep as semgrep_service
 from app.services import gitleaks as gitleaks_service
 from app.services import groq as groq_service
@@ -32,7 +33,9 @@ router = APIRouter(prefix="/api/scans", tags=["scans"])
 
 
 @router.post("")
+@limiter.limit("10/minute")
 async def trigger_scan(
+    request: Request,
     repo_id: str = Query(...),
     current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db),

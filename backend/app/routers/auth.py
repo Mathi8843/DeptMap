@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 from app.config import get_settings
 from app.database import get_db
+from app.rate_limit import limiter
 from app.services import github as github_service
 from app.services import (
     encrypt_token,
@@ -50,7 +51,9 @@ class RazorpayVerifyRequest(BaseModel):
 
 
 @router.get("/github")
+@limiter.limit("20/minute")
 async def github_login(
+    request: Request,
     current_user_id: str = Query(None, description="Optional user ID to link to"),
 ):
     """Redirect user to GitHub OAuth authorization page."""
@@ -69,6 +72,7 @@ async def github_login(
 
 
 @router.get("/github/callback")
+@limiter.limit("20/minute")
 async def github_callback(
     request: Request,
     code: str = Query(..., description="OAuth code from GitHub"),
@@ -227,7 +231,8 @@ async def get_current_user(
 
 
 @router.post("/signup")
-async def email_signup(payload: EmailSignUpRequest, response: Response, db=Depends(get_db)):
+@limiter.limit("5/minute")
+async def email_signup(request: Request, payload: EmailSignUpRequest, response: Response, db=Depends(get_db)):
     """
     Sign up a new user using Supabase Auth.
     Creates both the auth credentials and the public.users record.
@@ -290,7 +295,8 @@ async def email_signup(payload: EmailSignUpRequest, response: Response, db=Depen
 
 
 @router.post("/signin")
-async def email_signin(payload: EmailAuthRequest, response: Response, db=Depends(get_db)):
+@limiter.limit("10/minute")
+async def email_signin(request: Request, payload: EmailAuthRequest, response: Response, db=Depends(get_db)):
     """Sign in an existing user with email and password via Supabase Auth."""
     try:
         credentials = {
@@ -370,7 +376,9 @@ async def upgrade_plan(
 
 
 @router.post("/coupon")
+@limiter.limit("10/minute")
 async def apply_coupon(
+    request: Request,
     payload: CouponRequest,
     current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db)

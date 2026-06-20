@@ -1,14 +1,17 @@
 """
 DebtMap FastAPI Application
-Main entry point — registers all routers, configures CORS, and sets up middleware.
+Main entry point — registers all routers, configures CORS, rate limiting, and sets up middleware.
 """
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
+from app.rate_limit import limiter
 from app.routers import auth, repos, scans, issues, packages, trend, soc2, webhooks, admin
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
@@ -74,6 +77,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Rate Limiting ──────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(429, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # ─── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(auth.router)

@@ -30,7 +30,7 @@
       re-queues stale running scans within 30s. Graceful shutdown re-queues
       in-flight scans. Retry logic now uses persisted `retry_count` column.
 
-- [ ] **3. GitHub access token leaked via subprocess args**
+- [x] **3. GitHub access token leaked via subprocess args**
       `backend/app/services/semgrep.py:80`
       ```python
       auth_url = clone_url.replace("https://", f"https://{access_token}@")
@@ -38,9 +38,9 @@
       Token is embedded in the clone URL passed to GitPython, which spawns
       a `git` subprocess. Visible in `ps aux`, `/proc/PID/cmdline`, and
       Git error output.
-      **Fix:** Use `git` credential helpers, `.netrc` file, or pass the
-      token via environment variable (`GIT_ASKPASS` script) instead of the
-      URL.
+      **Fix:** Replaced URL-embedded token with `GIT_ASKPASS` mechanism.
+      Token is written to a temp script, git reads it via stdin, script is
+      deleted after clone. Token never appears in any command-line arg.
 
 - [ ] **4. No rate limiting on any endpoint**
       `backend/requirements.txt:13` (slowapi listed but unused)
@@ -231,11 +231,11 @@
 
 | Severity | Total | Completed |
 |----------|-------|-----------|
-| 🔴 Critical | 6 | 2 |
+| 🔴 Critical | 6 | 3 |
 | 🟠 High | 5 | 0 |
 | 🟡 Medium | 7 | 0 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **2** |
+| **Total** | **23** | **3** |
 
 ---
 
