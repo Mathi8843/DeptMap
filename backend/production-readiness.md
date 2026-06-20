@@ -20,15 +20,15 @@
       (concurrency cap of 3). Deploy `python worker.py` as a separate
       background service.
 
-- [ ] **2. No task persistence — scans lost on restart**
+- [x] **2. No task persistence — scans lost on restart**
       `backend/worker.py`
       Worker crash mid-scan leaves scan stuck as `"running"` until stale
       guard (10 min). No retry for transient failures. No heartbeat to
       detect worker death quickly. No graceful shutdown.
-      **Fix:** Add `heartbeat_at`, `retry_count`, `error_message` columns
+      **Fix:** Added `heartbeat_at`, `retry_count`, `error_message` columns
       to scans table. Worker updates heartbeat every 5s. Startup recovery
-      re-queues stale running scans. Graceful shutdown re-queues in-flight
-      scans. Retry logic fixed to use persisted `retry_count`.
+      re-queues stale running scans within 30s. Graceful shutdown re-queues
+      in-flight scans. Retry logic now uses persisted `retry_count` column.
 
 - [ ] **3. GitHub access token leaked via subprocess args**
       `backend/app/services/semgrep.py:80`
@@ -231,11 +231,11 @@
 
 | Severity | Total | Completed |
 |----------|-------|-----------|
-| 🔴 Critical | 6 | 1 |
+| 🔴 Critical | 6 | 2 |
 | 🟠 High | 5 | 0 |
 | 🟡 Medium | 7 | 0 |
 | 🟢 Low | 5 | 0 |
-| **Total** | **23** | **1** |
+| **Total** | **23** | **2** |
 
 ---
 

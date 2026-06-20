@@ -14,8 +14,9 @@ import json
 import logging
 import os
 import shutil
+import stat
 import subprocess
-import tempfile, os
+import tempfile
 from pathlib import Path
 from typing import Literal
 
@@ -70,21 +71,61 @@ def _should_skip_file(path: str) -> bool:
     return path.lower().endswith(SKIP_EXTENSIONS)
 
 
+def _create_askpass_script(access_token: str) -> str:
+    """
+    Create a temporary executable script for GIT_ASKPASS.
+    The script outputs the access token when git calls it — this avoids
+    embedding the token in the clone URL (which would be visible in
+    process listings, /proc/cmdline, and git error output).
+    """
+    if os.name == "nt":
+        # Windows: batch file that echoes the token (git on Windows supports this)
+        script_content = f"@echo {access_token}\r\n"
+        suffix = ".bat"
+    else:
+        # Unix: shell script with token in single quotes to prevent expansion
+        script_content = f"#!/bin/sh\necho '{access_token}'\n"
+        suffix = ".sh"
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False, encoding="utf-8") as f:
+        f.write(script_content)
+        script_path = f.name
+
+    if os.name != "nt":
+        os.chmod(script_path, stat.S_IRWXU)
+
+    return script_path
+
+
 def clone_repo(clone_url: str, access_token: str, dest_dir: str) -> None:
     """
     Clone a GitHub repository using the user's access token for auth.
-    Uses HTTPS with token embedded in URL (standard GitHub auth method).
+    Uses GIT_ASKPASS to pass the token securely — never embeds it in
+    the clone URL (which would be visible in process listings and logs).
     Uses depth=1 and filter=blob:none for high speed and minimal memory/disk usage.
     """
-    # Inject token into clone URL: https://token@github.com/owner/repo.git
-    auth_url = clone_url.replace("https://", f"https://{access_token}@")
-    git.Repo.clone_from(
-        auth_url,
-        dest_dir,
-        depth=1,                     # only latest commit
-        filter="blob:none",          # skip file blobs until needed
-        no_single_branch=False,
-    )
+    askpass_path = _create_askpass_script(access_token)
+
+    old_askpass = os.environ.get("GIT_ASKPASS")
+    os.environ["GIT_ASKPASS"] = askpass_path
+
+    try:
+        git.Repo.clone_from(
+            clone_url,  # clean URL — no token embedded
+            dest_dir,
+            depth=1,
+            filter="blob:none",
+            no_single_branch=False,
+        )
+    finally:
+        if old_askpass is not None:
+            os.environ["GIT_ASKPASS"] = old_askpass
+        else:
+            del os.environ["GIT_ASKPASS"]
+        try:
+            os.unlink(askpass_path)
+        except OSError:
+            pass
 
 
 def _get_semgrep_command(target_dir: str) -> list[str]:
