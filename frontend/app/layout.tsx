@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "DebtMap — AI Code Health & Security Platform",
     description: "Security scanning built for non-developer founders. Catch OWASP vulnerabilities and slopsquatted packages in apps built with Lovable, Bolt, or Cursor.",
+    url: "https://dept-map.vercel.app",
+    siteName: "DebtMap",
+    locale: "en_US",
     type: "website",
   },
   twitter: {

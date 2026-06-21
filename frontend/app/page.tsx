@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "DebtMap — AI Security for Vibe-Coded Apps",
     description: "Catch OWASP vulnerabilities and slopsquatted packages in AI-generated code. Plain English explanations with 1-click GitHub PR fixes. Free for 1 repo.",
+    url: "https://dept-map.vercel.app",
+    siteName: "DebtMap",
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
     card: "summary_large_image",
