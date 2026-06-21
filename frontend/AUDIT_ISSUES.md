@@ -16,10 +16,10 @@
 
 ## State Bugs
 
-- [ ] **S1. Stale closure in fixIssueSimulate** — `AppContext.tsx:542` reads `issues` from closure instead of functional setState.
-- [ ] **S2. Stale closure in dismissIssue** — `AppContext.tsx:600` same pattern as S1.
-- [ ] **S3. triggerScan interval leak** — `setInterval` inside `useCallback` with no cleanup on unmount.
-- [ ] **S4. Auth callback setTimeout leak** — `auth/callback/page.tsx` has multiple `setTimeout` calls with incomplete cleanup.
+- [x] **S1. Stale closure in fixIssueSimulate** — `DataContext.tsx` now reads `issuesRef.current` instead of stale closure `issues`.
+- [x] **S2. Stale closure in dismissIssue** — `DataContext.tsx` now reads `issuesRef.current` instead of stale closure `issues`.
+- [x] **S3. triggerScan interval leak** — `ScanContext.tsx` interval stored in `pollIntervalRef`, cleared by unmount cleanup effect and on scan completion/failure.
+- [x] **S4. Auth callback setTimeout leak** — all `setTimeout` calls collected in a `timers` array; `useEffect` cleanup clears every timer on unmount.
 
 ## Invalid CSS
 

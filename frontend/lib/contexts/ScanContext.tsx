@@ -31,9 +31,19 @@ export function ScanProvider({
 
   const isScanningRef = useRef(false);
   const reposRef = useRef<Repo[]>([]);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => { reposRef.current = repos; }, [repos]);
   useEffect(() => { isScanningRef.current = isScanning; }, [isScanning]);
+
+  // Clear polling interval on unmount to prevent state updates on unmounted component
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const triggerScan = useCallback(async (repoId?: string) => {
     if (isScanningRef.current) return;
@@ -63,7 +73,7 @@ export function ScanProvider({
 
       let scanFinished = false;
 
-      const pollInterval = setInterval(async () => {
+      pollIntervalRef.current = setInterval(async () => {
         if (scanFinished) return;
         try {
           const statusResult = await apiFetch(`/scans/${scanId}/status`);
@@ -76,7 +86,8 @@ export function ScanProvider({
 
           if (statusResult.status === "completed") {
             scanFinished = true;
-            clearInterval(pollInterval);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
             setIsScanning(false);
             setScanStatus("completed");
             showToast(`Scan complete for ${repoName}!`, "success");
@@ -85,7 +96,8 @@ export function ScanProvider({
             fetchData();
           } else if (statusResult.status === "failed") {
             scanFinished = true;
-            clearInterval(pollInterval);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
             setIsScanning(false);
             setScanStatus("failed");
             showToast(`Scan failed for ${repoName}. Check terminal logs.`, "error");

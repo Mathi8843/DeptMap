@@ -17,15 +17,32 @@ function AuthCallbackInner() {
     if (exchangeAttempted.current) return;
     exchangeAttempted.current = true;
 
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    function setStatusAfter(ms: number) {
+      timers.push(setTimeout(() => {
+        setStatus("Authentication successful! Redirecting...");
+      }, ms));
+    }
+
+    function redirectAfter(ms: number, isAdmin: boolean) {
+      timers.push(setTimeout(() => {
+        const redirectPath = sessionStorage.getItem("auth_redirect") ||
+          (isAdmin ? "/admin" : "/onboarding");
+        sessionStorage.removeItem("auth_redirect");
+        router.push(redirectPath);
+      }, ms));
+    }
+
     const authSuccess = searchParams.get("auth") === "success";
-    
+
     // 1. Production Cookie Session Redirect Flow
     if (authSuccess) {
       const fetchProfileAndLogin = async () => {
         try {
           setStatus("Restoring session profile...");
           const profile = await apiFetch("/auth/me");
-          
+
           const userData = {
             id: profile.id,
             name: profile.name,
@@ -38,25 +55,15 @@ function AuthCallbackInner() {
           };
 
           login(userData);
-
-          setTimeout(() => {
-            setStatus("Authentication successful! Redirecting...");
-          }, 0);
-
-          const timer = setTimeout(() => {
-            const redirectPath = sessionStorage.getItem("auth_redirect") || 
-              (profile.is_admin ? "/admin" : "/onboarding");
-            sessionStorage.removeItem("auth_redirect");
-            router.push(redirectPath);
-          }, 1000);
-          return () => clearTimeout(timer);
+          setStatusAfter(0);
+          redirectAfter(1000, profile.is_admin);
         } catch (err: any) {
           console.error("Failed to fetch profile on auth success:", err);
           setError("Failed to fetch user profile after authentication. Please try signing in again.");
         }
       };
       fetchProfileAndLogin();
-      return;
+      return () => timers.forEach(clearTimeout);
     }
 
     const userId = searchParams.get("user_id");
@@ -82,18 +89,9 @@ function AuthCallbackInner() {
       };
 
       login(userData);
-
-      setTimeout(() => {
-        setStatus("Authentication successful! Redirecting...");
-      }, 0);
-      
-      const timer = setTimeout(() => {
-        const redirectPath = sessionStorage.getItem("auth_redirect") || 
-          (isAdmin ? "/admin" : "/onboarding");
-        sessionStorage.removeItem("auth_redirect");
-        router.push(redirectPath);
-      }, 1000);
-      return () => clearTimeout(timer);
+      setStatusAfter(0);
+      redirectAfter(1000, isAdmin);
+      return () => timers.forEach(clearTimeout);
     }
 
     const code = searchParams.get("code");
@@ -116,14 +114,14 @@ function AuthCallbackInner() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
         const response = await fetch(`${apiUrl}/api/auth/github/callback?code=${code}&state=${encodeURIComponent(state)}`);
-        
+
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           throw new Error(errData.detail || "Authentication callback failed");
         }
 
         const data = await response.json();
-        
+
         const userData = {
           id: data.user_id,
           name: data.name,
@@ -136,19 +134,8 @@ function AuthCallbackInner() {
         };
 
         login(userData);
-
-        setTimeout(() => {
-          setStatus("Authentication successful! Redirecting...");
-        }, 0);
-        
-        const timer = setTimeout(() => {
-          const redirectPath = sessionStorage.getItem("auth_redirect") || 
-            (data.is_admin ? "/admin" : "/onboarding");
-          sessionStorage.removeItem("auth_redirect");
-          router.push(redirectPath);
-        }, 1000);
-        return () => clearTimeout(timer);
-
+        setStatusAfter(0);
+        redirectAfter(1000, data.is_admin);
       } catch (err: any) {
         console.error("Auth callback error:", err);
         setError(err.message || "Something went wrong during GitHub authorization. Please try again.");
@@ -156,6 +143,7 @@ function AuthCallbackInner() {
     };
 
     exchangeCode();
+    return () => timers.forEach(clearTimeout);
   }, [searchParams, router, login]);
 
   return (

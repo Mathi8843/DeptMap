@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { apiFetch } from "../api";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
@@ -154,6 +154,9 @@ export function DataProvider({
   const [soc2Report, setSoc2Report] = useState<any>(null);
   const [trendData, setTrendData] = useState<any[]>([]);
 
+  const issuesRef = useRef(issues);
+  useEffect(() => { issuesRef.current = issues; }, [issues]);
+
   const fetchData = useCallback(async () => {
     try {
       const [dbRepos, dbIssues, dbPackages] = await Promise.all([
@@ -262,7 +265,7 @@ export function DataProvider({
       );
 
       showToast(`Pull Request merged successfully! Security issue closed.`, "success");
-      const targetIssue = issues.find((i) => i.id === issueId);
+      const targetIssue = issuesRef.current.find((i) => i.id === issueId);
       const title = targetIssue ? targetIssue.plain_english_title : "Security issue";
       const repoName = targetIssue ? targetIssue.repo_name : "repository";
       triggerWebhookAlert("#security", `Resolved risk: ${title} in ${repoName}. PR opened.`, "slack");
@@ -285,7 +288,7 @@ export function DataProvider({
               )
             );
             showToast(`Pull Request created successfully! (Verification bypassed)`, "success");
-            const targetIssue = issues.find((i) => i.id === issueId);
+            const targetIssue = issuesRef.current.find((i) => i.id === issueId);
             const title = targetIssue ? targetIssue.plain_english_title : "Security issue";
             const repoName = targetIssue ? targetIssue.repo_name : "repository";
             triggerWebhookAlert("#security", `Resolved risk: ${title} in ${repoName}. PR opened.`, "slack");
@@ -309,7 +312,7 @@ export function DataProvider({
       await apiFetch(`/issues/${issueId}/dismiss`, { method: "POST" });
       setIssues((prev) => prev.map((i) => (i.id === issueId ? { ...i, status: "dismissed" } : i)));
       showToast("Vulnerability dismissed.", "info");
-      const targetIssue = issues.find((i) => i.id === issueId);
+      const targetIssue = issuesRef.current.find((i) => i.id === issueId);
       if (targetIssue) {
         triggerWebhookAlert("#security", `Vulnerability dismissed: ${targetIssue.plain_english_title} in ${targetIssue.repo_name}.`, "slack");
       }
