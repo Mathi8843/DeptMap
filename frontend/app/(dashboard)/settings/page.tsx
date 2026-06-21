@@ -310,6 +310,9 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("emailCritical")}
+                role="switch"
+                aria-checked={notifications.emailCritical}
+                aria-label="Toggle email alerts on Critical vulnerabilities"
                 className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.emailCritical ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
@@ -329,6 +332,9 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("emailHigh")}
+                role="switch"
+                aria-checked={notifications.emailHigh}
+                aria-label="Toggle email alerts on High vulnerabilities"
                 className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.emailHigh && PLAN_LIMITS[user.plan].email_alerts ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
@@ -345,6 +351,9 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("weeklyReport")}
+                role="switch"
+                aria-checked={notifications.weeklyReport}
+                aria-label="Toggle weekly code health report card"
                 className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.weeklyReport ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
@@ -364,6 +373,9 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("slackCritical")}
+                role="switch"
+                aria-checked={notifications.slackCritical}
+                aria-label="Toggle Slack alert channel integration"
                 className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.slackCritical && PLAN_LIMITS[user.plan].slack_alerts ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}

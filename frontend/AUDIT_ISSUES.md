@@ -39,9 +39,9 @@
 
 ## Accessibility
 
-- [ ] **X1. No skip-to-content link** — Missing keyboard navigation skip link.
-- [ ] **X2. Toggle switches lack ARIA** — Custom toggles lack `role="switch"` and `aria-checked`.
-- [ ] **X3. Potential contrast issues** — `text-text-muted` (#64748b) on dark bg (#06060c) may fail WCAG AA.
+- [x] **X1. No skip-to-content link** — Added skip-to-content link in root layout, visible on focus; `id="main-content"` on dashboard `<main>` element.
+- [x] **X2. Toggle switches lack ARIA** — All 4 toggle buttons in settings now have `role="switch"`, `aria-checked`, and `aria-label`.
+- [x] **X3. Potential contrast issues** — Dark theme `--text-muted` changed to `#94a3b8` (8.3:1 on bg), light theme to `#475569` (6.6:1 on bg). Both pass WCAG AA comfortably.
 
 ## Dead Code & Quality
 
