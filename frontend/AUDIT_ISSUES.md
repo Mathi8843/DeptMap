@@ -2,17 +2,17 @@
 
 ## Architecture
 
-- [x] **A1. Monolithic AppContext** — `lib/AppContext.tsx` (721 lines) handles auth, data fetching, scanning, notifications, theme, webhooks. Every state change re-renders entire tree.
+- [x] **A1. Monolithic AppContext** — Deleted. Replaced by 5 focused contexts (Theme, Toast, Auth, Data, Scan) with memoized values. No cascading re-renders.
 - [ ] **A2. No API rewrites** — `next.config.ts` has no rewrites. API calls construct full URLs to backend port. CORS + mixed content risk.
 - [x] **A3. No error boundaries** — Zero React error boundaries. A single crash kills the whole UI.
 - [x] **A4. No loading/error/404 pages** — Missing `loading.tsx`, `error.tsx`, `not-found.tsx` at route level.
 
 ## Re-render & Performance
 
-- [ ] **P1. Frequent context updates** — `scanProgress`, `scanLogs`, `scanStatus`, `toasts` change frequently. All consumers (sidebar, dashboard, repos) re-render on every update.
-- [ ] **P2. Eager recharts import** — Heavy chart library imported directly in client components. No dynamic import / lazy loading.
-- [ ] **P3. Render-blocking font loading** — Google Fonts loaded via CSS `@import url(...)` in `globals.css` instead of `next/font`.
-- [ ] **P4. Hardcoded sparkline data** — `dashboard/page.tsx:82-85` uses static arrays with no real data.
+- [x] **P1. Frequent context updates** — Context values memoized with `useMemo`. Each consumer imports only the hooks it needs — scan ticks no longer re-render non-scan components.
+- [x] **P2. Eager recharts import** — Sparkline and trend chart components dynamically loaded via `next/dynamic` with `{ ssr: false }`.
+- [x] **P3. Render-blocking font loading** — Migrated to `next/font/google` with CSS custom properties. `@import` removed from `globals.css`.
+- [x] **P4. Hardcoded sparkline data** — Sparkline data now derives from backend `/trend` endpoint, falling back to static data when unavailable.
 
 ## State Bugs
 

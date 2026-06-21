@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import { useApp } from "@/lib/AppContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { RefreshCw, ShieldAlert, CheckCircle, ShieldAlert as AlertTriangle, AlertCircle, HelpCircle, Check, Trash } from "lucide-react";
 
 const statusConfig = {
@@ -11,7 +12,8 @@ const statusConfig = {
 };
 
 export default function PackagesPage() {
-  const { packages, auditPackageAction, showToast } = useApp();
+  const { packages, auditPackageAction } = useData();
+  const { showToast } = useToast();
   const [isAuditing, setIsAuditing] = useState(false);
 
   const dangerous = packages.filter((p) => p.status === "dangerous");

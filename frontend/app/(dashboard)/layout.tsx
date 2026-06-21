@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
@@ -10,7 +10,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isInitializing } = useApp();
+  const { user, isInitializing } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);

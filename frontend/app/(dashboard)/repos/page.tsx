@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { useApp } from "@/lib/AppContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useScan } from "@/lib/contexts/ScanContext";
 import Link from "next/link";
 import { GitBranch, Plus, RefreshCw, Lock, Globe, Clock, ShieldCheck, Terminal, X } from "lucide-react";
 import ConnectRepoModal from "@/components/layout/ConnectRepoModal";
@@ -15,7 +16,8 @@ function timeAgo(dateStr: string) {
 }
 
 export default function ReposPage() {
-  const { repos, issues, triggerScan, isScanning, scanLogs, scanProgress, scanStatus } = useApp();
+  const { repos, issues } = useData();
+  const { triggerScan, isScanning, scanLogs, scanProgress, scanStatus } = useScan();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [activeScanningRepo, setActiveScanningRepo] = useState<string | null>(null);
 

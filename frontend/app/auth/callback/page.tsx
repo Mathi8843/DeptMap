@@ -2,13 +2,13 @@
 import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Loader2 } from "lucide-react";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 
 function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useApp();
+  const { login } = useAuth();
   const [status, setStatus] = useState("Authenticating you with GitHub...");
   const [error, setError] = useState<string | null>(null);
   const exchangeAttempted = useRef(false);

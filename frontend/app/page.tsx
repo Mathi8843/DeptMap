@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { Shield, Zap, Package, TrendingUp, ArrowRight, GitBranch, Check, AlertTriangle, Lock, Eye, EyeOff } from "lucide-react";
 
 const STATS = [
@@ -87,7 +88,8 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
-  const { login, showToast } = useApp();
+  const { login } = useAuth();
+  const { showToast } = useToast();
 
   const handleGithubLogin = async (e: React.MouseEvent) => {
     e.preventDefault();

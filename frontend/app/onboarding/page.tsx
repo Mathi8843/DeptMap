@@ -2,7 +2,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useScan } from "@/lib/contexts/ScanContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { Lock, Globe, GitBranch, ChevronRight, Check, Terminal, Shield, AlertTriangle, Zap, ArrowRight, Loader2 } from "lucide-react";
 
 
@@ -31,7 +34,10 @@ const MOCK_FALLBACK_REPOS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, repos, issues, connectRepo, triggerScan, scanLogs, scanProgress, isScanning, scanStatus, showToast } = useApp();
+  const { user } = useAuth();
+  const { repos, issues, connectRepo } = useData();
+  const { triggerScan, scanLogs, scanProgress, isScanning, scanStatus } = useScan();
+  const { showToast } = useToast();
 
   const [step, setStep] = useState(1);
   const [githubConnected, setGithubConnected] = useState(false);

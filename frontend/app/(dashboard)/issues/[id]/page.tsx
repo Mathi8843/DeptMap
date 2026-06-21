@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useApp } from "@/lib/AppContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { ArrowLeft, GitPullRequest, Copy, X, Terminal, CheckCircle2, ShieldAlert, FileCode, Check, ArrowRight } from "lucide-react";
 import clsx from "clsx";
 
@@ -16,7 +17,8 @@ const severityConfig = {
 export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { issues, fixIssueSimulate, dismissIssue, showToast } = useApp();
+  const { issues, fixIssueSimulate, dismissIssue } = useData();
+  const { showToast } = useToast();
   
   const issueId = params.id as string;
   const issue = issues.find((i) => i.id === issueId) || issues[0];

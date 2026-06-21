@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "Fira Code", monospace;
-  --font-display: "Outfit", sans-serif;
+  --font-sans: var(--font-inter), sans-serif;
+  --font-mono: var(--font-fira-code), monospace;
+  --font-display: var(--font-outfit), sans-serif;
 
   /* Theme Dynamic CSS Variables mapping */
   --color-bg-deep:   var(--bg-deep);
@@ -94,7 +93,7 @@ html {
   scroll-behavior: smooth;
   background-color: var(--bg-deep);
   color: var(--text-main);
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-inter), sans-serif;
   font-size: 15px; /* Scaled up from browser default */
 }
 

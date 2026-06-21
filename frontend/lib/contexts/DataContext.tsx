@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { apiFetch } from "../api";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
@@ -345,25 +345,18 @@ export function DataProvider({
     }
   };
 
+  const dataValue = useMemo(() => ({
+    repos, issues, packages, webhookAlerts, soc2Report, trendData, overallScore,
+    connectRepo, upgradePlan, fixIssueSimulate, dismissIssue, auditPackageAction,
+    triggerWebhookAlert, fetchData,
+  }), [
+    repos, issues, packages, webhookAlerts, soc2Report, trendData, overallScore,
+    connectRepo, upgradePlan, fixIssueSimulate, dismissIssue, auditPackageAction,
+    triggerWebhookAlert, fetchData,
+  ]);
+
   return (
-    <DataContext.Provider
-      value={{
-        repos,
-        issues,
-        packages,
-        webhookAlerts,
-        soc2Report,
-        trendData,
-        overallScore,
-        connectRepo,
-        upgradePlan,
-        fixIssueSimulate,
-        dismissIssue,
-        auditPackageAction,
-        triggerWebhookAlert,
-        fetchData,
-      }}
-    >
+    <DataContext.Provider value={dataValue}>
       {children}
     </DataContext.Provider>
   );

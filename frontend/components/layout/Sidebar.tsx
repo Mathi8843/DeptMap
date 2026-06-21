@@ -2,7 +2,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 import ConnectRepoModal from "./ConnectRepoModal";
 import {
   LayoutDashboard, AlertTriangle, Package,
@@ -12,7 +14,9 @@ import {
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, repos, issues, upgradePlan, theme, setTheme, logout } = useApp();
+  const { user, logout } = useAuth();
+  const { repos, issues, upgradePlan } = useData();
+  const { theme, setTheme } = useTheme();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   const openIssues = issues.filter((i) => i.status === "open");

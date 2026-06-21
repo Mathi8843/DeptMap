@@ -1,25 +1,19 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useApp } from "@/lib/AppContext";
+import dynamic from "next/dynamic";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useScan } from "@/lib/contexts/ScanContext";
 import { RefreshCw, Download, AlertTriangle, ShieldAlert, CheckCircle, ArrowUpRight, Terminal, Bell, MessageSquare, Mail, GitBranch, X } from "lucide-react";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import { apiFetch } from "@/lib/api";
 
+const Sparkline = dynamic(() => import("./Sparkline"), { ssr: false });
+
 export default function DashboardPage() {
-  const { 
-    user,
-    issues, 
-    repos, 
-    overallScore, 
-    isScanning, 
-    scanProgress, 
-    scanLogs,
-    scanStatus,
-    triggerScan,
-    packages,
-    webhookAlerts
-  } = useApp();
+  const { user } = useAuth();
+  const { issues, repos, overallScore, packages, webhookAlerts, trendData } = useData();
+  const { isScanning, scanProgress, scanLogs, scanStatus, triggerScan } = useScan();
 
   // Show terminal while scanning OR after completion until dismissed
   const [terminalDismissed, setTerminalDismissed] = useState(false);
@@ -78,11 +72,35 @@ export default function DashboardPage() {
     return "text-slate-300";
   };
 
-  // Sparkline data generators
-  const healthSparkData = [{ v: 80 }, { v: 75 }, { v: 68 }, { v: 62 }, { v: 55 }, { v: 47 }, { v: 41 }, { v: 38 }, { v: overallScore }];
-  const openSparkData   = [{ v: 1 }, { v: 2 }, { v: 2 }, { v: 3 }, { v: 4 }, { v: 5 }, { v: 5 }, { v: 6 }, { v: openIssues.length }];
-  const criticalSparkData = [{ v: 0 }, { v: 1 }, { v: 1 }, { v: 1 }, { v: 2 }, { v: 2 }, { v: 2 }, { v: 2 }, { v: critical.length }];
-  const fixedSparkData  = [{ v: 1 }, { v: 1 }, { v: 2 }, { v: 2 }, { v: 3 }, { v: 3 }, { v: 4 }, { v: 4 }, { v: fixed }];
+  // Sparkline data generators — derive from trendData when available
+  const { healthSparkData, openSparkData, criticalSparkData, fixedSparkData } = useMemo(() => {
+    if (trendData && trendData.length > 1) {
+      const sorted = [...trendData].sort(
+        (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+      const health = sorted.map((d: any) => ({ v: d.score }));
+      let cumOpen = 0;
+      const open = sorted.map((d: any) => {
+        cumOpen += (d.introduced || 0) - (d.fixed || 0);
+        return { v: Math.max(0, cumOpen) };
+      });
+      const critVals = sorted.map((_: any, i: number) => ({
+        v: Math.round(critical.length * (i + 1) / sorted.length),
+      }));
+      let cumFixed = 0;
+      const fixedVals = sorted.map((d: any) => {
+        cumFixed += d.fixed || 0;
+        return { v: cumFixed };
+      });
+      return { healthSparkData: health, openSparkData: open, criticalSparkData: critVals, fixedSparkData: fixedVals };
+    }
+    return {
+      healthSparkData: [{ v: 80 }, { v: 75 }, { v: 68 }, { v: 62 }, { v: 55 }, { v: 47 }, { v: 41 }, { v: 38 }, { v: overallScore }],
+      openSparkData:   [{ v: 1 }, { v: 2 }, { v: 2 }, { v: 3 }, { v: 4 }, { v: 5 }, { v: 5 }, { v: 6 }, { v: openIssues.length }],
+      criticalSparkData: [{ v: 0 }, { v: 1 }, { v: 1 }, { v: 1 }, { v: 2 }, { v: 2 }, { v: 2 }, { v: 2 }, { v: critical.length }],
+      fixedSparkData:  [{ v: 1 }, { v: 1 }, { v: 2 }, { v: 2 }, { v: 3 }, { v: 3 }, { v: 4 }, { v: 4 }, { v: fixed }],
+    };
+  }, [trendData, overallScore, openIssues.length, critical.length, fixed]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 sm:space-y-8 relative min-h-full">
@@ -172,47 +190,31 @@ export default function DashboardPage() {
               <span className="absolute text-[11px] font-display font-extrabold text-indigo-500 dark:text-indigo-400">{overallScore}%</span>
             </div>
           </div>
-          <div className="h-6 w-full opacity-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={healthSparkData}><Area type="monotone" dataKey="v" stroke={scoreTheme.stroke} strokeWidth={2} fill="transparent" dot={false} /></AreaChart>
-            </ResponsiveContainer>
+            <Sparkline data={healthSparkData} stroke={scoreTheme.stroke} />
           </div>
-        </div>
 
         <div className="glass-card rounded-2xl p-5 flex flex-col justify-between h-[140px]">
           <div className="space-y-1">
             <div className="text-xs font-mono uppercase tracking-[1.5px] text-text-muted font-bold">Open Issues</div>
             <div className="font-display font-extrabold text-3xl text-text-main tracking-wide">{openIssues.length}</div>
           </div>
-          <div className="h-6 w-full opacity-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={openSparkData}><Area type="monotone" dataKey="v" stroke="#f59e0b" strokeWidth={2} fill="transparent" dot={false} /></AreaChart>
-            </ResponsiveContainer>
+            <Sparkline data={openSparkData} stroke="#f59e0b" />
           </div>
-        </div>
 
         <div className="glass-card rounded-2xl p-5 flex flex-col justify-between h-[140px]">
           <div className="space-y-1">
             <div className="text-xs font-mono uppercase tracking-[1.5px] text-text-muted font-bold">Critical Alerts</div>
             <div className="font-display font-extrabold text-3xl text-rose-500 tracking-wide text-glow-rose">{critical.length}</div>
           </div>
-          <div className="h-6 w-full opacity-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={criticalSparkData}><Area type="monotone" dataKey="v" stroke="#f43f5e" strokeWidth={2} fill="transparent" dot={false} /></AreaChart>
-            </ResponsiveContainer>
+            <Sparkline data={criticalSparkData} stroke="#f43f5e" />
           </div>
-        </div>
 
         <div className="glass-card rounded-2xl p-5 flex flex-col justify-between h-[140px]">
           <div className="space-y-1">
             <div className="text-xs font-mono uppercase tracking-[1.5px] text-text-muted font-bold">Remediated PRs</div>
             <div className="font-display font-extrabold text-3xl text-emerald-500 dark:text-emerald-400 tracking-wide">{fixed}</div>
           </div>
-          <div className="h-6 w-full opacity-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={fixedSparkData}><Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={2} fill="transparent" dot={false} /></AreaChart>
-            </ResponsiveContainer>
-          </div>
+            <Sparkline data={fixedSparkData} stroke="#10b981" />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { 
   Users, GitBranch, Terminal, ShieldAlert, 
@@ -48,7 +48,7 @@ interface AdminInsights {
 }
 
 export default function AdminPage() {
-  const { user } = useApp();
+  const { user } = useAuth();
   const [insights, setInsights] = useState<AdminInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

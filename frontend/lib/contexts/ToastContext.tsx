@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 
 export interface Toast {
   id: string;
@@ -30,8 +30,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const toastValue = useMemo(() => ({ toasts, showToast, removeToast }), [toasts, showToast, removeToast]);
+
   return (
-    <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
+    <ToastContext.Provider value={toastValue}>
       {children}
     </ToastContext.Provider>
   );

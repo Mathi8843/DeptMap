@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useData } from "@/lib/contexts/DataContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { Check, X, Shield, CreditCard, Bell, HelpCircle, AlertCircle, Zap, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import { PLAN_LIMITS } from "@/lib/plan-limits";
@@ -73,7 +75,9 @@ const plans = [
 ];
 
 export default function SettingsPage() {
-  const { user, upgradePlan, showToast, login } = useApp();
+  const { user, login } = useAuth();
+  const { upgradePlan } = useData();
+  const { showToast } = useToast();
   const [selectedPlanKey, setSelectedPlanKey] = useState<typeof user.plan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [couponCode, setCouponCode] = useState("");

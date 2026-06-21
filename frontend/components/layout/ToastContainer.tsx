@@ -1,10 +1,10 @@
 "use client";
 import React from "react";
-import { useApp } from "@/lib/AppContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { X, CheckCircle, AlertTriangle, Info, AlertOctagon } from "lucide-react";
 
 export default function ToastContainer() {
-  const { toasts, removeToast } = useApp();
+  const { toasts, removeToast } = useToast();
 
   if (toasts.length === 0) return null;
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { apiFetch } from "../api";
 import { useData, type Repo } from "./DataContext";
 import { useToast } from "./ToastContext";
@@ -107,8 +107,10 @@ export function ScanProvider({
     triggerScanRef.current = triggerScan;
   }, [triggerScanRef, triggerScan]);
 
+  const scanValue = useMemo(() => ({ isScanning, scanProgress, scanLogs, scanStatus, triggerScan }), [isScanning, scanProgress, scanLogs, scanStatus, triggerScan]);
+
   return (
-    <ScanContext.Provider value={{ isScanning, scanProgress, scanLogs, scanStatus, triggerScan }}>
+    <ScanContext.Provider value={scanValue}>
       {children}
     </ScanContext.Provider>
   );

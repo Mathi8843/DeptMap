@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { useApp } from "@/lib/AppContext";
+import { useData } from "@/lib/contexts/DataContext";
 import { Search, AlertTriangle, CheckCircle, HelpCircle, X, Shield } from "lucide-react";
 
 const severityConfig = {
@@ -12,7 +12,7 @@ const severityConfig = {
 };
 
 export default function IssuesPage() {
-  const { issues } = useApp();
+  const { issues } = useData();
   const [activeSeverity, setActiveSeverity] = useState<string>("all");
   const [activeStatus, setActiveStatus] = useState<string>("open");
   const [searchQuery, setSearchQuery] = useState("");

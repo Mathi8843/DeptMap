@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useData } from "@/lib/contexts/DataContext";
 import { X, GitBranch, Shield, Globe, Terminal, Loader2, AlertTriangle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
@@ -10,7 +11,8 @@ interface ConnectRepoModalProps {
 }
 
 export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalProps) {
-  const { user, repos, connectRepo } = useApp();
+  const { user } = useAuth();
+  const { repos, connectRepo } = useData();
   const [githubRepos, setGithubRepos] = useState<any[]>([]);
   const [selectedRepo, setSelectedRepo] = useState("");
   const [language, setLanguage] = useState("TypeScript");
