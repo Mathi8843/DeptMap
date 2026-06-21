@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useData } from "@/lib/contexts/DataContext";
 import { useScan } from "@/lib/contexts/ScanContext";
+import { useToast } from "@/lib/contexts/ToastContext";
 import { RefreshCw, Download, AlertTriangle, ShieldAlert, CheckCircle, ArrowUpRight, Terminal, Bell, MessageSquare, Mail, GitBranch, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { issues, repos, overallScore, packages, webhookAlerts, trendData } = useData();
   const { isScanning, scanProgress, scanLogs, scanStatus, triggerScan } = useScan();
+  const { showToast } = useToast();
 
   // Show terminal while scanning OR after completion until dismissed
   const [terminalDismissed, setTerminalDismissed] = useState(false);
@@ -38,7 +40,7 @@ export default function DashboardPage() {
         window.location.href = data.auth_url;
       }
     } catch (err: any) {
-      alert(err.message || "Failed to retrieve GitHub connection link.");
+      showToast(err.message || "Failed to retrieve GitHub connection link.", "error");
     }
   };
 
@@ -51,7 +53,7 @@ export default function DashboardPage() {
   // Export audit report as JSON
   const handleExport = useCallback(() => {
     if (issues.length === 0) {
-      alert("No audit data to export. Run a scan first.");
+      showToast("No audit data to export. Run a scan first.", "warning");
       return;
     }
     const report = {

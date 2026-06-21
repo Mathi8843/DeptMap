@@ -16,21 +16,10 @@ const STEPS = [
   { id: 4, label: "View Results" },
 ];
 
-const DEMO_REPOS = [
-  { full_name: "mathivanan/saas-app", language: "TypeScript", private: true, generator: "Lovable", stars: 0, issues: "2 critical, 5 high" },
-  { full_name: "mathivanan/api-backend", language: "Python", private: true, generator: "Cursor", stars: 3, issues: "1 high, 4 medium" },
-  { full_name: "mathivanan/landing-page", language: "JavaScript", private: false, generator: "Bolt", stars: 12, issues: "Clean" },
-];
-
 const GENERATORS = ["Lovable", "Bolt", "Cursor", "Replit", "v0", "Other"];
 
 import { useEffect } from "react";
 import { apiFetch, getSavedUser } from "@/lib/api";
-
-const MOCK_FALLBACK_REPOS = [
-  { full_name: "your-github/saas-app", language: "TypeScript", is_private: true, stars: 0, issues: "Pending scan" },
-  { full_name: "your-github/api-backend", language: "Python", is_private: true, stars: 0, issues: "Pending scan" },
-];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -243,6 +232,7 @@ export default function OnboardingPage() {
                   >
                     <GitBranch size={20} /> Authorize DebtMap on GitHub
                   </button>
+                  <p className="font-mono text-[10px] text-[#44446a]">{statusMessage}</p>
                   <p className="text-[11px] text-[#44446a] font-mono">
                     We only request <strong className="text-[#8888bb]">read access</strong> to your code. We never write or store your source code.
                   </p>

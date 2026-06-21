@@ -39,6 +39,8 @@ export function logoutUser() {
 /**
  * Fetch wrapper that automatically adds the session JWT to the Authorization header.
  */
+const API_TIMEOUT = 30_000; // 30 seconds
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const user = getSavedUser();
   const sessionToken = user?.session_token;
@@ -72,23 +74,36 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     headers["Authorization"] = `Bearer ${sessionToken}`;
   }
 
-  const response = await fetch(url.toString(), {
-    ...options,
-    credentials: "include",
-    headers,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorDetail = "API call failed";
-    try {
-      const errorJson = JSON.parse(errorText);
-      errorDetail = errorJson.detail || errorDetail;
-    } catch {
-      errorDetail = errorText || errorDetail;
+  try {
+    const response = await fetch(url.toString(), {
+      ...options,
+      signal: options.signal || controller.signal,
+      credentials: "include",
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorDetail = "API call failed";
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorDetail = errorJson.detail || errorDetail;
+      } catch {
+        errorDetail = errorText || errorDetail;
+      }
+      throw new Error(errorDetail);
     }
-    throw new Error(errorDetail);
-  }
 
-  return response.json();
+    return response.json();
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

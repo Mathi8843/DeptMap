@@ -45,10 +45,10 @@
 
 ## Dead Code & Quality
 
-- [ ] **D1. Unused variables** — `DEMO_REPOS`, `MOCK_FALLBACK_REPOS` defined but unused in `onboarding/page.tsx`.
-- [ ] **D2. statusMessage unused** — Set but never displayed in onboarding UI.
-- [ ] **D3. No API timeout** — `apiFetch` hangs indefinitely if backend doesn't respond.
-- [ ] **D4. Inconsistent error handling** — Mix of `showToast`, `alert()`, `console.error`, inline state.
+- [x] **D1. Unused variables** — Removed `DEMO_REPOS` and `MOCK_FALLBACK_REPOS` from `onboarding/page.tsx`.
+- [x] **D2. statusMessage unused** — Now rendered below the GitHub connect button on Step 1.
+- [x] **D3. No API timeout** — `apiFetch` wraps `fetch` with `AbortController` and a 30-second default timeout; throws `"Request timed out"` on abort.
+- [x] **D4. Inconsistent error handling** — Replaced the two remaining `alert()` calls in the dashboard (connect error + empty export) with `showToast`.
 
 ## Auth & Security
 
