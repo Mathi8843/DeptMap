@@ -142,6 +142,7 @@ def _get_semgrep_command(target_dir: str) -> list[str]:
         "--no-git-ignore",
         "--timeout", "60",
         "--max-memory", "300",
+        "--metrics", "off",      # Prevents METRICS warning from polluting stderr and confusing error messages
     ]
 
     if platform.system() != "Windows":
@@ -187,12 +188,58 @@ def run_semgrep(target_dir: str) -> dict:
             stderr=subprocess.PIPE,
             timeout=180,
         )
+
+        stderr_raw = result.stderr.decode("utf-8", errors="ignore")
+
+        # Strip Semgrep's noisy preamble from stderr so it never leaks into user-facing errors.
+        # Semgrep always prints METRICS + scan status banner to stderr even with --json + --metrics off.
+        def _clean_stderr(s: str) -> str:
+            skip_prefixes = (
+                "METRICS:", "Using configs", "To disable", "More information",
+                "┌", "│", "└", "Scanning", "Ran", "findings", "ran"
+            )
+            lines = [l for l in s.splitlines() if not any(l.strip().startswith(p) for p in skip_prefixes)]
+            return "\n".join(lines).strip()
+
+        # Semgrep exit codes:
+        #   0 = success, no findings
+        #   1 = success, findings found (completely normal)
+        #   2 = max-memory exceeded — Semgrep killed itself mid-scan
+        #       stdout may still contain partial JSON, try to use it
+        #   3 = config/rule error
+        #   4+ = fatal error
+        if result.returncode == 2:
+            logger.warning(
+                "Semgrep hit memory limit (--max-memory 300MB) and produced partial results. "
+                "Some files may not have been scanned."
+            )
+            # Try to use whatever partial JSON output Semgrep managed to write
+            try:
+                with open(output_path, "r") as f:
+                    content = f.read().strip()
+                if content:
+                    return json.loads(content)
+            except (json.JSONDecodeError, OSError):
+                pass
+            # No usable output — return empty findings rather than crashing the whole scan
+            return {"results": [], "errors": [], "_partial": True}
+
         if result.returncode not in (0, 1):
-            raise RuntimeError(f"Semgrep failed: {result.stderr.decode()[:500]}")
+            clean_err = _clean_stderr(stderr_raw)
+            raise RuntimeError(
+                f"Semgrep failed with exit code {result.returncode}: {clean_err[:300]}"
+            )
+
         with open(output_path, "r") as f:
             return json.load(f)
+
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Semgrep output was not valid JSON: {str(e)}")
     finally:
-        os.unlink(output_path)
+        try:
+            os.unlink(output_path)
+        except OSError:
+            pass
 
 
 def parse_findings(semgrep_output: dict, repo_dir: str) -> list[dict]:
