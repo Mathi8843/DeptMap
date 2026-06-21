@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -47,6 +47,39 @@ export default function DashboardPage() {
   const high = openIssues.filter((i) => i.severity === "high");
   const fixed = issues.filter((i) => i.status === "fixed").length;
   const dangerPackages = packages.filter((p) => p.status === "dangerous").length;
+
+  // Export audit report as JSON
+  const handleExport = useCallback(() => {
+    if (issues.length === 0) {
+      alert("No audit data to export. Run a scan first.");
+      return;
+    }
+    const report = {
+      generatedAt: new Date().toISOString(),
+      overallScore,
+      openIssues: openIssues.length,
+      criticalAlerts: critical.length,
+      remediatedPRs: fixed,
+      issues: issues.map((i) => ({
+        id: i.id,
+        severity: i.severity,
+        status: i.status,
+        title: i.plain_english_title,
+        file: `${i.file_path}:${i.line_start}`,
+      })),
+      packages: {
+        total: packages.length,
+        dangerous: packages.filter((p) => !p.exists_in_registry).length,
+      },
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `debtmap-audit-${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [issues, overallScore, openIssues.length, critical.length, fixed, packages]);
 
   const handleRunScan = () => { triggerScan(); };
 
@@ -112,7 +145,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => alert("PDF report generated successfully (simulated download)")}
+            onClick={handleExport}
             className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1px] font-bold px-5 py-3 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub rounded-xl transition-all cursor-pointer hover:bg-bg-panel/40"
           >
             <Download size={14} /> Export Audit Report

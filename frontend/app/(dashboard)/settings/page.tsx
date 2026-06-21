@@ -108,6 +108,13 @@ export default function SettingsPage() {
 
   const handleRazorpayPayment = async () => {
     setPaying(true);
+    const plan = plans.find((p) => p.key === selectedPlanKey);
+    if (!plan) {
+      showToast("No plan selected", "error");
+      setPaying(false);
+      return;
+    }
+
     const isLoaded = await loadRazorpay();
     if (!isLoaded) {
       showToast("Razorpay SDK failed to load. Are you connected to the internet?", "error");
@@ -122,8 +129,8 @@ export default function SettingsPage() {
         key: orderData.key,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "DebtMap Pro",
-        description: "Upgrade workspace to Pro tier",
+        name: `DebtMap ${plan.name}`,
+        description: `Upgrade workspace to ${plan.name} tier`,
         order_id: orderData.order_id,
         handler: async function (response: any) {
           setPaying(true);
@@ -137,14 +144,14 @@ export default function SettingsPage() {
                 razorpay_signature: response.razorpay_signature
               })
              });
-             if (verifyRes.success) {
-               login({
-                 ...user,
-                 plan: "pro"
-               });
-               showToast("Subscription upgraded to Pro successfully!", "success");
-               setIsCheckoutOpen(false);
-             }
+              if (verifyRes.success) {
+                login({
+                  ...user,
+                  plan: plan.key,
+                });
+                showToast(`Subscription upgraded to ${plan.name} successfully!`, "success");
+                setIsCheckoutOpen(false);
+              }
           } catch (err: any) {
             showToast(err.message || "Payment verification failed", "error");
           } finally {
@@ -201,12 +208,22 @@ export default function SettingsPage() {
     }
   };
   
-  const [notifications, setNotifications] = useState({
-    emailCritical: true,
-    emailHigh: true,
-    weeklyReport: true,
-    slackCritical: false,
+  const defaultNotifs = { emailCritical: true, emailHigh: true, weeklyReport: true, slackCritical: false };
+  type NotifState = typeof defaultNotifs;
+
+  const [notifications, setNotifications] = useState<NotifState>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("debtmap_notifications");
+        if (saved) return JSON.parse(saved) as NotifState;
+      } catch {}
+    }
+    return defaultNotifs;
   });
+
+  useEffect(() => {
+    localStorage.setItem("debtmap_notifications", JSON.stringify(notifications));
+  }, [notifications]);
 
   const handleToggle = (key: keyof typeof notifications) => {
     if (key === "emailHigh" && !PLAN_LIMITS[user.plan].email_alerts) {
@@ -261,7 +278,7 @@ export default function SettingsPage() {
             </h3>
             <div className="flex items-center gap-3.5">
               <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-display font-extrabold text-base text-indigo-500 dark:text-indigo-400">
-                {user.name[0]}
+                {user.name ? user.name[0] : "?"}
               </div>
               <div className="min-w-0 space-y-0.5">
                 <div className="text-sm font-bold text-text-main truncate">{user.name}</div>

@@ -31,11 +31,11 @@
 
 ## UI/UX
 
-- [ ] **U1. Simulated export** — `dashboard/page.tsx:97` uses `alert("PDF report generated successfully (simulated download)")` with no real implementation.
-- [ ] **U2. Issue detail silent fallback** — `issues/[id]/page.tsx:22` falls back to `issues[0]` if ID not found, showing wrong data with no warning.
-- [ ] **U3. Notification toggles not persisted** — Settings notification state resets on page refresh.
-- [ ] **U4. user.name[0] no empty guard** — `settings/page.tsx:260`, `sidebar:184` will crash if name is empty string.
-- [ ] **U5. Razorpay hardcoded to Pro** — `settings/page.tsx:121` always charges "DebtMap Pro" regardless of selected plan.
+- [x] **U1. Simulated export** — Replaced `alert` with a real JSON export: `handleExport` builds a structured report and triggers a file download.
+- [x] **U2. Issue detail silent fallback** — Removed `|| issues[0]` fallback; shows the error UI when issue ID not found, with a warning toast.
+- [x] **U3. Notification toggles not persisted** — State initialises from `localStorage["debtmap_notifications"]` and syncs on change via `useEffect`.
+- [x] **U4. user.name[0] no empty guard** — `settings/page.tsx` now uses `user.name ? user.name[0] : "?"` (sidebar was already guarded).
+- [x] **U5. Razorpay hardcoded to Pro** — Plan name/description and post-verification `plan` field are now driven by `selectedPlanKey`.
 
 ## Accessibility
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useData } from "@/lib/contexts/DataContext";
@@ -21,7 +21,13 @@ export default function IssueDetailPage() {
   const { showToast } = useToast();
   
   const issueId = params.id as string;
-  const issue = issues.find((i) => i.id === issueId) || issues[0];
+  const issue = issues.find((i) => i.id === issueId);
+
+  useEffect(() => {
+    if (!issue && issues.length > 0) {
+      showToast(`Issue "${issueId}" not found`, "warning");
+    }
+  }, [issue, issueId, issues.length, showToast]);
   
   const [isReviewing, setIsReviewing] = useState(false);
   const [chunkApproved, setChunkApproved] = useState(false);
