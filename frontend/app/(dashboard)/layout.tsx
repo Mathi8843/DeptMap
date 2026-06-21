@@ -27,6 +27,22 @@ export default function DashboardLayout({
     setSidebarOpen(false);
   }, [pathname]);
 
+  // Set document title per page
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      "/dashboard": "Dashboard — DebtMap",
+      "/issues": "Issues — DebtMap",
+      "/repos": "Repositories — DebtMap",
+      "/packages": "Package Audit — DebtMap",
+      "/soc2": "SOC 2 Readiness — DebtMap",
+      "/settings": "Settings — DebtMap",
+      "/admin": "Admin — DebtMap",
+      "/trend": "Health Trend — DebtMap",
+    };
+    const title = titles[pathname] ?? (pathname.startsWith("/issues/") ? "Issue Details — DebtMap" : "DebtMap");
+    document.title = title;
+  }, [pathname]);
+
   // Show loading indicator if still initializing or if not authenticated yet to prevent UI flash
   if (isInitializing || !user.session_token) {
     return (

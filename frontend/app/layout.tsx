@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/contexts/AuthContext";
 import DataAndAppProviders from "@/app/providers";
 import ToastContainer from "@/components/layout/ToastContainer";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import JsonLd from "@/components/seo/JsonLd";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,6 +36,7 @@ export const metadata: Metadata = {
     description: "Security scanning built for non-developer founders who shipped with Lovable, Bolt, or Cursor.",
     type: "website",
   },
+  alternates: { canonical: "https://dept-map.vercel.app" },
 };
 
 export default function RootLayout({
@@ -51,6 +53,7 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
+        <JsonLd />
         <ThemeProvider>
           <ToastProvider>
             <ErrorBoundary>
