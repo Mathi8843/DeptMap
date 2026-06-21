@@ -221,9 +221,9 @@ export default function LandingPage() {
               <span className="font-mono text-[10px] uppercase tracking-[3px] text-[#b8ff57]">AI Code Security · June 2026</span>
             </div>
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.05] tracking-tight">
-              Your vibe-coded app<br />
-              <span className="text-[#b8ff57]">has vulnerabilities.</span><br />
-              <span className="text-[#44446a]">We fix them.</span>
+              <span className="block">Your vibe-coded app</span>
+              <span className="block text-[#b8ff57]">has vulnerabilities.</span>
+              <span className="block text-[#44446a]">We fix them.</span>
             </h1>
             <p className="text-lg text-[#8888bb] leading-relaxed max-w-xl">
               DebtMap scans every repository you built with Lovable, Bolt, or Cursor and explains every security issue in plain English — then fixes it with one click.
