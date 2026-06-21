@@ -182,12 +182,15 @@ def run_semgrep(target_dir: str) -> dict:
         output_path = f.name
 
     try:
-        result = subprocess.run(
-            cmd,
-            stdout=open(output_path, "w"),
-            stderr=subprocess.PIPE,
-            timeout=180,
-        )
+        # Open the output file explicitly so we can close it before reading
+        with open(output_path, "w") as stdout_file:
+            result = subprocess.run(
+                cmd,
+                stdout=stdout_file,   # write directly to disk — avoids RAM buffering for large outputs
+                stderr=subprocess.PIPE,
+                timeout=180,
+            )
+        # stdout_file is now closed here — safe to read output_path
 
         stderr_raw = result.stderr.decode("utf-8", errors="ignore")
 
