@@ -71,7 +71,7 @@ export default function Soc2Page() {
           <div className="w-full max-w-xl glass-card rounded-2xl p-10 border border-border-subtle text-center space-y-6 relative overflow-hidden shadow-2xl animate-slide-up">
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 to-indigo-500" />
             
-            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-500 mx-auto glow-purple/10">
+            <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-500 mx-auto glow-purple">
               <Lock size={28} />
             </div>
 
@@ -85,7 +85,7 @@ export default function Soc2Page() {
             <div className="pt-2">
               <button
                 onClick={() => setIsCheckoutOpen(true)}
-                className="font-mono text-[10px] uppercase tracking-[1.5px] font-bold px-8 py-3.5 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-all shadow-lg shadow-purple-500/15 cursor-pointer hover:scale-[1.02] active:scale-98"
+                className="font-mono text-[10px] uppercase tracking-[1.5px] font-bold px-8 py-3.5 bg-purple-500 hover:bg-purple-600 text-white rounded-xl transition-all shadow-lg shadow-purple-500/15 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
               >
                 Upgrade Workspace — ₹16,000/mo
               </button>

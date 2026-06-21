@@ -61,7 +61,7 @@ export default function PackagesPage() {
       </div>
 
       {/* Explainer card */}
-      <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-6 flex gap-4.5 items-start">
+      <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-6 flex gap-[1.125rem] items-start">
         <HelpCircle size={22} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
         <div className="space-y-1.5 flex-1 min-w-0">
           <h3 className="text-sm font-bold text-text-main">What is AI Slopsquatting?</h3>

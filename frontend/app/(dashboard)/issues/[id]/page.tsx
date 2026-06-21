@@ -327,7 +327,7 @@ export default function IssueDetailPage() {
                     href={issue.fix_pr_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-mono text-[10px] font-bold uppercase tracking-[1px] px-4.5 py-2.5 border border-emerald-500/30 hover:border-emerald-500/55 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-xl transition-all"
+                    className="font-mono text-[10px] font-bold uppercase tracking-[1px] px-[1.125rem] py-2.5 border border-emerald-500/30 hover:border-emerald-500/55 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-xl transition-all"
                   >
                     View PR
                   </a>

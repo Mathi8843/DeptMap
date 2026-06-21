@@ -228,14 +228,14 @@ export default function ReposPage() {
                 <button
                   onClick={() => handleScanRepo(repo.id)}
                   disabled={isRepoScanning}
-                  className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] font-bold px-4.5 py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub hover:text-text-main rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] font-bold px-[1.125rem] py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub hover:text-text-main rounded-xl transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <RefreshCw size={12} className={isRepoScanning ? "animate-spin" : ""} />
                   {isRepoScanning ? "Scanning..." : "Scan Workspace"}
                 </button>
                 <Link
                   href="/issues"
-                  className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-4.5 py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-colors text-center cursor-pointer"
+                  className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-colors text-center cursor-pointer"
                 >
                   View Issues
                 </Link>

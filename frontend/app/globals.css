@@ -159,6 +159,15 @@ html:not(.light) body {
 .glow-amber {
   box-shadow: 0 0 15px -3px rgba(255, 170, 51, 0.25), inset 0 0 10px -5px rgba(255, 170, 51, 0.15);
 }
+.glow-indigo {
+  box-shadow: 0 0 15px -3px rgba(99, 102, 241, 0.25), inset 0 0 10px -5px rgba(99, 102, 241, 0.15);
+}
+.glow-purple {
+  box-shadow: 0 0 15px -3px rgba(170, 119, 255, 0.25), inset 0 0 10px -5px rgba(170, 119, 255, 0.15);
+}
+.text-glow-rose {
+  text-shadow: 0 0 20px rgba(255, 87, 87, 0.5);
+}
 
 /* Shimmer overlay effect */
 .shimmer-btn {

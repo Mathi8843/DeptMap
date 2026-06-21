@@ -293,11 +293,11 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("emailCritical")}
-                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.emailCritical ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
               >
-                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.emailCritical ? "translate-x-4.5" : "translate-x-0"}`} />
+                <div className={`w-[1.125rem] h-[1.125rem] rounded-full bg-white transition-transform ${notifications.emailCritical ? "translate-x-[1.125rem]" : "translate-x-0"}`} />
               </button>
             </div>
 
@@ -312,11 +312,11 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("emailHigh")}
-                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.emailHigh && PLAN_LIMITS[user.plan].email_alerts ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
               >
-                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.emailHigh && PLAN_LIMITS[user.plan].email_alerts ? "translate-x-4.5" : "translate-x-0"}`} />
+                <div className={`w-[1.125rem] h-[1.125rem] rounded-full bg-white transition-transform ${notifications.emailHigh && PLAN_LIMITS[user.plan].email_alerts ? "translate-x-[1.125rem]" : "translate-x-0"}`} />
               </button>
             </div>
 
@@ -328,11 +328,11 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("weeklyReport")}
-                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.weeklyReport ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
               >
-                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.weeklyReport ? "translate-x-4.5" : "translate-x-0"}`} />
+                <div className={`w-[1.125rem] h-[1.125rem] rounded-full bg-white transition-transform ${notifications.weeklyReport ? "translate-x-[1.125rem]" : "translate-x-0"}`} />
               </button>
             </div>
 
@@ -347,11 +347,11 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("slackCritical")}
-                className={`w-10 h-5.5 rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
+                className={`w-10 h-[1.375rem] rounded-full p-0.5 transition-all duration-200 cursor-pointer ${
                   notifications.slackCritical && PLAN_LIMITS[user.plan].slack_alerts ? "bg-indigo-500" : "bg-bg-deep border border-border-subtle"
                 }`}
               >
-                <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${notifications.slackCritical && PLAN_LIMITS[user.plan].slack_alerts ? "translate-x-4.5" : "translate-x-0"}`} />
+                <div className={`w-[1.125rem] h-[1.125rem] rounded-full bg-white transition-transform ${notifications.slackCritical && PLAN_LIMITS[user.plan].slack_alerts ? "translate-x-[1.125rem]" : "translate-x-0"}`} />
               </button>
             </div>
           </div>

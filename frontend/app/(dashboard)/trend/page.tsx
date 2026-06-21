@@ -27,7 +27,7 @@ export default function TrendPage() {
   if (!hasHistory) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in flex flex-col items-center justify-center min-h-[400px]">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-500 glow-indigo/10 mb-4">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-500 glow-indigo mb-4">
           <TrendingUpIcon size={28} />
         </div>
         <h2 className="font-display font-extrabold text-xl text-text-main">No Scan History Yet</h2>
@@ -66,7 +66,7 @@ export default function TrendPage() {
       <TrendCharts trendData={trendData} drop={drop} />
 
       {/* Mitigation Action card */}
-      <div className="glass-card rounded-2xl p-6 flex gap-4.5 items-start border border-border-subtle bg-bg-deep/10">
+      <div className="glass-card rounded-2xl p-6 flex gap-[1.125rem] items-start border border-border-subtle bg-bg-deep/10">
         <ShieldCheck size={20} className="text-indigo-500 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
         <div className="space-y-1.5 flex-1 min-w-0">
           <h4 className="text-xs font-bold text-text-main font-mono uppercase tracking-[1px]">Debt Deficit Remediation Plan</h4>

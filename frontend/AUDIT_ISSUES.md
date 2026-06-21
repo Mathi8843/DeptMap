@@ -23,11 +23,11 @@
 
 ## Invalid CSS
 
-- [ ] **C1. text-glow-rose** — Used in dashboard, soc2, packages pages. Not a valid class.
-- [ ] **C2. glow-indigo/5, glow-amber/5, glow-rose/5, glow-purple/10** — Custom glow classes don't include `indigo` or `purple` variants.
-- [ ] **C3. active:scale-98** — `soc2/page.tsx:85` should be `active:scale-[0.98]`.
-- [ ] **C4. Fractional Tailwind values** — `px-4.5`, `py-5.5`, `h-5.5`, `gap-4.5`, `bg-white/3`, `border-white/8` — may not work in Tailwind v4 without bracket notation.
-- [ ] **C5. Tailwind v3 config vestigial** — `tailwind.config.ts` exists but v4 uses `@theme` in CSS. Confusing and unused.
+- [x] **C1. text-glow-rose** — Added `.text-glow-rose` utility to `globals.css` with `text-shadow`.
+- [x] **C2. glow-indigo/5, glow-amber/5, glow-rose/5, glow-purple/10** — Added `.glow-indigo` and `.glow-purple` classes; removed non-functional `/5`, `/10` opacity suffixes.
+- [x] **C3. active:scale-98** — Changed to `active:scale-[0.98]` in `soc2/page.tsx`.
+- [x] **C4. Fractional Tailwind values** — `px-4.5` → `px-[1.125rem]`, `h-5.5` → `h-[1.375rem]`, `gap-4.5` → `gap-[1.125rem]`, `w-4.5` → `w-[1.125rem]`, `translate-x-4.5` → `translate-x-[1.125rem]`. `py-5.5` never existed — no-op.
+- [x] **C5. Tailwind v3 config vestigial** — Deleted `tailwind.config.ts`. All config is in `@theme` within `globals.css`.
 
 ## UI/UX
 

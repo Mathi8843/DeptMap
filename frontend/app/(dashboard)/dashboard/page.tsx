@@ -130,7 +130,7 @@ export default function DashboardPage() {
 
       {/* GitHub Connection Banner */}
       {!user.has_github_token && (
-        <div className="glass-panel border-l-4 border-l-indigo-500 rounded-2xl p-5 flex gap-4 items-start glow-indigo/5 animate-fade-in">
+        <div className="glass-panel border-l-4 border-l-indigo-500 rounded-2xl p-5 flex gap-4 items-start glow-indigo animate-fade-in">
           <GitBranch className="text-indigo-500 dark:text-indigo-400 flex-shrink-0 mt-0.5" size={20} />
           <div className="flex-1 min-w-0 space-y-1">
             <h4 className="text-sm font-bold text-text-main">GitHub Account Not Connected</h4>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
 
       {/* Critical Alert Banner */}
       {critical.length > 0 && (
-        <div className="glass-panel border-l-4 border-l-rose-500 rounded-2xl p-5 flex gap-4 items-start glow-rose/5 animate-fade-in">
+        <div className="glass-panel border-l-4 border-l-rose-500 rounded-2xl p-5 flex gap-4 items-start glow-rose animate-fade-in">
           <ShieldAlert className="text-rose-500 dark:text-rose-400 flex-shrink-0 mt-0.5" size={20} />
           <div className="flex-1 min-w-0 space-y-1">
             <h4 className="text-sm font-bold text-text-main">Critical Exposure Detected</h4>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
 
       {/* Danger Packages Banner */}
       {dangerPackages > 0 && (
-        <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-5 flex gap-4 items-start glow-amber/5 animate-fade-in">
+        <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-5 flex gap-4 items-start glow-amber animate-fade-in">
           <AlertTriangle className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" size={20} />
           <div className="flex-1 min-w-0 space-y-1">
             <h4 className="text-sm font-bold text-text-main">AI Dependency Risk (Slopsquatting)</h4>
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                         <h4 className="text-sm font-bold text-text-main group-hover:text-indigo-500 transition-colors">{issue.plain_english_title}</h4>
                       </div>
                       <div className="flex items-center gap-3 flex-shrink-0">
-                        <Link href={`/issues/${issue.id}`} className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-4.5 py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-colors cursor-pointer text-center">Fix exposure</Link>
+                        <Link href={`/issues/${issue.id}`} className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-colors cursor-pointer text-center">Fix exposure</Link>
                       </div>
                     </div>
                   );

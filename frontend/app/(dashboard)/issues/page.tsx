@@ -82,7 +82,7 @@ export default function IssuesPage() {
                 <button
                   key={s}
                   onClick={() => setActiveStatus(s)}
-                  className={`font-mono text-[10px] uppercase tracking-[1px] font-bold px-4.5 py-2.5 rounded-lg transition-all cursor-pointer ${
+                  className={`font-mono text-[10px] uppercase tracking-[1px] font-bold px-[1.125rem] py-2.5 rounded-lg transition-all cursor-pointer ${
                     activeStatus === s
                       ? "bg-indigo-500 text-white shadow"
                       : "text-text-sub hover:text-text-main"
@@ -139,7 +139,7 @@ export default function IssuesPage() {
             return (
               <div 
                 key={issue.id}
-                className="glass-card rounded-2xl p-5.5 flex flex-col md:flex-row md:items-center justify-between gap-5 border border-border-subtle hover:border-border-glow group animate-fade-in"
+                className="glass-card rounded-2xl p-[1.375rem] flex flex-col md:flex-row md:items-center justify-between gap-5 border border-border-subtle hover:border-border-glow group animate-fade-in"
               >
                 {/* Visual state dot */}
                 <div className="flex items-start gap-4 min-w-0 flex-1">
@@ -169,7 +169,7 @@ export default function IssuesPage() {
                   {issue.status === "open" && (
                     <Link
                       href={`/issues/${issue.id}`}
-                      className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-4.5 py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-lime-400/5 hover:shadow-lime-400/15"
+                      className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-lime-400/5 hover:shadow-lime-400/15"
                     >
                       Fix Issue
                     </Link>
@@ -179,14 +179,14 @@ export default function IssuesPage() {
                       href={issue.fix_pr_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-4.5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-500/20 transition-all flex items-center gap-1.5"
+                      className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-500/20 transition-all flex items-center gap-1.5"
                     >
                       View Pull Request
                     </a>
                   )}
                   <Link
                     href={`/issues/${issue.id}`}
-                    className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-4.5 py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep/40 text-text-sub hover:text-text-main rounded-xl transition-colors"
+                    className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep/40 text-text-sub hover:text-text-main rounded-xl transition-colors"
                   >
                     Details
                   </Link>
