@@ -11,19 +11,21 @@ export default function ToastContainer() {
   return (
     <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
       {toasts.map((toast) => {
-        const bgStyles = {
+        const bgMap: Record<string, string> = {
           success: "bg-emerald-950/90 border-emerald-500/30 text-emerald-300 shadow-emerald-950/20",
           warning: "bg-amber-950/90 border-amber-500/30 text-amber-300 shadow-amber-950/20",
           error: "bg-rose-950/90 border-rose-500/30 text-rose-300 shadow-rose-950/20",
           info: "bg-blue-950/90 border-blue-500/30 text-blue-300 shadow-blue-950/20",
-        }[toast.type];
+        };
+        const bgStyles = bgMap[toast.type];
 
-        const Icon = {
+        const iconMap: Record<string, typeof CheckCircle> = {
           success: CheckCircle,
           warning: AlertTriangle,
           error: AlertOctagon,
           info: Info,
-        }[toast.type];
+        };
+        const Icon = iconMap[toast.type];
 
         return (
           <div

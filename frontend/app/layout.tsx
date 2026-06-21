@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { AppContextProvider } from "@/lib/AppContext";
+import { ThemeProvider } from "@/lib/contexts/ThemeContext";
+import { ToastProvider } from "@/lib/contexts/ToastContext";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+import DataAndAppProviders from "@/app/providers";
 import ToastContainer from "@/components/layout/ToastContainer";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,10 +26,18 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body className="antialiased selection:bg-lime-500/20 selection:text-lime-300">
-        <AppContextProvider>
-          {children}
-          <ToastContainer />
-        </AppContextProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <ErrorBoundary>
+              <AuthProvider>
+                <DataAndAppProviders>
+                  {children}
+                  <ToastContainer />
+                </DataAndAppProviders>
+              </AuthProvider>
+            </ErrorBoundary>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
