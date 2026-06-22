@@ -195,8 +195,8 @@ export default function LandingPage() {
     <div
       style={{
         background: theme === "dark"
-          ? "radial-gradient(circle at 50% -10%, #15102a 0%, #06060c 60%)"
-          : "radial-gradient(circle at 50% -10%, #e2e8f0 0%, #f8fafc 60%)"
+          ? "radial-gradient(ellipse at 50% 0%, #15102a 0%, #06060c 60%)"
+          : "radial-gradient(ellipse at 50% 0%, #c7d2fe 0%, #e2e8f0 35%, #f1f5f9 100%)"
       }}
       className="min-h-screen text-text-main font-sans transition-all duration-200"
     >

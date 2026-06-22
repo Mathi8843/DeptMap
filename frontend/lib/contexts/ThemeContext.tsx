@@ -8,35 +8,29 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function getInitialTheme(): "dark" | "light" {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("debtmap-theme") as "dark" | "light" | null;
+    if (saved === "dark" || saved === "light") return saved;
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+  }
+  return "light";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<"dark" | "light">("light");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("debtmap-theme") as "dark" | "light" | null;
-      if (savedTheme === "dark" || savedTheme === "light") {
-        setThemeState(savedTheme);
-      }
-    }
+    setThemeState(getInitialTheme());
   }, []);
 
   const setTheme = useCallback((t: "dark" | "light") => {
     setThemeState(t);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("debtmap-theme", t);
-    }
+    localStorage.setItem("debtmap-theme", t);
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (theme === "dark") {
-        document.documentElement.classList.add("dark");
-        document.documentElement.classList.remove("light");
-      } else {
-        document.documentElement.classList.add("light");
-        document.documentElement.classList.remove("dark");
-      }
-    }
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
   return (

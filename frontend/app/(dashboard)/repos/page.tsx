@@ -35,7 +35,7 @@ export default function ReposPage() {
     ? scanLogs
     : terminalLogs;
   
-  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const logsContainerRef = useRef<HTMLDivElement>(null);
 
   const handleScanRepo = async (repoId: string) => {
     setActiveScanningRepo(repoId);
@@ -49,9 +49,11 @@ export default function ReposPage() {
     return { text: "text-rose-500 dark:text-rose-400", stroke: "stroke-rose-600 dark:stroke-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" };
   };
 
-  // Auto-scroll terminal whenever logs update (real scan logs or manual CLI logs)
+  // Auto-scroll terminal container whenever logs update (real scan logs or manual CLI logs)
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
   }, [displayLogs]);
 
   // Terminal commands handling
@@ -295,7 +297,7 @@ export default function ReposPage() {
           </div>
 
           {/* Logs */}
-          <div className="flex-1 p-5 overflow-y-auto space-y-1.5 select-text text-emerald-400 text-xs leading-relaxed">
+          <div ref={logsContainerRef} className="flex-1 p-5 overflow-y-auto space-y-1.5 select-text text-emerald-400 text-xs leading-relaxed">
             {displayLogs.map((log, index) => (
               <div
                 key={index}
@@ -319,7 +321,6 @@ export default function ReposPage() {
                 {log}
               </div>
             ))}
-            <div ref={terminalEndRef} />
           </div>
 
           {/* Input field — disabled during active scan */}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Outfit, Fira_Code } from "next/font/google";
+import Script from "next/script";
 import { ThemeProvider } from "@/lib/contexts/ThemeContext";
 import { ToastProvider } from "@/lib/contexts/ToastContext";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
@@ -67,7 +68,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${outfit.variable} ${firaCode.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${outfit.variable} ${firaCode.variable}`} suppressHydrationWarning>
+      <Script id="theme-init" strategy="beforeInteractive">
+        {`
+          (function() {
+            try {
+              var t = localStorage.getItem("debtmap-theme");
+              if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+                document.documentElement.classList.add("dark");
+              }
+            } catch(e) {}
+          })();
+        `}
+      </Script>
       <body className="antialiased selection:bg-lime-500/20 selection:text-lime-300">
         <a
           href="#main-content"

@@ -188,8 +188,8 @@ function AuthCallbackInner() {
 export default function AuthCallbackPage() {
   const { theme } = useTheme();
   const background = theme === "dark"
-    ? "radial-gradient(circle at 50% 30%, #15102a 0%, #06060c 60%)"
-    : "radial-gradient(circle at 50% 30%, #e2e8f0 0%, #f8fafc 60%)";
+    ? "radial-gradient(ellipse at 50% 30%, #15102a 0%, #06060c 60%)"
+    : "radial-gradient(ellipse at 50% 30%, #c7d2fe 0%, #e2e8f0 35%, #f1f5f9 100%)";
 
   return (
     <div 
