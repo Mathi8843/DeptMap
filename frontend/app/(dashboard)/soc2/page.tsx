@@ -103,7 +103,7 @@ export default function Soc2Page() {
                   <CreditCard size={18} className="text-purple-400" />
                   <span className="text-xs font-mono font-bold text-white">CHECKOUT GATEWAY</span>
                 </div>
-                <button onClick={() => setIsCheckoutOpen(false)} className="text-slate-500 hover:text-white">
+                <button onClick={() => setIsCheckoutOpen(false)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-white" aria-label="Close checkout">
                   <XCircle size={18} className="text-slate-400 hover:text-white cursor-pointer" />
                 </button>
               </div>

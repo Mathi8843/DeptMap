@@ -331,7 +331,7 @@ export default function ReposPage() {
               value={terminalInput}
               onChange={(e) => setTerminalInput(e.target.value)}
               disabled={isScanning}
-              className="flex-1 bg-transparent border-none focus:outline-none text-white text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex-1 bg-transparent border-none focus-visible:outline-none focus-visible:ring-0 text-white text-xs disabled:opacity-40 disabled:cursor-not-allowed"
             />
           </form>
         </div>

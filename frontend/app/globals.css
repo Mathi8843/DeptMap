@@ -97,7 +97,7 @@ html {
   background-color: var(--bg-deep);
   color: var(--text-main);
   font-family: var(--font-inter), sans-serif;
-  font-size: 15px; /* Scaled up from browser default */
+  font-size: 16px; /* WCAG minimum readable size */
 }
 
 body {
@@ -187,4 +187,14 @@ html.dark body {
 .code-diff-removed {
   background-color: rgba(239, 68, 68, 0.08);
   border-left: 3px solid #ef4444;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

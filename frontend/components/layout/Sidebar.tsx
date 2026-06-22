@@ -71,8 +71,8 @@ export default function Sidebar() {
           {/* Theme switcher */}
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-1.5 rounded-lg border border-border-subtle hover:bg-border-subtle text-text-sub hover:text-text-main transition-all cursor-pointer"
-            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-border-subtle hover:bg-border-subtle text-text-sub hover:text-text-main transition-all cursor-pointer"
+            aria-label={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
           </button>
@@ -197,8 +197,8 @@ export default function Sidebar() {
               logout();
               window.location.href = "/";
             }}
-            className="p-1.5 rounded-lg border border-border-subtle hover:bg-rose-500/5 text-text-muted hover:text-rose-500 transition-all cursor-pointer"
-            title="Log Out"
+            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-border-subtle hover:bg-rose-500/5 text-text-muted hover:text-rose-500 transition-all cursor-pointer"
+            aria-label="Log Out"
           >
             <LogOut size={14} />
           </button>

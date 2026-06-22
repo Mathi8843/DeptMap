@@ -71,7 +71,7 @@ export default function RootLayout({
       <body className="antialiased selection:bg-lime-500/20 selection:text-lime-300">
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-indigo-500 focus:text-white focus:rounded-xl focus:shadow-lg focus:outline-none focus:text-sm focus:font-semibold"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-indigo-500 focus:text-white focus:rounded-xl focus:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus:text-sm focus:font-semibold"
         >
           Skip to main content
         </a>

@@ -5,6 +5,23 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
+const Patterns = () => (
+  <defs>
+    <pattern id="hatchDiagonal" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#f43f5e" fillOpacity={0.2} />
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#f43f5e" strokeWidth={2.5} strokeOpacity={0.85} />
+    </pattern>
+    <pattern id="hatchHorizontal" width="8" height="8" patternTransform="rotate(0)" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#10b981" fillOpacity={0.2} />
+      <rect x="0" y="3" width="8" height="2" fill="#10b981" fillOpacity={0.85} />
+    </pattern>
+    <pattern id="dotGrid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#f43f5e" fillOpacity={0.08} />
+      <circle cx="4" cy="4" r="1.5" fill="#f43f5e" fillOpacity={0.6} />
+    </pattern>
+  </defs>
+);
+
 const C = {
   border: "var(--border-subtle)",
   text3: "var(--text-muted)",
@@ -53,6 +70,7 @@ export default function TrendCharts({ trendData, drop }: Props) {
                   <stop offset="95%" stopColor={C.rose} stopOpacity={0} />
                 </linearGradient>
               </defs>
+              <Patterns />
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
               <XAxis
                 dataKey="date"
@@ -73,9 +91,16 @@ export default function TrendCharts({ trendData, drop }: Props) {
                 stroke={C.rose}
                 strokeWidth={2.5}
                 fill="url(#glowScore)"
-                dot={{ fill: C.rose, r: 4 }}
+                dot={{ fill: C.rose, r: 4, stroke: "transparent", strokeWidth: 0 }}
                 activeDot={{ r: 6 }}
                 name="Health Score"
+              />
+              <Area
+                type="monotone"
+                dataKey="score"
+                stroke="none"
+                fill="url(#dotGrid)"
+                name=""
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -90,6 +115,9 @@ export default function TrendCharts({ trendData, drop }: Props) {
         <div className="h-56 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barGap={3}>
+              <defs>
+                <Patterns />
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
               <XAxis
                 dataKey="date"
@@ -109,15 +137,13 @@ export default function TrendCharts({ trendData, drop }: Props) {
               <Bar
                 dataKey="introduced"
                 name="Introduced"
-                fill={C.rose}
-                fillOpacity={0.7}
+                fill="url(#hatchDiagonal)"
                 radius={[3, 3, 0, 0]}
               />
               <Bar
                 dataKey="fixed"
                 name="Remediated"
-                fill={C.emerald}
-                fillOpacity={0.8}
+                fill="url(#hatchHorizontal)"
                 radius={[3, 3, 0, 0]}
               />
             </BarChart>

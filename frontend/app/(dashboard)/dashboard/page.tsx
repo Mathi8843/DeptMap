@@ -281,9 +281,9 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex flex-col items-center gap-2 flex-shrink-0">
                       <div className="relative w-14 h-14 flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90">
+                        <svg className="w-full h-full transform -rotate-90" aria-label={`Health score ${repo.health_score}`}>
                           <circle cx="28" cy="28" r="24" className="stroke-bg-deep fill-none" strokeWidth="3" />
-                          <circle cx="28" cy="28" r="24" className={`fill-none transition-all duration-1000 ${repo.health_score >= 70 ? "stroke-emerald-400" : repo.health_score >= 40 ? "stroke-amber-400" : "stroke-rose-400"}`} strokeWidth="3" strokeDasharray="151" strokeDashoffset={151 - (151 * repo.health_score) / 100} />
+                          <circle cx="28" cy="28" r="24" className={`fill-none transition-all duration-1000 ${repo.health_score >= 70 ? "stroke-emerald-400" : repo.health_score >= 40 ? "stroke-amber-400" : "stroke-rose-400"}`} strokeWidth="3" strokeDasharray={repo.health_score >= 70 ? "151" : repo.health_score >= 40 ? "8 6" : "3 4"} strokeDashoffset={151 - (151 * repo.health_score) / 100} />
                         </svg>
                         <div className={`absolute font-display font-extrabold text-xs ${getScoreColor(repo.health_score).text}`}>{repo.health_score}</div>
                       </div>

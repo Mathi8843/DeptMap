@@ -57,12 +57,14 @@ export default function IssuesPage() {
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+            <label htmlFor="issue-search" className="sr-only">Search vulnerabilities</label>
             <input
+              id="issue-search"
               type="text"
               placeholder="Search by vulnerability, file path, or workspace..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-bg-deep border border-border-subtle rounded-xl pl-10 pr-4 py-3 text-sm text-text-main placeholder-text-muted focus:outline-none focus:border-indigo-500/50 transition-colors"
+              className="w-full bg-bg-deep border border-border-subtle rounded-xl pl-10 pr-4 py-3 text-sm text-text-main placeholder-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
             />
             {searchQuery && (
               <button 

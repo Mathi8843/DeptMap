@@ -80,7 +80,7 @@ export default function DashboardLayout({
       {/* Mobile hamburger toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed bottom-6 left-4 z-50 w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 hover:bg-indigo-600 transition-all"
+        className="md:hidden fixed bottom-6 left-4 z-50 w-11 h-11 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 hover:bg-indigo-600 transition-all"
         aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
       >
         {sidebarOpen ? <X size={18} /> : <Menu size={18} />}

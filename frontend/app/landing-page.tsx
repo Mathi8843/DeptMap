@@ -215,8 +215,8 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-1.5 rounded-lg border border-border-subtle hover:bg-border-subtle text-text-sub hover:text-text-main transition-all cursor-pointer"
-            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-border-subtle hover:bg-border-subtle text-text-sub hover:text-text-main transition-all cursor-pointer"
+            aria-label={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
           </button>
@@ -338,29 +338,40 @@ export default function LandingPage() {
 
               <form onSubmit={handleEmailAuth} className="space-y-4">
                 {mode === "signup" && (
-                  <input
-                    type="text"
-                    placeholder="Your Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                  />
+                  <div>
+                    <label htmlFor="name-input" className="block text-xs font-semibold text-text-sub mb-1.5">Full Name</label>
+                    <input
+                      id="name-input"
+                      type="text"
+                      placeholder="Your Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
+                    />
+                  </div>
                 )}
-                <input
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
-                <div className="relative">
+                <div>
+                  <label htmlFor="email-input" className="block text-xs font-semibold text-text-sub mb-1.5">Email Address</label>
                   <input
-                    type={showPass ? "text" : "password"}
-                    placeholder="Password (min 6 chars)"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus:outline-none focus:border-indigo-500/50 transition-colors pr-11"
+                    id="email-input"
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
                   />
+                </div>
+                <div>
+                  <label htmlFor="password-input" className="block text-xs font-semibold text-text-sub mb-1.5">Password</label>
+                  <div className="relative">
+                    <input
+                      id="password-input"
+                      type={showPass ? "text" : "password"}
+                      placeholder="Min 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors pr-11"
+                    />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
@@ -369,6 +380,7 @@ export default function LandingPage() {
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+              </div>
 
                 <button
                   type="submit"

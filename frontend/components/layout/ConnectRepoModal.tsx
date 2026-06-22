@@ -115,7 +115,8 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
           </div>
           <button 
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+            aria-label="Close dialog"
           >
             <X size={16} />
           </button>
@@ -147,7 +148,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Repository Select */}
             <div>
-              <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
+              <label htmlFor="repo-select" className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
                 Select Repository
               </label>
               
@@ -182,9 +183,10 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
 
               {!loading && !error && availableRepos.length > 0 && (
                 <select
+                  id="repo-select"
                   value={selectedRepo}
                   onChange={(e) => setSelectedRepo(e.target.value)}
-                  className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+                  className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors cursor-pointer"
                 >
                   {availableRepos.map((r) => (
                     <option key={r.full_name} value={r.full_name} className="bg-bg-panel text-text-main">
@@ -197,13 +199,14 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
 
             {/* AI Generator Tool */}
             <div>
-              <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
+              <label htmlFor="generator-select" className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
                 AI Coding Tool used to build this
               </label>
               <select
+                id="generator-select"
                 value={generator}
                 onChange={(e) => setGenerator(e.target.value)}
-                className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+                className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors cursor-pointer"
               >
                 {["Lovable", "Cursor", "Bolt", "v0", "Replit", "GitHub Copilot", "None"].map((g) => (
                   <option key={g} value={g} className="bg-bg-panel text-text-main">{g}</option>

@@ -533,15 +533,16 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-3.5">
                   <div className="space-y-1.5">
-                    <label className="block font-mono text-[9px] uppercase tracking-[1px] text-slate-500">
+                    <label htmlFor="coupon-input" className="block font-mono text-[9px] uppercase tracking-[1px] text-slate-500">
                       Enter Promo Code
                     </label>
                     <input
+                      id="coupon-input"
                       type="text"
-                      placeholder=""
+                      placeholder="Enter coupon code"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
-                      className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-indigo-500/50 uppercase"
+                      className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 uppercase"
                     />
                   </div>
                   <button
