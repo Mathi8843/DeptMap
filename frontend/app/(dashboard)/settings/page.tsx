@@ -268,6 +268,8 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      <section aria-labelledby="account-heading">
+      <h2 id="account-heading" className="sr-only">Account Information</h2>
       {/* Account Info and Notifications */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Card */}
@@ -387,6 +389,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      </section>
+
+      <section aria-labelledby="billing-heading">
+      <h2 id="billing-heading" className="sr-only">Billing Plans</h2>
       {/* Plans Pricing Selection Section */}
       <div className="space-y-4">
         <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">
@@ -462,6 +468,7 @@ export default function SettingsPage() {
           })}
         </div>
       </div>
+      </section>
 
       {/* Real Billing Checkout Modal Popup */}
       {isCheckoutOpen && activePlanDetails && (

@@ -9,6 +9,12 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import JsonLd from "@/components/seo/JsonLd";
 import "./globals.css";
 
+const appleTouchIcon = {
+  url: "/apple-touch-icon.png",
+  sizes: "180x180",
+  type: "image/png",
+};
+
 const inter = Inter({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
@@ -32,6 +38,11 @@ export const metadata: Metadata = {
   description: "The AI-powered security and technical debt monitor for vibe-coded apps. Catch OWASP vulnerabilities, slopsquatted packages, and code issues before they ship.",
   keywords: "code security, vibe coding, AI code review, technical debt, OWASP, slopsquatting",
   robots: { index: true, follow: true },
+  icons: {
+    icon: "/favicon.svg",
+    apple: appleTouchIcon,
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "DebtMap — AI Code Health & Security Platform",
     description: "Security scanning built for non-developer founders. Catch OWASP vulnerabilities and slopsquatted packages in apps built with Lovable, Bolt, or Cursor.",

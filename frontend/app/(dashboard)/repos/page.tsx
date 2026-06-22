@@ -256,7 +256,8 @@ export default function ReposPage() {
         </button>
       </div>
 
-      {/* Retro developer CLI Console terminal bottom widget - styled dark but theme-adjusted */}
+      <section aria-labelledby="cli-heading">
+      <h2 id="cli-heading" className="sr-only">CLI Terminal</h2>
       <div className="space-y-3.5">
         <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold flex items-center gap-1.5">
           <Terminal size={14} className="text-indigo-500" /> Workspace Command Line Explorer (CLI)
@@ -335,6 +336,8 @@ export default function ReposPage() {
           </form>
         </div>
       </div>
+
+      </section>
 
       {/* Connect Repo Modal Container */}
       <ConnectRepoModal 

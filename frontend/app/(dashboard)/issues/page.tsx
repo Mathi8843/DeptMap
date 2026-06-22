@@ -121,6 +121,8 @@ export default function IssuesPage() {
         </div>
       </div>
 
+      <section aria-labelledby="issues-list-heading">
+      <h2 id="issues-list-heading" className="sr-only">Vulnerability Issues List</h2>
       {/* Issues List */}
       {filteredIssues.length === 0 ? (
         <div className="glass-card rounded-2xl py-20 text-center flex flex-col items-center justify-center">
@@ -196,6 +198,7 @@ export default function IssuesPage() {
           })}
         </div>
       )}
+      </section>
     </div>
   );
 }

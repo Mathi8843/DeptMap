@@ -60,6 +60,8 @@ export default function PackagesPage() {
         </button>
       </div>
 
+      <section aria-labelledby="explainer-heading">
+      <h2 id="explainer-heading" className="sr-only">About Slopsquatting</h2>
       {/* Explainer card */}
       <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-6 flex gap-[1.125rem] items-start">
         <HelpCircle size={22} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -99,6 +101,10 @@ export default function PackagesPage() {
         </div>
       </div>
 
+      </section>
+
+      <section aria-labelledby="audit-list-heading">
+      <h2 id="audit-list-heading" className="sr-only">Dependency Audit Results</h2>
       {/* Dependencies List */}
       <div className="space-y-4">
         <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">
@@ -193,6 +199,7 @@ export default function PackagesPage() {
           </div>
         )}
       </div>
+      </section>
     </div>
   );
 }

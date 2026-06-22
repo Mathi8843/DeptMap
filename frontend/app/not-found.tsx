@@ -18,10 +18,10 @@ export default function NotFound() {
         </div>
 
         <Link
-          href="/dashboard"
+          href="/"
           className="inline-block px-6 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] font-bold uppercase tracking-[1px] rounded-xl transition-all"
         >
-          Back to Dashboard
+          Back to Home
         </Link>
       </div>
     </div>

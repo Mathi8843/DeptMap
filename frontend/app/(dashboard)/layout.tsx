@@ -27,7 +27,7 @@ export default function DashboardLayout({
     setSidebarOpen(false);
   }, [pathname]);
 
-  // Set document title per page
+  // Set document title and canonical per page
   useEffect(() => {
     const titles: Record<string, string> = {
       "/dashboard": "Dashboard — DebtMap",
@@ -39,8 +39,28 @@ export default function DashboardLayout({
       "/admin": "Admin — DebtMap",
       "/trend": "Health Trend — DebtMap",
     };
+    const canonicalMap: Record<string, string> = {
+      "/dashboard": "https://dept-map.vercel.app/dashboard",
+      "/issues": "https://dept-map.vercel.app/issues",
+      "/repos": "https://dept-map.vercel.app/repos",
+      "/packages": "https://dept-map.vercel.app/packages",
+      "/soc2": "https://dept-map.vercel.app/soc2",
+      "/settings": "https://dept-map.vercel.app/settings",
+      "/admin": "https://dept-map.vercel.app/admin",
+      "/trend": "https://dept-map.vercel.app/trend",
+    };
+
     const title = titles[pathname] ?? (pathname.startsWith("/issues/") ? "Issue Details — DebtMap" : "DebtMap");
     document.title = title;
+
+    const canonicalUrl = canonicalMap[pathname] ?? (pathname.startsWith("/issues/") ? `https://dept-map.vercel.app${pathname}` : "https://dept-map.vercel.app");
+    let link = document.querySelector("link[rel='canonical']") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
+    link.href = canonicalUrl;
   }, [pathname]);
 
   // Show loading indicator if still initializing or if not authenticated yet to prevent UI flash

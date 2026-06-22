@@ -1,0 +1,16 @@
+{
+  "name": "DebtMap — AI Code Health & Security Platform",
+  "short_name": "DebtMap",
+  "description": "AI-powered security and technical debt monitor for vibe-coded apps.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06060c",
+  "theme_color": "#b8ff57",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

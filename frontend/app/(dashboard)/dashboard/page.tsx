@@ -256,7 +256,9 @@ export default function DashboardPage() {
       {/* Main 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="space-y-3.5">
+          <section aria-labelledby="workspaces-heading">
+            <h2 id="workspaces-heading" className="sr-only">Connected Workspaces</h2>
+            <div className="space-y-3.5">
             <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">Connected Workspaces ({repos.length})</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {repos.map((repo) => {
@@ -292,8 +294,10 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
+          </section>
 
-          {/* Open Vulnerabilities */}
+          <section aria-labelledby="vulnerabilities-heading">
+          <h2 id="vulnerabilities-heading" className="sr-only">Open Vulnerabilities</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">Open Vulnerabilities (High & Critical)</h3>
@@ -327,9 +331,11 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          </section>
         </div>
 
-        {/* Right Column: Alert Feed */}
+        <section aria-labelledby="alerts-heading">
+        <h2 id="alerts-heading" className="sr-only">Integration Alerts</h2>
         <div className="space-y-4">
           <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold flex items-center gap-1.5">
             <Bell size={12} className="text-indigo-500" /> Integration Alert Feed
@@ -360,6 +366,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+        </section>
       </div>
 
       {/* ── Scan Terminal Overlay ─────────────────────────────────────────────── */}

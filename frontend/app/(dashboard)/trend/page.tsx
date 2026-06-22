@@ -65,6 +65,8 @@ export default function TrendPage() {
 
       <TrendCharts trendData={trendData} drop={drop} />
 
+      <section aria-labelledby="mitigation-heading">
+      <h2 id="mitigation-heading" className="sr-only">Mitigation Plan</h2>
       {/* Mitigation Action card */}
       <div className="glass-card rounded-2xl p-6 flex gap-[1.125rem] items-start border border-border-subtle bg-bg-deep/10">
         <ShieldCheck size={20} className="text-indigo-500 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
@@ -75,6 +77,7 @@ export default function TrendPage() {
           </p>
         </div>
       </div>
+      </section>
     </div>
   );
 }
