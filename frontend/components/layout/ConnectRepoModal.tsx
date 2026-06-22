@@ -101,7 +101,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
       />
       
       {/* Modal Card */}
-      <div className="relative w-full max-w-md glass-card rounded-2xl p-6 border border-white/10 shadow-2xl z-10 animate-slide-up">
+      <div className="relative w-full max-w-md glass-card rounded-2xl p-6 border border-border-subtle shadow-2xl z-10 animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -109,8 +109,8 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
               <GitBranch size={16} />
             </div>
             <div>
-              <h2 className="font-display font-extrabold text-base text-white">Connect Repository</h2>
-              <p className="text-[10px] text-slate-400 mt-0.5">Link a GitHub workspace for vulnerability auditing</p>
+              <h2 className="font-display font-extrabold text-base text-text-main">Connect Repository</h2>
+              <p className="text-[10px] text-text-muted mt-0.5">Link a GitHub workspace for vulnerability auditing</p>
             </div>
           </div>
           <button 
@@ -128,8 +128,8 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
               <GitBranch size={22} className="animate-pulse" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-white">GitHub Account Not Connected</h3>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+              <h3 className="text-sm font-bold text-text-main">GitHub Account Not Connected</h3>
+              <p className="text-xs text-text-sub max-w-xs mx-auto leading-relaxed">
                 You must connect your GitHub account to fetch and import repositories.
               </p>
             </div>
@@ -147,14 +147,14 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Repository Select */}
             <div>
-              <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 mb-1.5">
+              <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
                 Select Repository
               </label>
               
               {loading && (
-                <div className="w-full bg-slate-950/40 border border-white/5 rounded-xl px-4 py-3 flex items-center gap-2.5 justify-center">
+                <div className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 flex items-center gap-2.5 justify-center">
                   <Loader2 className="animate-spin text-indigo-400" size={16} />
-                  <span className="text-xs text-slate-400 font-mono">Fetching repos from GitHub...</span>
+                  <span className="text-xs text-text-sub font-mono">Fetching repos from GitHub...</span>
                 </div>
               )}
 
@@ -175,7 +175,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
               )}
 
               {!loading && !error && availableRepos.length === 0 && (
-                <div className="w-full bg-slate-950/40 border border-white/5 rounded-xl p-4 text-center text-xs text-slate-400 font-mono leading-relaxed">
+                <div className="w-full bg-bg-deep border border-border-subtle rounded-xl p-4 text-center text-xs text-text-muted font-mono leading-relaxed">
                   All repositories on your GitHub account are already connected!
                 </div>
               )}
@@ -184,10 +184,10 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
                 <select
                   value={selectedRepo}
                   onChange={(e) => setSelectedRepo(e.target.value)}
-                  className="w-full bg-slate-950/80 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+                  className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
                 >
                   {availableRepos.map((r) => (
-                    <option key={r.full_name} value={r.full_name}>
+                    <option key={r.full_name} value={r.full_name} className="bg-bg-panel text-text-main">
                       {r.full_name} ({r.is_private ? "Private" : "Public"})
                     </option>
                   ))}
@@ -197,23 +197,23 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
 
             {/* AI Generator Tool */}
             <div>
-              <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-slate-400 mb-1.5">
+              <label className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
                 AI Coding Tool used to build this
               </label>
               <select
                 value={generator}
                 onChange={(e) => setGenerator(e.target.value)}
-                className="w-full bg-slate-950/80 border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
+                className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus:outline-none focus:border-indigo-500/50 transition-colors cursor-pointer"
               >
                 {["Lovable", "Cursor", "Bolt", "v0", "Replit", "GitHub Copilot", "None"].map((g) => (
-                  <option key={g} value={g} className="bg-slate-950 text-white">{g}</option>
+                  <option key={g} value={g} className="bg-bg-panel text-text-main">{g}</option>
                 ))}
               </select>
             </div>
 
             {/* Repo Privacy Details Indicator */}
             {selectedRepoInfo && (
-              <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-white/5 rounded-xl font-sans text-xs">
+              <div className="flex items-center justify-between p-3.5 bg-bg-deep border border-border-subtle rounded-xl font-sans text-xs">
                 <div className="flex items-center gap-2.5">
                   {selectedRepoInfo.is_private ? (
                     <Shield size={14} className="text-indigo-400" />
@@ -221,10 +221,10 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
                     <Globe size={14} className="text-emerald-400" />
                   )}
                   <div>
-                    <div className="font-semibold text-white">
+                    <div className="font-semibold text-text-main">
                       {selectedRepoInfo.is_private ? "Private Repository" : "Public Repository"}
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
+                    <div className="text-[10px] text-text-muted mt-0.5">
                       Detected language: {selectedRepoInfo.language || "Unknown"}
                     </div>
                   </div>

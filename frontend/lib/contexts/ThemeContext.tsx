@@ -9,25 +9,32 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<"dark" | "light">("dark");
+  const [theme, setThemeState] = useState<"dark" | "light">("light");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("debtmap-theme") as "dark" | "light" | null;
+      if (savedTheme === "dark" || savedTheme === "light") {
+        setThemeState(savedTheme);
+      }
+    }
+  }, []);
 
   const setTheme = useCallback((t: "dark" | "light") => {
     setThemeState(t);
     if (typeof window !== "undefined") {
-      if (t === "light") {
-        document.documentElement.classList.add("light");
-      } else {
-        document.documentElement.classList.remove("light");
-      }
+      localStorage.setItem("debtmap-theme", t);
     }
   }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      if (theme === "light") {
-        document.documentElement.classList.add("light");
-      } else {
+      if (theme === "dark") {
+        document.documentElement.classList.add("dark");
         document.documentElement.classList.remove("light");
+      } else {
+        document.documentElement.classList.add("light");
+        document.documentElement.classList.remove("dark");
       }
     }
   }, [theme]);

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-inter), sans-serif;
   --font-mono: var(--font-fira-code), monospace;
@@ -59,22 +62,7 @@
 
 /* Color Variables Definitions */
 :root {
-  /* Default: Dark Theme */
-  --bg-deep:   #06060c;
-  --bg-panel:  #0a0a14;
-  --bg-card:   #0f0f20;
-  --bg-glass:  rgba(15, 15, 32, 0.55);
-  
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-glow:   rgba(255, 255, 255, 0.09);
-  
-  --text-main: #f8fafc; /* slate-50 */
-  --text-sub:  #cbd5e1; /* slate-300 */
-  --text-muted: #94a3b8; /* slate-400 — WCAG AA 8.3:1 on #06060c */
-}
-
-html.light {
-  /* Light Theme */
+  /* Default: Light Theme */
   --bg-deep:   #f8fafc; /* slate-50 */
   --bg-panel:  #ffffff;
   --bg-card:   #f1f5f9; /* slate-100 */
@@ -86,6 +74,21 @@ html.light {
   --text-main: #0f172a; /* slate-900 */
   --text-sub:  #334155; /* slate-700 */
   --text-muted: #475569; /* slate-600 — WCAG AA 6.6:1 on #f8fafc */
+}
+
+html.dark {
+  /* Dark Theme */
+  --bg-deep:   #06060c;
+  --bg-panel:  #0a0a14;
+  --bg-card:   #0f0f20;
+  --bg-glass:  rgba(15, 15, 32, 0.55);
+  
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-glow:   rgba(255, 255, 255, 0.09);
+  
+  --text-main: #f8fafc; /* slate-50 */
+  --text-sub:  #cbd5e1; /* slate-300 */
+  --text-muted: #94a3b8; /* slate-400 — WCAG AA 8.3:1 on #06060c */
 }
 
 /* Base overrides with scaled typography */
@@ -104,7 +107,7 @@ body {
 }
 
 /* Radial background details for dark theme only */
-html:not(.light) body {
+html.dark body {
   background: radial-gradient(circle at 50% -20%, #15102a 0%, #06060c 65%);
 }
 

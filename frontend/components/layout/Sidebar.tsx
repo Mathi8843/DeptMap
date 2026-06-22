@@ -25,7 +25,7 @@ export default function Sidebar() {
   const getPlanBadgeColor = (p: typeof user.plan) => {
     switch (p) {
       case "free": return "text-text-muted border-border-glow bg-bg-card";
-      case "pro": return "text-lime-500 dark:text-lime-400 border-lime-500/20 bg-lime-500/10";
+      case "pro": return "text-emerald-600 dark:text-lime-400 border-emerald-500/20 dark:border-lime-500/20 bg-emerald-500/5 dark:bg-lime-500/10";
       case "team": return "text-purple-500 dark:text-purple-400 border-purple-500/20 bg-purple-500/10";
       case "enterprise": return "text-amber-500 dark:text-amber-400 border-amber-500/20 bg-amber-500/10";
     }
@@ -60,7 +60,7 @@ export default function Sidebar() {
       <div className="p-6 border-b border-border-subtle flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center font-display font-extrabold text-sm text-black shadow-lg shadow-indigo-500/20">
+            <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center font-display font-extrabold text-sm text-white shadow-lg shadow-indigo-500/20">
               D
             </div>
             <span className="font-display font-extrabold text-base text-text-main tracking-wide">

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { useTheme } from "@/lib/contexts/ThemeContext";
 import { apiFetch } from "@/lib/api";
 
 function AuthCallbackInner() {
@@ -147,14 +148,14 @@ function AuthCallbackInner() {
   }, [searchParams, router, login]);
 
   return (
-    <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl">
+    <div className="w-full max-w-md glass-card rounded-2xl p-8 text-center space-y-6 shadow-2xl">
       <div className="flex justify-center">
         <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
           <Shield size={24} className={error ? "text-rose-400" : "animate-pulse"} />
         </div>
       </div>
       
-      <h1 className="text-2xl font-bold tracking-tight">
+      <h1 className="text-2xl font-bold tracking-tight text-text-main">
         {error ? "Authentication Error" : "Connecting Accounts"}
       </h1>
 
@@ -165,14 +166,14 @@ function AuthCallbackInner() {
           </p>
           <button
             onClick={() => router.push("/")}
-            className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+            className="w-full py-3 bg-bg-card border border-border-subtle hover:bg-border-glow text-text-main rounded-xl text-sm font-semibold transition-all cursor-pointer"
           >
             Back to Home
           </button>
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-sm text-[#8888bb]">{status}</p>
+          <p className="text-sm text-text-sub">{status}</p>
           <div className="flex justify-center pt-2">
             <Loader2 className="text-indigo-400 animate-spin" size={20} />
           </div>
@@ -183,13 +184,18 @@ function AuthCallbackInner() {
 }
 
 export default function AuthCallbackPage() {
+  const { theme } = useTheme();
+  const background = theme === "dark"
+    ? "radial-gradient(circle at 50% 30%, #15102a 0%, #06060c 60%)"
+    : "radial-gradient(circle at 50% 30%, #e2e8f0 0%, #f8fafc 60%)";
+
   return (
     <div 
-      style={{ background: "radial-gradient(circle at 50% 30%, #15102a 0%, #06060c 60%)" }}
-      className="min-h-screen text-[#eeeeff] flex flex-col items-center justify-center p-4 sm:p-6"
+      style={{ background }}
+      className="min-h-screen text-text-main flex flex-col items-center justify-center p-4 sm:p-6"
     >
       <Suspense fallback={
-        <div className="w-full max-w-md bg-[#0d0d1a] border border-white/5 rounded-2xl p-8 text-center space-y-6 shadow-2xl flex flex-col items-center justify-center min-h-[200px]">
+        <div className="w-full max-w-md glass-card rounded-2xl p-8 text-center space-y-6 shadow-2xl flex flex-col items-center justify-center min-h-[200px]">
           <Loader2 className="text-indigo-400 animate-spin" size={28} />
         </div>
       }>

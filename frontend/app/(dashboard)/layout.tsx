@@ -66,7 +66,7 @@ export default function DashboardLayout({
   // Show loading indicator if still initializing or if not authenticated yet to prevent UI flash
   if (isInitializing || !user.session_token) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#06060c] text-[#8888bb]">
+      <div className="flex items-center justify-center h-screen bg-bg-deep text-text-muted">
         <div className="flex flex-col items-center gap-3">
           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <span className="font-mono text-xs uppercase tracking-widest">Verifying session...</span>
@@ -76,7 +76,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[--bg] overflow-hidden">
+    <div className="flex h-screen bg-bg-deep overflow-hidden">
       {/* Mobile hamburger toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}

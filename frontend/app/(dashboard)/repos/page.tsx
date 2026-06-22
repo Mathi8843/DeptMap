@@ -44,9 +44,9 @@ export default function ReposPage() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 70) return { text: "text-emerald-500 dark:text-emerald-400", stroke: "stroke-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
-    if (score >= 40) return { text: "text-amber-500 dark:text-amber-400", stroke: "stroke-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" };
-    return { text: "text-rose-500 dark:text-rose-400", stroke: "stroke-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" };
+    if (score >= 70) return { text: "text-emerald-500 dark:text-emerald-400", stroke: "stroke-emerald-500 dark:stroke-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" };
+    if (score >= 40) return { text: "text-amber-500 dark:text-amber-400", stroke: "stroke-amber-500 dark:stroke-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" };
+    return { text: "text-rose-500 dark:text-rose-400", stroke: "stroke-rose-600 dark:stroke-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" };
   };
 
   // Auto-scroll terminal whenever logs update (real scan logs or manual CLI logs)
@@ -162,7 +162,7 @@ export default function ReposPage() {
                 {/* SVG circular score gauge */}
                 <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="32" cy="32" r="28" className="stroke-bg-deep fill-none" strokeWidth="3.5" />
+                    <circle cx="32" cy="32" r="28" className="stroke-slate-200 dark:stroke-slate-800 fill-none" strokeWidth="3.5" />
                     <circle 
                       cx="32" cy="32" r="28" 
                       className={`fill-none transition-all duration-1000 ${clr.stroke}`} 
@@ -215,7 +215,7 @@ export default function ReposPage() {
                       </span>
                     )}
                     {repoIssues.length === 0 && (
-                      <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                      <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
                         <ShieldCheck size={12} /> Safe workspace
                       </span>
                     )}
@@ -247,7 +247,7 @@ export default function ReposPage() {
         {/* Connect box */}
         <button
           onClick={() => setConnectModalOpen(true)}
-          className="w-full flex flex-col sm:flex-row items-center justify-center gap-2 bg-bg-deep/20 hover:bg-bg-deep/40 border border-dashed border-border-subtle hover:border-border-glow rounded-2xl p-6 transition-all group cursor-pointer"
+          className="w-full flex flex-col sm:flex-row items-center justify-center gap-2 bg-bg-card/50 hover:bg-bg-card border border-dashed border-border-subtle hover:border-indigo-500/30 rounded-2xl p-6 transition-all group cursor-pointer"
         >
           <Plus size={18} className="text-text-muted group-hover:text-indigo-500 transition-colors" />
           <span className="font-mono text-[10px] uppercase tracking-[1.5px] font-bold text-text-muted group-hover:text-indigo-500 transition-colors">
@@ -263,9 +263,9 @@ export default function ReposPage() {
           <Terminal size={14} className="text-indigo-500" /> Workspace Command Line Explorer (CLI)
         </h3>
         
-        <div className="bg-[#030308] border border-border-subtle rounded-2xl overflow-hidden font-mono text-xs flex flex-col h-[280px] shadow-2xl">
+        <div className="bg-[#030308] border border-zinc-800/80 rounded-2xl overflow-hidden font-mono text-xs flex flex-col h-[280px] shadow-2xl">
           {/* Header */}
-          <div className="bg-black/40 px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+          <div className="bg-black/40 px-5 py-3 border-b border-zinc-800/50 flex items-center justify-between">
             <span className="text-slate-400 font-bold tracking-wide text-[10px]">
               {isScanning ? "DEBTMAP LIVE SCAN" : "DEBTMAP INTERACTIVE CLI"}
             </span>
@@ -323,7 +323,7 @@ export default function ReposPage() {
           </div>
 
           {/* Input field — disabled during active scan */}
-          <form onSubmit={handleTerminalSubmit} className="bg-black/50 px-5 py-3 border-t border-border-subtle flex items-center gap-2">
+          <form onSubmit={handleTerminalSubmit} className="bg-black/50 px-5 py-3 border-t border-zinc-800/50 flex items-center gap-2">
             <span className="text-slate-100 font-bold">$</span>
             <input
               type="text"
