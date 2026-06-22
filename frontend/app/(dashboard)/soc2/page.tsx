@@ -23,6 +23,15 @@ export default function Soc2Page() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [expandedControl, setExpandedControl] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!isCheckoutOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsCheckoutOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isCheckoutOpen]);
+
   const hasSoc2 = PLAN_LIMITS[user.plan].soc2_report;
 
   // Calculate readiness metrics from backend report
@@ -97,35 +106,35 @@ export default function Soc2Page() {
         {isCheckoutOpen && (
           <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsCheckoutOpen(false)} />
-            <div className="relative w-full max-w-sm glass-card rounded-2xl p-6 border border-white/10 shadow-2xl z-10 space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+            <div role="dialog" aria-modal="true" aria-label="Checkout" className="relative w-full max-w-sm bg-bg-panel border border-border-subtle rounded-2xl p-6 shadow-2xl z-10 space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-border-subtle">
                 <div className="flex items-center gap-2">
-                  <CreditCard size={18} className="text-purple-400" />
-                  <span className="text-xs font-mono font-bold text-white">CHECKOUT GATEWAY</span>
+                  <CreditCard size={18} className="text-purple-500" />
+                  <span className="text-xs font-mono font-bold text-text-main">CHECKOUT GATEWAY</span>
                 </div>
-                <button onClick={() => setIsCheckoutOpen(false)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-white" aria-label="Close checkout">
-                  <XCircle size={18} className="text-slate-400 hover:text-white cursor-pointer" />
+                <button onClick={() => setIsCheckoutOpen(false)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-text-main" aria-label="Close checkout">
+                  <XCircle size={18} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <div className="text-[10px] text-slate-500 uppercase font-mono">Plan Selected</div>
-                  <div className="text-xs font-bold text-white">DebtMap Team Workspace Audit Plan</div>
-                  <div className="text-[11px] text-purple-400 font-mono">₹16,000 / month (billed monthly)</div>
+                  <div className="text-[10px] text-text-muted uppercase font-mono">Plan Selected</div>
+                  <div className="text-xs font-bold text-text-main">DebtMap Team Workspace Audit Plan</div>
+                  <div className="text-[11px] text-purple-500 font-mono">₹16,000 / month (billed monthly)</div>
                 </div>
 
                 <div className="space-y-2.5">
-                  <div className="text-[10px] text-slate-500 uppercase font-mono">Card Details</div>
+                  <div className="text-[10px] text-text-muted uppercase font-mono">Card Details</div>
                   <input
                     type="text"
                     disabled
                     value="••••  ••••  ••••  4242"
-                    className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-slate-400"
+                    className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-2.5 text-xs text-text-sub"
                   />
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="text" disabled value="12/29" className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400" />
-                    <input type="text" disabled value="•••" className="bg-slate-950 border border-white/5 rounded-xl px-4 py-2 text-xs text-slate-400" />
+                    <input type="text" disabled value="12/29" className="bg-bg-deep border border-border-subtle rounded-xl px-4 py-2 text-xs text-text-sub" />
+                    <input type="text" disabled value="•••" className="bg-bg-deep border border-border-subtle rounded-xl px-4 py-2 text-xs text-text-sub" />
                   </div>
                 </div>
               </div>
@@ -169,6 +178,7 @@ export default function Soc2Page() {
           <button 
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
+            aria-busy={isGeneratingPdf}
             className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] font-bold px-5 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-500/15 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={14} className={isGeneratingPdf ? "animate-spin" : ""} />
@@ -248,6 +258,10 @@ export default function Soc2Page() {
                 {/* Control Header */}
                 <div 
                   onClick={() => setExpandedControl(isExpanded ? null : control.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedControl(isExpanded ? null : control.id); } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
                   className="p-5 flex items-center justify-between gap-5 cursor-pointer hover:bg-border-subtle select-none"
                 >
                   <div className="flex items-center gap-4 min-w-0 flex-1">

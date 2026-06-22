@@ -312,6 +312,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("emailCritical")}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle("emailCritical"); } }}
                 role="switch"
                 aria-checked={notifications.emailCritical}
                 aria-label="Toggle email alerts on Critical vulnerabilities"
@@ -334,6 +335,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("emailHigh")}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle("emailHigh"); } }}
                 role="switch"
                 aria-checked={notifications.emailHigh}
                 aria-label="Toggle email alerts on High vulnerabilities"
@@ -353,6 +355,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("weeklyReport")}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle("weeklyReport"); } }}
                 role="switch"
                 aria-checked={notifications.weeklyReport}
                 aria-label="Toggle weekly code health report card"
@@ -375,6 +378,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => handleToggle("slackCritical")}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle("slackCritical"); } }}
                 role="switch"
                 aria-checked={notifications.slackCritical}
                 aria-label="Toggle Slack alert channel integration"
@@ -474,24 +478,24 @@ export default function SettingsPage() {
       {isCheckoutOpen && activePlanDetails && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setIsCheckoutOpen(false)} />
-          <div className="relative w-full max-w-sm glass-card rounded-2xl p-6 border border-white/10 shadow-2xl z-10 space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-white/5">
+          <div role="dialog" aria-modal="true" aria-label="Upgrade plan" className="relative w-full max-w-sm bg-bg-panel border border-border-subtle rounded-2xl p-6 shadow-2xl z-10 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-border-subtle">
               <div className="flex items-center gap-2">
-                <CreditCard size={18} className="text-indigo-400" />
-                <span className="text-xs font-mono font-bold text-white">UPGRADE ACCOUNT</span>
+                <CreditCard size={18} className="text-indigo-500" />
+                <span className="text-xs font-mono font-bold text-text-main">UPGRADE ACCOUNT</span>
               </div>
-              <button onClick={() => setIsCheckoutOpen(false)} className="text-slate-500 hover:text-white">
+              <button onClick={() => setIsCheckoutOpen(false)} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-text-main" aria-label="Close checkout">
                 <X size={16} />
               </button>
             </div>
 
             {/* Payment Options Tabs */}
-            <div className="flex bg-white/5 rounded-xl p-1 gap-1">
+            <div className="flex bg-bg-card rounded-xl p-1 gap-1">
               <button
                 onClick={() => setActivePaymentTab("razorpay")}
                 className={clsx(
                   "flex-1 py-2 rounded-lg font-mono text-[9px] uppercase tracking-[1px] font-bold transition-all cursor-pointer",
-                  activePaymentTab === "razorpay" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+                  activePaymentTab === "razorpay" ? "bg-bg-panel text-text-main" : "text-text-muted hover:text-text-sub"
                 )}
               >
                 Razorpay
@@ -500,7 +504,7 @@ export default function SettingsPage() {
                 onClick={() => setActivePaymentTab("coupon")}
                 className={clsx(
                   "flex-1 py-2 rounded-lg font-mono text-[9px] uppercase tracking-[1px] font-bold transition-all cursor-pointer",
-                  activePaymentTab === "coupon" ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
+                  activePaymentTab === "coupon" ? "bg-bg-panel text-text-main" : "text-text-muted hover:text-text-sub"
                 )}
               >
                 Coupon Code
@@ -509,16 +513,16 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <div className="space-y-1">
-                <div className="text-[10px] text-slate-500 uppercase font-mono">Plan Selected</div>
-                <div className="text-xs font-bold text-white">DebtMap {activePlanDetails.name} Plan</div>
-                <div className="text-[11px] text-indigo-400 font-mono">
+                <div className="text-[10px] text-text-muted uppercase font-mono">Plan Selected</div>
+                <div className="text-xs font-bold text-text-main">DebtMap {activePlanDetails.name} Plan</div>
+                <div className="text-[11px] text-indigo-500 font-mono">
                   {activePlanDetails.price} {activePlanDetails.per}
                 </div>
               </div>
 
               {activePaymentTab === "razorpay" ? (
                 <div className="space-y-3.5">
-                  <div className="text-xs text-slate-400 leading-relaxed">
+                  <div className="text-xs text-text-sub leading-relaxed">
                     Pay securely using Razorpay. Supports Cards, Netbanking, UPI, and Wallets.
                   </div>
                   <button
@@ -533,7 +537,7 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-3.5">
                   <div className="space-y-1.5">
-                    <label htmlFor="coupon-input" className="block font-mono text-[9px] uppercase tracking-[1px] text-slate-500">
+                    <label htmlFor="coupon-input" className="block font-mono text-[9px] uppercase tracking-[1px] text-text-muted">
                       Enter Promo Code
                     </label>
                     <input
@@ -542,7 +546,7 @@ export default function SettingsPage() {
                       placeholder="Enter coupon code"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
-                      className="w-full bg-slate-950 border border-white/5 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 uppercase"
+                      className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-2.5 text-xs text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 uppercase"
                     />
                   </div>
                   <button

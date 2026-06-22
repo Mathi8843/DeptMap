@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -8,7 +8,6 @@ import { useScan } from "@/lib/contexts/ScanContext";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { Lock, Globe, GitBranch, ChevronRight, Check, Terminal, Shield, AlertTriangle, Zap, ArrowRight, Loader2, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/lib/contexts/ThemeContext";
-
 
 const STEPS = [
   { id: 1, label: "Connect GitHub" },
@@ -19,10 +18,10 @@ const STEPS = [
 
 const GENERATORS = ["Lovable", "Bolt", "Cursor", "Replit", "v0", "Other"];
 
-import { useEffect } from "react";
 import { apiFetch, getSavedUser } from "@/lib/api";
 
 export default function OnboardingPage() {
+  useEffect(() => { document.title = "Onboarding — DebtMap"; }, []);
   const router = useRouter();
   const { user } = useAuth();
   const { repos, issues, connectRepo } = useData();

@@ -80,7 +80,8 @@ export default function DashboardLayout({
       {/* Mobile hamburger toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="md:hidden fixed bottom-6 left-4 z-50 w-11 h-11 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 hover:bg-indigo-600 transition-all"
+        className="md:hidden fixed z-50 w-11 h-11 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 hover:bg-indigo-600 transition-all"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)", left: "calc(env(safe-area-inset-left, 0px) + 1rem)" }}
         aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
       >
         {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
@@ -99,6 +100,7 @@ export default function DashboardLayout({
         className={`${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out`}
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <Sidebar />
       </div>

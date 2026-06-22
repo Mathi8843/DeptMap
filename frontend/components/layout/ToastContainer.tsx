@@ -9,7 +9,7 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+    <div aria-live="polite" role="status" className="fixed z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none" style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.25rem)", right: "calc(env(safe-area-inset-right, 0px) + 1.25rem)" }}>
       {toasts.map((toast) => {
         const bgMap: Record<string, string> = {
           success: "bg-emerald-950/90 border-emerald-500/30 text-emerald-300 shadow-emerald-950/20",
@@ -36,7 +36,8 @@ export default function ToastContainer() {
             <div className="flex-1 text-xs font-sans font-medium leading-relaxed">{toast.message}</div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-white/40 hover:text-white/80 transition-colors flex-shrink-0 mt-0.5"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
+              aria-label="Dismiss notification"
             >
               <X size={13} />
             </button>

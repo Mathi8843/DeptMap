@@ -55,6 +55,15 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user.has_github_token]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleConnectGitHub = async () => {
@@ -101,7 +110,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
       />
       
       {/* Modal Card */}
-      <div className="relative w-full max-w-md glass-card rounded-2xl p-6 border border-border-subtle shadow-2xl z-10 animate-slide-up">
+      <div role="dialog" aria-modal="true" aria-label="Connect repository" className="relative w-full max-w-md glass-card rounded-2xl p-6 border border-border-subtle shadow-2xl z-10 animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -239,6 +248,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
             <button
               type="submit"
               disabled={loading || availableRepos.length === 0}
+              aria-busy={loading}
               className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Terminal size={12} />

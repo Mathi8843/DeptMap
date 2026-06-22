@@ -331,12 +331,12 @@ export default function LandingPage() {
               </div>
 
               {errorMsg && (
-                <div className="bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-center text-xs text-rose-500 font-medium">
+                <div id="form-error-summary" role="alert" className="bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-center text-xs text-rose-500 font-medium">
                   {errorMsg}
                 </div>
               )}
 
-              <form onSubmit={handleEmailAuth} className="space-y-4">
+              <form onSubmit={handleEmailAuth} className="space-y-4" aria-label={mode === "signup" ? "Sign up form" : "Sign in form"}>
                 {mode === "signup" && (
                   <div>
                     <label htmlFor="name-input" className="block text-xs font-semibold text-text-sub mb-1.5">Full Name</label>
@@ -346,6 +346,8 @@ export default function LandingPage() {
                       placeholder="Your Name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      aria-invalid={!!errorMsg}
+                      aria-describedby={errorMsg ? "form-error-summary" : undefined}
                       className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
                     />
                   </div>
@@ -358,6 +360,8 @@ export default function LandingPage() {
                     placeholder="name@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    aria-invalid={!!errorMsg}
+                    aria-describedby={errorMsg ? "form-error-summary" : undefined}
                     className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
                   />
                 </div>
@@ -370,12 +374,15 @@ export default function LandingPage() {
                       placeholder="Min 6 characters"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      aria-invalid={!!errorMsg}
+                      aria-describedby={errorMsg ? "form-error-summary" : undefined}
                       className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main placeholder-text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors pr-11"
                     />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-sub cursor-pointer"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-text-sub cursor-pointer"
+                    aria-label={showPass ? "Hide password" : "Show password"}
                   >
                     {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -385,6 +392,7 @@ export default function LandingPage() {
                 <button
                   type="submit"
                   disabled={loading}
+                  aria-busy={loading}
                   className="w-full text-center py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white dark:bg-[#b8ff57] dark:hover:bg-[#d4ff8a] dark:text-black font-mono text-[11px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {mode === "signin" ? "Sign In" : "Create Account"}

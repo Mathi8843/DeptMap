@@ -137,8 +137,8 @@ export default function Sidebar() {
               </span>
               <button 
                 onClick={() => setConnectModalOpen(true)}
-                className="text-text-muted hover:text-indigo-500 transition-colors cursor-pointer"
-                title="Connect repository"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-indigo-500 transition-colors cursor-pointer"
+                aria-label="Connect repository"
               >
                 <Plus size={14} />
               </button>

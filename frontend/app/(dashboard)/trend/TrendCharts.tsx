@@ -45,6 +45,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const CustomLegend = () => {
+  const items = [
+    { name: "Introduced", fill: "url(#hatchDiagonal)", color: C.rose },
+    { name: "Remediated", fill: "url(#hatchHorizontal)", color: C.emerald },
+  ];
+  return (
+    <div className="flex justify-center gap-6 pt-3" style={{ fontFamily: "JetBrains Mono" }}>
+      {items.map((item) => (
+        <div key={item.name} className="flex items-center gap-2">
+          <svg width="14" height="14">
+            <rect width="14" height="14" rx={2} fill={item.fill} />
+          </svg>
+          <span style={{ color: "var(--text-sub)", fontSize: 10 }}>{item.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 interface Props {
   trendData: any[];
   drop: number;
@@ -133,6 +152,7 @@ export default function TrendCharts({ trendData, drop }: Props) {
               <Tooltip content={<CustomTooltip />} />
               <Legend
                 wrapperStyle={{ fontSize: 10, fontFamily: "JetBrains Mono", color: C.text3, paddingTop: 12 }}
+                content={<CustomLegend />}
               />
               <Bar
                 dataKey="introduced"

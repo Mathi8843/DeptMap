@@ -53,6 +53,7 @@ export default function PackagesPage() {
         <button
           onClick={handleRescan}
           disabled={isAuditing}
+          aria-busy={isAuditing}
           className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1px] font-bold px-5 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-500/15 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed self-start sm:self-auto"
         >
           <RefreshCw size={14} className={isAuditing ? "animate-spin" : ""} />
@@ -176,8 +177,8 @@ export default function PackagesPage() {
                         </button>
                         <button
                           onClick={() => auditPackageAction(pkg.id, "ignore")}
-                          className="p-2 border border-border-subtle hover:border-rose-500/20 bg-bg-deep/40 hover:bg-rose-500/5 text-text-muted hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
-                          title="Ignore alert"
+                          className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 border border-border-subtle hover:border-rose-500/20 bg-bg-deep/40 hover:bg-rose-500/5 text-text-muted hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
+                          aria-label="Ignore alert"
                         >
                           <Trash size={14} />
                         </button>

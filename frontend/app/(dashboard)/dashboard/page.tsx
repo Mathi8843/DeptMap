@@ -32,6 +32,16 @@ export default function DashboardPage() {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [scanLogs]);
 
+  // Escape key dismisses terminal
+  useEffect(() => {
+    if (!showTerminal) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTerminalDismissed(true);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showTerminal]);
+
   const handleConnectGitHub = async () => {
     try {
       const data = await apiFetch(`/auth/github?current_user_id=${user.id}`);
@@ -155,6 +165,7 @@ export default function DashboardPage() {
           <button 
             onClick={handleRunScan}
             disabled={isScanning}
+            aria-busy={isScanning}
             className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1px] font-bold px-5 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-500/15 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw size={14} className={isScanning ? "animate-spin" : ""} />
@@ -218,7 +229,7 @@ export default function DashboardPage() {
               <div className={`font-display font-extrabold text-3xl tracking-wide ${scoreTheme.text}`}>{overallScore}</div>
             </div>
             <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
-              <svg className="w-full h-full transform -rotate-90">
+              <svg aria-hidden="true" className="w-full h-full transform -rotate-90">
                 <circle cx="32" cy="32" r="28" className="stroke-bg-deep fill-none" strokeWidth="3.5" />
                 <circle cx="32" cy="32" r="28" className="fill-none stroke-indigo-500 transition-all duration-1000" strokeWidth="3.5" strokeDasharray="176" strokeDashoffset={176 - (176 * overallScore) / 100} />
               </svg>
@@ -371,8 +382,8 @@ export default function DashboardPage() {
 
       {/* ── Scan Terminal Overlay ─────────────────────────────────────────────── */}
       {showTerminal && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+        <div role="alert" className="fixed inset-0 z-[999] flex items-center justify-center" style={{ padding: "calc(env(safe-area-inset-top, 0px) + 1rem) calc(env(safe-area-inset-right, 0px) + 1rem) calc(env(safe-area-inset-bottom, 0px) + 1rem) calc(env(safe-area-inset-left, 0px) + 1rem)" }}>
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setTerminalDismissed(true)} />
           <div className="relative w-full max-w-xl bg-black border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-10 font-mono text-xs flex flex-col h-[420px]">
 
             {/* Terminal header */}
@@ -394,16 +405,14 @@ export default function DashboardPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-500/30" />
                   <div className={`w-2.5 h-2.5 rounded-full ${isScanning ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/50"}`} />
                 </div>
-                {/* Close button — only show after scan ends */}
-                {!isScanning && (
-                  <button
-                    onClick={() => setTerminalDismissed(true)}
-                    className="ml-1 text-slate-500 hover:text-white transition-colors cursor-pointer"
-                    title="Close terminal"
-                  >
-                    <X size={15} />
-                  </button>
-                )}
+                {/* Close button */}
+                <button
+                  onClick={() => setTerminalDismissed(true)}
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close terminal"
+                >
+                  <X size={15} />
+                </button>
               </div>
             </div>
 

@@ -76,6 +76,23 @@
   --text-muted: #475569; /* slate-600 — WCAG AA 6.6:1 on #f8fafc */
 }
 
+/* OS-level dark mode fallback before JS toggle runs */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-deep:   #06060c;
+    --bg-panel:  #0a0a14;
+    --bg-card:   #0f0f20;
+    --bg-glass:  rgba(15, 15, 32, 0.55);
+    
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-glow:   rgba(255, 255, 255, 0.09);
+    
+    --text-main: #f8fafc; /* slate-50 */
+    --text-sub:  #cbd5e1; /* slate-300 */
+    --text-muted: #94a3b8; /* slate-400 */
+  }
+}
+
 html.dark {
   /* Dark Theme */
   --bg-deep:   #06060c;
