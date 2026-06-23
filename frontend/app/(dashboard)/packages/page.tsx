@@ -61,7 +61,7 @@ export default function PackagesPage() {
         </button>
       </div>
 
-      <section aria-labelledby="explainer-heading">
+      <section aria-labelledby="explainer-heading" className="space-y-6">
       <h2 id="explainer-heading" className="sr-only">About Slopsquatting</h2>
       {/* Explainer card */}
       <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-6 flex gap-[1.125rem] items-start">
