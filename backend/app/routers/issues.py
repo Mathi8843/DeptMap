@@ -368,6 +368,9 @@ async def create_fix_pr(
                                     "plain_english_body": groq_explanation.get("plain_english_body", issue["plain_english_body"]),
                                     "impact_bullets": groq_explanation.get("impact_bullets", issue["impact_bullets"]),
                                 }).eq("id", issue_id).execute()
+                                issue["plain_english_title"] = groq_explanation.get("plain_english_title", issue["plain_english_title"])
+                                issue["plain_english_body"] = groq_explanation.get("plain_english_body", issue["plain_english_body"])
+                                issue["impact_bullets"] = groq_explanation.get("impact_bullets", issue["impact_bullets"])
                     except Exception as ex:
                         logger.warning(f"Failed to regenerate fix using Groq: {ex}")
                 
@@ -387,6 +390,8 @@ async def create_fix_pr(
             issue_title=issue["plain_english_title"],
             issue_id=issue_id,
             base_branch=repo.get("default_branch", "main"),
+            plain_english_body=issue.get("plain_english_body", ""),
+            impact_bullets=issue.get("impact_bullets", []),
         )
 
         # Update issue status

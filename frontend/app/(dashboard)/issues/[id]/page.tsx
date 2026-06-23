@@ -69,7 +69,7 @@ export default function IssueDetailPage() {
       { delay: 700, log: "[TESTER] Running regression test suites. 12/12 validation scripts OK." },
       { delay: 600, log: `[GIT] Committing patch: 'security-fix: resolve vulnerability in endpoint'...` },
       { delay: 800, log: "[GIT] Pushing security branch to origin upstream..." },
-      { delay: 500, log: "[GITHUB] Creating Pull Request. Mapped to SOC 2 CC6.1 compliance checklist..." },
+      { delay: 500, log: "[GITHUB] Creating Pull Request with plain English explanation..." },
       { delay: 400, log: "[GITHUB] Auto-merging verified Pull Request branch into main..." }
     ];
 
@@ -288,7 +288,7 @@ export default function IssueDetailPage() {
                       )}
                     >
                       <GitPullRequest size={14} />
-                      Commit Fix as GitHub PR #44
+                      Commit Fix as GitHub PR
                     </button>
                     <button 
                       onClick={() => setIsReviewing(false)}
