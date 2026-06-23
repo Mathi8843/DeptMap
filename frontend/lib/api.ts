@@ -39,7 +39,7 @@ export function logoutUser() {
 /**
  * Fetch wrapper that automatically adds the session JWT to the Authorization header.
  */
-const API_TIMEOUT = 30_000; // 30 seconds
+const API_TIMEOUT = 120_000; // 120 seconds (2 minutes) for scans, PRs, and LLM processing
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const user = getSavedUser();
