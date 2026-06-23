@@ -121,7 +121,7 @@ interface DataContextType {
   soc2Report: any;
   trendData: any[];
   overallScore: number;
-  connectRepo: (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan?: boolean) => Promise<void>;
+  connectRepo: (fullName: string, language: string, generator: string, isPrivate: boolean, branch?: string, autoScan?: boolean) => Promise<void>;
   upgradePlan: (newPlan: "free" | "pro" | "team" | "enterprise") => void;
   fixIssueSimulate: (issueId: string) => Promise<boolean>;
   dismissIssue: (issueId: string) => Promise<void>;
@@ -219,10 +219,12 @@ export function DataProvider({
   };
 
   // Connect Repository
-  const connectRepo = useCallback(async (fullName: string, language: string, generator: string, isPrivate: boolean, autoScan = true) => {
+  const connectRepo = useCallback(async (fullName: string, language: string, generator: string, isPrivate: boolean, branch?: string, autoScan = true) => {
     try {
       showToast(`Connecting repository ${fullName}...`, "info");
-      const newRepo = await apiFetch(`/repos?github_repo_full_name=${encodeURIComponent(fullName)}&generator=${encodeURIComponent(generator)}`, {
+      const url = `/repos?github_repo_full_name=${encodeURIComponent(fullName)}&generator=${encodeURIComponent(generator)}` +
+        (branch ? `&default_branch=${encodeURIComponent(branch)}` : "");
+      const newRepo = await apiFetch(url, {
         method: "POST",
       });
 

@@ -25,6 +25,7 @@ async def list_repos(current_user_id: str = Depends(get_current_user_id), db=Dep
 async def connect_repo(
     github_repo_full_name: str = Query(...),
     generator: str = Query("Unknown"),
+    default_branch: str = Query(None),
     current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db),
 ):
@@ -60,7 +61,7 @@ async def connect_repo(
         "github_repo_id": meta["github_repo_id"],
         "full_name": meta["full_name"],
         "language": meta["language"],
-        "default_branch": meta["default_branch"],
+        "default_branch": default_branch or meta["default_branch"],
         "is_private": meta["is_private"],
         "health_score": 100,
         "critical_count": 0,

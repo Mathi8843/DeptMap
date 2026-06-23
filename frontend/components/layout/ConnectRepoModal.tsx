@@ -15,10 +15,21 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
   const { repos, connectRepo } = useData();
   const [githubRepos, setGithubRepos] = useState<any[]>([]);
   const [selectedRepo, setSelectedRepo] = useState("");
+  const [branch, setBranch] = useState("");
   const [language, setLanguage] = useState("TypeScript");
   const [generator, setGenerator] = useState("Lovable");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync selected repository default branch to the branch input field
+  useEffect(() => {
+    if (selectedRepo && githubRepos.length > 0) {
+      const repoInfo = githubRepos.find((r) => r.full_name === selectedRepo);
+      if (repoInfo && repoInfo.default_branch) {
+        setBranch(repoInfo.default_branch);
+      }
+    }
+  }, [selectedRepo, githubRepos]);
 
   // Keep a stable ref for connected repo names so the effect doesn't re-run
   // every time the repos array reference changes in context (avoids infinite loop).
@@ -92,10 +103,12 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
       selectedRepo,
       repoInfo?.language || language,
       generator,
-      repoInfo?.is_private ?? true
+      repoInfo?.is_private ?? true,
+      branch || repoInfo?.default_branch || "main"
     );
     onClose();
     setSelectedRepo("");
+    setBranch("");
   };
 
   // Find info of the currently selected repo in dropdown
@@ -205,6 +218,24 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
                 </select>
               )}
             </div>
+
+            {/* Target Branch to Scan */}
+            {selectedRepo && (
+              <div>
+                <label htmlFor="branch-input" className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
+                  Scan Branch
+                </label>
+                <input
+                  id="branch-input"
+                  type="text"
+                  placeholder="e.g. main, master, development"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
+                  required
+                />
+              </div>
+            )}
 
             {/* AI Generator Tool */}
             <div>

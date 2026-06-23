@@ -32,6 +32,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [githubConnected, setGithubConnected] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+  const [branch, setBranch] = useState("");
   const [selectedGenerator, setSelectedGenerator] = useState<string>("Lovable");
   const [scanStarted, setScanStarted] = useState(false);
   const [scanDone, setScanDone] = useState(false);
@@ -39,6 +40,16 @@ export default function OnboardingPage() {
   // Real repositories fetched from user's GitHub account
   const [reposList, setReposList] = useState<any[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
+
+  // Sync selected repository default branch to the branch input field
+  useEffect(() => {
+    if (selectedRepo && reposList.length > 0) {
+      const repo = reposList.find((r) => r.full_name === selectedRepo);
+      if (repo && repo.default_branch) {
+        setBranch(repo.default_branch);
+      }
+    }
+  }, [selectedRepo, reposList]);
 
   // Auto-detect if user already authorized GitHub on mount
   useEffect(() => {
@@ -135,6 +146,7 @@ export default function OnboardingPage() {
       repo.language || "TypeScript",
       selectedGenerator,
       repo.is_private ?? true,
+      branch || repo.default_branch || "main",
       false
     );
     setStep(3);
@@ -323,26 +335,43 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* Generator select */}
+              {/* Branch select and Generator select */}
               {selectedRepo && (
-                <div className="space-y-3 animate-fade-in">
-                  <label className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted block">
-                    Which AI tool generated this code?
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {GENERATORS.map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setSelectedGenerator(g)}
-                        className={`font-mono text-[10px] uppercase tracking-[1px] px-4 py-2 rounded-lg border transition-all cursor-pointer ${
-                          selectedGenerator === g
-                            ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-650 dark:text-indigo-400"
-                            : "border-border-subtle text-text-muted hover:text-text-sub hover:border-border-glow"
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
+                <div className="space-y-5 animate-fade-in">
+                  <div className="space-y-3">
+                    <label htmlFor="branch-input" className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted block">
+                      Target Branch to Scan
+                    </label>
+                    <input
+                      id="branch-input"
+                      type="text"
+                      placeholder="e.g. main, master, development"
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted block">
+                      Which AI tool generated this code?
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {GENERATORS.map((g) => (
+                        <button
+                          key={g}
+                          onClick={() => setSelectedGenerator(g)}
+                          className={`font-mono text-[10px] uppercase tracking-[1px] px-4 py-2 rounded-lg border transition-all cursor-pointer ${
+                            selectedGenerator === g
+                              ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-650 dark:text-indigo-400"
+                              : "border-border-subtle text-text-muted hover:text-text-sub hover:border-border-glow"
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
