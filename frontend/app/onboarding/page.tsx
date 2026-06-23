@@ -33,6 +33,8 @@ export default function OnboardingPage() {
   const [githubConnected, setGithubConnected] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [branch, setBranch] = useState("");
+  const [branches, setBranches] = useState<string[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   const [selectedGenerator, setSelectedGenerator] = useState<string>("Lovable");
   const [scanStarted, setScanStarted] = useState(false);
   const [scanDone, setScanDone] = useState(false);
@@ -41,14 +43,31 @@ export default function OnboardingPage() {
   const [reposList, setReposList] = useState<any[]>([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
 
-  // Sync selected repository default branch to the branch input field
+  // Sync selected repository default branch and fetch available branches
   useEffect(() => {
-    if (selectedRepo && reposList.length > 0) {
-      const repo = reposList.find((r) => r.full_name === selectedRepo);
-      if (repo && repo.default_branch) {
-        setBranch(repo.default_branch);
-      }
+    if (!selectedRepo) {
+      setBranches([]);
+      setBranch("");
+      return;
     }
+    const repo = reposList.find((r) => r.full_name === selectedRepo);
+    if (repo && repo.default_branch) {
+      setBranch(repo.default_branch);
+    }
+
+    const fetchBranches = async () => {
+      setLoadingBranches(true);
+      try {
+        const list = await apiFetch(`/repos/github-branches?repo_name=${encodeURIComponent(selectedRepo)}`);
+        setBranches(list || ["main", "master"]);
+      } catch (err) {
+        console.error("Failed to fetch branches:", err);
+        setBranches(["main", "master"]);
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+    fetchBranches();
   }, [selectedRepo, reposList]);
 
   // Auto-detect if user already authorized GitHub on mount
@@ -339,18 +358,29 @@ export default function OnboardingPage() {
               {selectedRepo && (
                 <div className="space-y-5 animate-fade-in">
                   <div className="space-y-3">
-                    <label htmlFor="branch-input" className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted block">
+                    <label htmlFor="branch-select" className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted block">
                       Target Branch to Scan
                     </label>
-                    <input
-                      id="branch-input"
-                      type="text"
-                      placeholder="e.g. main, master, development"
-                      value={branch}
-                      onChange={(e) => setBranch(e.target.value)}
-                      className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
-                      required
-                    />
+                    {loadingBranches ? (
+                      <div className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-3 flex items-center gap-2.5 justify-center">
+                        <Loader2 className="animate-spin text-indigo-400" size={16} />
+                        <span className="text-xs text-text-sub font-mono">Fetching branches...</span>
+                      </div>
+                    ) : (
+                      <select
+                        id="branch-select"
+                        value={branch}
+                        onChange={(e) => setBranch(e.target.value)}
+                        className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors cursor-pointer"
+                        required
+                      >
+                        {branches.map((b) => (
+                          <option key={b} value={b} className="bg-bg-panel text-text-main">
+                            {b}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="space-y-3">

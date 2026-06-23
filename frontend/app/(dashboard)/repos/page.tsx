@@ -3,9 +3,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { useData } from "@/lib/contexts/DataContext";
 import { useScan } from "@/lib/contexts/ScanContext";
 import Link from "next/link";
-import { GitBranch, Plus, RefreshCw, Lock, Globe, Clock, ShieldCheck, Terminal, X } from "lucide-react";
+import { GitBranch, Plus, RefreshCw, Lock, Globe, Clock, ShieldCheck, Terminal, X, Loader2 } from "lucide-react";
 import ConnectRepoModal from "@/components/layout/ConnectRepoModal";
 import clsx from "clsx";
+import { apiFetch } from "@/lib/api";
 
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -16,10 +17,36 @@ function timeAgo(dateStr: string) {
 }
 
 export default function ReposPage() {
-  const { repos, issues } = useData();
+  const { repos, issues, updateRepoBranch } = useData();
   const { triggerScan, isScanning, scanLogs, scanProgress, scanStatus } = useScan();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [activeScanningRepo, setActiveScanningRepo] = useState<string | null>(null);
+
+  // States to hold branches list for connected repositories
+  const [repoBranches, setRepoBranches] = useState<Record<string, string[]>>({});
+  const [loadingRepoBranches, setLoadingRepoBranches] = useState<Record<string, boolean>>({});
+
+  // Fetch branches for each connected repository on load
+  useEffect(() => {
+    if (repos.length === 0) return;
+    repos.forEach((repo) => {
+      if (repoBranches[repo.id] || loadingRepoBranches[repo.id]) return;
+
+      const fetchBranches = async () => {
+        setLoadingRepoBranches((prev) => ({ ...prev, [repo.id]: true }));
+        try {
+          const list = await apiFetch(`/repos/github-branches?repo_name=${encodeURIComponent(repo.full_name)}`);
+          setRepoBranches((prev) => ({ ...prev, [repo.id]: list || [repo.default_branch] }));
+        } catch (err) {
+          console.error(`Failed to fetch branches for ${repo.full_name}:`, err);
+          setRepoBranches((prev) => ({ ...prev, [repo.id]: [repo.default_branch] }));
+        } finally {
+          setLoadingRepoBranches((prev) => ({ ...prev, [repo.id]: false }));
+        }
+      };
+      fetchBranches();
+    });
+  }, [repos, repoBranches, loadingRepoBranches]);
 
   // Terminal State — static CLI for manual commands
   const [terminalInput, setTerminalInput] = useState("");
@@ -199,11 +226,34 @@ export default function ReposPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-text-muted font-mono">
-                      <Clock size={12} />
-                      <span>Scanned {timeAgo(repo.last_scanned_at)}</span>
+                    <div className="flex items-center gap-2 text-xs text-text-muted font-mono flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <Clock size={12} />
+                        <span>Scanned {timeAgo(repo.last_scanned_at)}</span>
+                      </div>
                       <span>·</span>
-                      <span>branch: {repo.default_branch}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span>branch:</span>
+                        {loadingRepoBranches[repo.id] && !repoBranches[repo.id] ? (
+                          <div className="flex items-center gap-1">
+                            <Loader2 size={10} className="animate-spin text-indigo-500" />
+                            <span className="text-[10px] text-text-muted">loading...</span>
+                          </div>
+                        ) : (
+                          <select
+                            value={repo.default_branch}
+                            onChange={(e) => updateRepoBranch(repo.id, e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-mono text-[10px] bg-bg-deep/80 hover:bg-bg-deep border border-border-subtle hover:border-border-glow rounded-lg px-2 py-0.5 text-text-sub focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                          >
+                            {(repoBranches[repo.id] || [repo.default_branch]).map((b) => (
+                              <option key={b} value={b} className="bg-bg-panel text-text-main text-[10px]">
+                                {b}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     </div>
 
                     {/* Vulnerability indicators */}

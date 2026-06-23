@@ -95,6 +95,51 @@ async def list_github_repos(current_user_id: str = Depends(get_current_user_id),
         raise HTTPException(status_code=500, detail=f"Failed to list repos: {str(e)}")
 
 
+@router.get("/github-branches")
+async def list_github_branches(
+    repo_name: str = Query(...),
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
+    """List branches of a GitHub repository for the branch selection step."""
+    user_res = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
+    if not user_res.data:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    encrypted_token = user_res.data[0].get("github_access_token")
+    if not encrypted_token:
+        # Fallback to defaults if token is missing
+        return ["main", "master", "development", "feature-auth"]
+
+    access_token = decrypt_token(encrypted_token)
+
+    try:
+        branches = await github_service.list_repo_branches_async(access_token, repo_name)
+        return branches
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list branches: {str(e)}")
+
+
+@router.patch("/{repo_id}")
+async def update_repo_branch(
+    repo_id: str,
+    default_branch: str = Query(...),
+    current_user_id: str = Depends(get_current_user_id),
+    db=Depends(get_db)
+):
+    """Update the active branch of a connected repository."""
+    # Verify owner
+    existing = db.table("repos").select("id").eq("id", repo_id).eq("user_id", current_user_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    result = db.table("repos").update({
+        "default_branch": default_branch
+    }).eq("id", repo_id).execute()
+
+    return result.data[0]
+
+
 @router.delete("/{repo_id}")
 async def disconnect_repo(repo_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """Remove a repository and all its associated data."""

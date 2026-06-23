@@ -296,3 +296,23 @@ async def create_fix_pull_request_async(
         base_branch,
     )
     return await loop.run_in_executor(None, fn)
+
+
+def list_repo_branches(access_token: str, full_name: str) -> list[str]:
+    """List all branches of a specific repository."""
+    if access_token in ["mock_github_token", "mock-session-token", ""] or not access_token:
+        return ["main", "master", "development", "feature-auth"]
+    try:
+        gh = get_github_client(access_token)
+        repo = gh.get_repo(full_name)
+        branches = []
+        for branch in repo.get_branches():
+            branches.append(branch.name)
+        return branches
+    except Exception:
+        return ["main", "master", "development"]
+
+
+async def list_repo_branches_async(access_token: str, full_name: str) -> list[str]:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, list_repo_branches, access_token, full_name)

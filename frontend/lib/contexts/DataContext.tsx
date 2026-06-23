@@ -128,6 +128,7 @@ interface DataContextType {
   auditPackageAction: (pkgId: string, action: "verify" | "replace" | "ignore") => Promise<void>;
   triggerWebhookAlert: (channel: string, message: string, type: WebhookAlert["type"]) => void;
   fetchData: () => Promise<void>;
+  updateRepoBranch: (repoId: string, branch: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -350,14 +351,30 @@ export function DataProvider({
     }
   };
 
+  // Update repository branch
+  const updateRepoBranch = useCallback(async (repoId: string, branch: string) => {
+    try {
+      showToast(`Switching scan branch to ${branch}...`, "info");
+      await apiFetch(`/repos/${repoId}?default_branch=${encodeURIComponent(branch)}`, {
+        method: "PATCH",
+      });
+      setRepos((prev) =>
+        prev.map((r) => (r.id === repoId ? { ...r, default_branch: branch } : r))
+      );
+      showToast(`Workspace branch switched to ${branch}!`, "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to switch repository branch", "error");
+    }
+  }, [showToast]);
+
   const dataValue = useMemo(() => ({
     repos, issues, packages, webhookAlerts, soc2Report, trendData, overallScore,
     connectRepo, upgradePlan, fixIssueSimulate, dismissIssue, auditPackageAction,
-    triggerWebhookAlert, fetchData,
+    triggerWebhookAlert, fetchData, updateRepoBranch,
   }), [
     repos, issues, packages, webhookAlerts, soc2Report, trendData, overallScore,
     connectRepo, upgradePlan, fixIssueSimulate, dismissIssue, auditPackageAction,
-    triggerWebhookAlert, fetchData,
+    triggerWebhookAlert, fetchData, updateRepoBranch,
   ]);
 
   return (

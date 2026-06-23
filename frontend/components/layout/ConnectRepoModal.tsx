@@ -16,19 +16,38 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
   const [githubRepos, setGithubRepos] = useState<any[]>([]);
   const [selectedRepo, setSelectedRepo] = useState("");
   const [branch, setBranch] = useState("");
+  const [branches, setBranches] = useState<string[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   const [language, setLanguage] = useState("TypeScript");
   const [generator, setGenerator] = useState("Lovable");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync selected repository default branch to the branch input field
+  // Sync selected repository default branch and fetch available branches
   useEffect(() => {
-    if (selectedRepo && githubRepos.length > 0) {
-      const repoInfo = githubRepos.find((r) => r.full_name === selectedRepo);
-      if (repoInfo && repoInfo.default_branch) {
-        setBranch(repoInfo.default_branch);
-      }
+    if (!selectedRepo) {
+      setBranches([]);
+      setBranch("");
+      return;
     }
+    const repoInfo = githubRepos.find((r) => r.full_name === selectedRepo);
+    if (repoInfo && repoInfo.default_branch) {
+      setBranch(repoInfo.default_branch);
+    }
+
+    const fetchBranches = async () => {
+      setLoadingBranches(true);
+      try {
+        const list = await apiFetch(`/repos/github-branches?repo_name=${encodeURIComponent(selectedRepo)}`);
+        setBranches(list || ["main", "master"]);
+      } catch (err) {
+        console.error("Failed to fetch branches:", err);
+        setBranches(["main", "master"]);
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+    fetchBranches();
   }, [selectedRepo, githubRepos]);
 
   // Keep a stable ref for connected repo names so the effect doesn't re-run
@@ -222,18 +241,29 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
             {/* Target Branch to Scan */}
             {selectedRepo && (
               <div>
-                <label htmlFor="branch-input" className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
+                <label htmlFor="branch-select" className="block font-mono text-[9px] uppercase tracking-[1.5px] text-text-muted mb-1.5">
                   Scan Branch
                 </label>
-                <input
-                  id="branch-input"
-                  type="text"
-                  placeholder="e.g. main, master, development"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors"
-                  required
-                />
+                {loadingBranches ? (
+                  <div className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-2.5 flex items-center gap-2 justify-center">
+                    <Loader2 className="animate-spin text-indigo-400" size={14} />
+                    <span className="text-[10px] text-text-sub font-mono">Fetching branches...</span>
+                  </div>
+                ) : (
+                  <select
+                    id="branch-select"
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="w-full bg-bg-deep border border-border-subtle rounded-xl px-3 py-2.5 text-xs text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50 transition-colors cursor-pointer"
+                    required
+                  >
+                    {branches.map((b) => (
+                      <option key={b} value={b} className="bg-bg-panel text-text-main">
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
 
