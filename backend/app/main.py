@@ -18,7 +18,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
 from app.rate_limit import limiter
-from app.routers import auth, repos, scans, issues, packages, trend, soc2, webhooks, admin
+from app.routers import auth, repos, scans, issues, packages, trend, soc2, webhooks, admin, analyze
 
 # ─── Logging Setup ────────────────────────────────────────────────────────────
 
@@ -129,6 +129,7 @@ app.include_router(trend.router)
 app.include_router(soc2.router)
 app.include_router(webhooks.router)
 app.include_router(admin.router)
+app.include_router(analyze.router)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────

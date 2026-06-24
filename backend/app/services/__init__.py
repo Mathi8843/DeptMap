@@ -6,3 +6,5 @@ from app.services.auth import (
     verify_oauth_state,
     get_current_user_id,
 )
+
+from app.services.ai_review import run_ai_review

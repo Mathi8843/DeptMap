@@ -37,6 +37,7 @@ export interface Issue {
   fix_pr_url: string | null;
   confidence?: number;
   what_changed?: string;
+  source?: string;
   created_at: string;
 }
 
@@ -89,6 +90,7 @@ function formatIssue(i: any): Issue {
     fix_pr_url: i.fix_pr_url,
     confidence: i.confidence,
     what_changed: i.what_changed,
+    source: i.source,
     created_at: i.created_at,
   };
 }

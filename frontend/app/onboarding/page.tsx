@@ -451,6 +451,7 @@ export default function OnboardingPage() {
                     if (log.includes("[SUCCESS]")) color = "text-emerald-500 dark:text-[#b8ff57] font-bold";
                     else if (log.includes("[WARN]")) color = "text-amber-500";
                     else if (log.includes("[SYSTEM]")) color = "text-indigo-500 dark:text-indigo-400";
+                    else if (log.includes("[AI REVIEW]")) color = "text-indigo-500 dark:text-indigo-400 font-bold";
                     return <div key={idx} className={color}>{log}</div>;
                   })}
                   {isScanning && (
@@ -537,7 +538,14 @@ export default function OnboardingPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${issue.severity === "critical" ? "bg-rose-500 shadow-[0_0_6px_#ef4444]" : "bg-amber-500"}`} />
                       <div className="min-w-0 font-sans">
-                        <div className="text-sm font-bold text-text-main truncate">{issue.plain_english_title}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="text-sm font-bold text-text-main truncate">{issue.plain_english_title}</div>
+                          {issue.source === "ai_review" && (
+                            <span className="font-mono text-[8px] font-bold uppercase tracking-[1px] px-1.5 py-0.5 rounded border border-indigo-500/20 bg-indigo-500/10 text-indigo-450 dark:text-indigo-400">
+                              AI Review
+                            </span>
+                          )}
+                        </div>
                         <div className="font-mono text-[10px] text-text-muted truncate">{issue.file_path}:{issue.line_start}</div>
                       </div>
                     </div>

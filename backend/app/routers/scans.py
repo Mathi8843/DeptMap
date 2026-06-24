@@ -212,6 +212,18 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
             except Exception as e:
                 logger.warning("Dependency audit failed", exc_info=True)
                 log(f"[REGISTRY] Dependency audit failed (non-fatal): {e}", 48)
+
+            # ── Step 1.9: Independent AI Review (Groq Logic Flaws) ─────────────
+            log("[AI REVIEW] Running independent AI vulnerability review on important files...", 48)
+            try:
+                from app.services.ai_review import run_ai_review
+                ai_findings = await run_ai_review(repo_dir=repo_dir, limit=20)
+                findings.extend(ai_findings)
+                log(f"[AI REVIEW] AI review complete. Found {len(ai_findings)} logic flaws/vulnerabilities.", 52)
+            except Exception as e:
+                logger.warning("AI review failed", exc_info=True)
+                log(f"[AI REVIEW] AI review failed (non-fatal): {e}", 52)
+
         finally:
             if repo_dir:
                 temp_dir_to_clean = os.path.dirname(repo_dir)
@@ -247,6 +259,14 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         except Exception:
             logger.info("Database 'issues' table does not have 'confidence' column. Skipping confidence saving.")
 
+        # Check if database schema includes source column
+        has_source_col = False
+        try:
+            db.table("issues").select("id, source").limit(1).execute()
+            has_source_col = True
+        except Exception:
+            logger.info("Database 'issues' table does not have 'source' column. Skipping source saving.")
+
         new_issue_rows = []
 
         # Compare and synchronize
@@ -269,6 +289,8 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                 if has_confidence_col:
                     update_payload["confidence"] = f.get("confidence")
                     update_payload["what_changed"] = f.get("what_changed")
+                if has_source_col:
+                    update_payload["source"] = f.get("source", "semgrep")
                 db.table("issues").update(update_payload).eq("id", matched_issue["id"]).execute()
             else:
                 # Insert as a new issue
@@ -293,6 +315,8 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                 if has_confidence_col:
                     insert_row["confidence"] = f.get("confidence")
                     insert_row["what_changed"] = f.get("what_changed")
+                if has_source_col:
+                    insert_row["source"] = f.get("source", "semgrep")
                 new_issue_rows.append(insert_row)
 
         # Save new issues in bulk

@@ -107,6 +107,7 @@ export default function DashboardPage() {
     if (log.startsWith("[GITLEAKS]")) return "text-purple-400";
     if (log.startsWith("[GROQ]"))     return "text-yellow-400";
     if (log.startsWith("[REGISTRY]")) return "text-blue-400";
+    if (log.startsWith("[AI REVIEW]")) return "text-indigo-400 font-bold";
     if (log.startsWith("[SCORER]"))   return "text-emerald-400";
     if (log.startsWith("[DB]"))       return "text-slate-400";
     return "text-slate-300";
@@ -332,6 +333,11 @@ export default function DashboardPage() {
                       <div className="min-w-0 flex-1 space-y-1.5">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className={`font-mono text-[9px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded border ${badgeColor}`}>{issue.severity}</span>
+                          {issue.source === "ai_review" && (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded border border-indigo-500/20 bg-indigo-500/10 text-indigo-405 dark:text-indigo-400">
+                              AI Review
+                            </span>
+                          )}
                           <span className="font-mono text-[10px] text-text-muted">{issue.repo_name} · {issue.file_path}:{issue.line_start}</span>
                         </div>
                         <h4 className="text-sm font-bold text-text-main group-hover:text-indigo-500 transition-colors">{issue.plain_english_title}</h4>
@@ -402,6 +408,7 @@ export default function DashboardPage() {
                   <span className="text-purple-400">GITLEAKS</span>
                   <span className="text-yellow-400">GROQ</span>
                   <span className="text-blue-400">DEPS</span>
+                  <span className="text-indigo-400">AI REVIEW</span>
                 </div>
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-rose-500/30" />

@@ -109,6 +109,11 @@ export default function IssueDetailPage() {
             <span className={`font-mono text-[9px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.text} ${cfg.glow}`}>
               {cfg.label}
             </span>
+            {issue.source === "ai_review" && (
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded border border-indigo-500/20 bg-indigo-500/10 text-indigo-405 dark:text-indigo-400">
+                AI Review
+              </span>
+            )}
             <span className="font-mono text-[10px] text-text-muted truncate">
               {issue.repo_name} · {issue.file_path}:{issue.line_start}
             </span>

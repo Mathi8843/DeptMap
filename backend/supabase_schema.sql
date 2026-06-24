@@ -232,3 +232,10 @@ CREATE POLICY "scans_own_data" ON public.scans
 --             WHERE user_id = auth.uid()
 --         )
 --     );
+
+-- ═══════════════════════════════════════════════════════════════
+-- AI Review Source Migration
+-- ═══════════════════════════════════════════════════════════════
+-- ALTER TABLE public.issues
+--   ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'semgrep';
+
