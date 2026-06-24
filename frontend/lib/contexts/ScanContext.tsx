@@ -10,6 +10,8 @@ export interface ScanContextType {
   scanLogs: string[];
   scanStatus: "idle" | "queued" | "running" | "completed" | "failed";
   triggerScan: (repoId?: string) => Promise<void>;
+  terminalOpen: boolean;
+  setTerminalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const ScanContext = createContext<ScanContextType | undefined>(undefined);
@@ -28,6 +30,7 @@ export function ScanProvider({
   const [scanProgress, setScanProgress] = useState(0);
   const [scanLogs, setScanLogs] = useState<string[]>([]);
   const [scanStatus, setScanStatus] = useState<"idle" | "queued" | "running" | "completed" | "failed">("idle");
+  const [terminalOpen, setTerminalOpen] = useState(false);
 
   const isScanningRef = useRef(false);
   const reposRef = useRef<Repo[]>([]);
@@ -66,6 +69,7 @@ export function ScanProvider({
     setScanStatus("queued");
     setScanProgress(0);
     setScanLogs([`[SYSTEM] Starting scan process on backend for ${repoName}...`]);
+    setTerminalOpen(true);
 
     try {
       const scanResult = await apiFetch(`/scans?repo_id=${scanRepoId}`, { method: "POST" });
@@ -119,7 +123,15 @@ export function ScanProvider({
     triggerScanRef.current = triggerScan;
   }, [triggerScanRef, triggerScan]);
 
-  const scanValue = useMemo(() => ({ isScanning, scanProgress, scanLogs, scanStatus, triggerScan }), [isScanning, scanProgress, scanLogs, scanStatus, triggerScan]);
+  const scanValue = useMemo(() => ({
+    isScanning,
+    scanProgress,
+    scanLogs,
+    scanStatus,
+    triggerScan,
+    terminalOpen,
+    setTerminalOpen,
+  }), [isScanning, scanProgress, scanLogs, scanStatus, triggerScan, terminalOpen]);
 
   return (
     <ScanContext.Provider value={scanValue}>

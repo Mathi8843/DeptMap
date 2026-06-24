@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -14,18 +14,11 @@ const Sparkline = dynamic(() => import("./Sparkline"), { ssr: false });
 export default function DashboardPage() {
   const { user } = useAuth();
   const { issues, repos, overallScore, packages, webhookAlerts, trendData } = useData();
-  const { isScanning, scanProgress, scanLogs, scanStatus, triggerScan } = useScan();
+  const { isScanning, scanProgress, scanLogs, scanStatus, triggerScan, terminalOpen, setTerminalOpen } = useScan();
   const { showToast } = useToast();
 
-  // Show terminal while scanning OR after completion until dismissed
-  const [terminalDismissed, setTerminalDismissed] = useState(false);
-  const showTerminal = (isScanning || scanStatus === "completed" || scanStatus === "failed") && !terminalDismissed;
+  const showTerminal = terminalOpen;
   const terminalEndRef = useRef<HTMLDivElement>(null);
-
-  // Reset dismiss flag each time a new scan starts
-  useEffect(() => {
-    if (isScanning) setTerminalDismissed(false);
-  }, [isScanning]);
 
   // Auto-scroll terminal to bottom as logs come in
   useEffect(() => {
@@ -36,11 +29,11 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!showTerminal) return;
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setTerminalDismissed(true);
+      if (e.key === "Escape") setTerminalOpen(false);
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [showTerminal]);
+  }, [showTerminal, setTerminalOpen]);
 
   const handleConnectGitHub = async () => {
     try {
@@ -156,6 +149,14 @@ export default function DashboardPage() {
           <p className="text-sm text-text-sub mt-1">Real-time vulnerability monitor and AI remediation desk</p>
         </div>
         <div className="flex items-center gap-3">
+          {scanStatus !== "idle" && scanLogs.length > 0 && (
+            <button 
+              onClick={() => setTerminalOpen(true)}
+              className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1px] font-bold px-5 py-3 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub rounded-xl transition-all cursor-pointer hover:bg-bg-panel/40"
+            >
+              <Terminal size={14} /> Show Logs
+            </button>
+          )}
           <button 
             onClick={handleExport}
             className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[1px] font-bold px-5 py-3 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub rounded-xl transition-all cursor-pointer hover:bg-bg-panel/40"
@@ -383,7 +384,7 @@ export default function DashboardPage() {
       {/* ── Scan Terminal Overlay ─────────────────────────────────────────────── */}
       {showTerminal && (
         <div role="alert" className="fixed inset-0 z-[999] flex items-center justify-center" style={{ padding: "calc(env(safe-area-inset-top, 0px) + 1rem) calc(env(safe-area-inset-right, 0px) + 1rem) calc(env(safe-area-inset-bottom, 0px) + 1rem) calc(env(safe-area-inset-left, 0px) + 1rem)" }}>
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setTerminalDismissed(true)} />
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setTerminalOpen(false)} />
           <div className="relative w-full max-w-xl bg-black border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-10 font-mono text-xs flex flex-col h-[420px]">
 
             {/* Terminal header */}
@@ -407,7 +408,7 @@ export default function DashboardPage() {
                 </div>
                 {/* Close button */}
                 <button
-                  onClick={() => setTerminalDismissed(true)}
+                  onClick={() => setTerminalOpen(false)}
                   className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-500 hover:text-white transition-colors cursor-pointer"
                   aria-label="Close terminal"
                 >
