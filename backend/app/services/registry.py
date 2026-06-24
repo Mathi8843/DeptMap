@@ -355,6 +355,9 @@ async def audit_packages(
     Returns:
         dict: {"packages": list[dict], "issues": list[dict]}
     """
+    if not package_files:
+        return {"packages": [], "issues": []}
+
     all_packages: list[tuple[str, str]] = []  # (package_name, manager)
 
     if "package.json" in package_files:
