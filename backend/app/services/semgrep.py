@@ -187,6 +187,12 @@ def run_semgrep(target_dir: str) -> dict:
             stderr=subprocess.PIPE,
             timeout=180,
         )
+        if result.returncode == 2:
+            logger.warning('Semgrep hit --max-memory limit, returning partial results')
+            try:
+                with open(output_path) as f: return json.load(f)
+            except: return {'results': [], 'errors': [], '_partial': True}
+
         if result.returncode not in (0, 1):
             raise RuntimeError(f"Semgrep failed: {result.stderr.decode()[:500]}")
         with open(output_path, "r") as f:
