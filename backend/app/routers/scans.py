@@ -239,6 +239,14 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
             key = (issue["file_path"], issue["semgrep_rule_id"])
             existing_by_key.setdefault(key, []).append(issue)
 
+        # Check if database schema includes confidence and what_changed columns
+        has_confidence_col = False
+        try:
+            db.table("issues").select("id, confidence").limit(1).execute()
+            has_confidence_col = True
+        except Exception:
+            logger.info("Database 'issues' table does not have 'confidence' column. Skipping confidence saving.")
+
         new_issue_rows = []
 
         # Compare and synchronize
@@ -247,7 +255,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
             if key in existing_by_key and existing_by_key[key]:
                 # Retain existing active issue, update its details
                 matched_issue = existing_by_key[key].pop(0)
-                db.table("issues").update({
+                update_payload = {
                     "scan_id": scan_id,
                     "line_start": f["line_start"],
                     "line_end": f["line_end"],
@@ -256,10 +264,14 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                     "plain_english_body": f["plain_english_body"],
                     "impact_bullets": f["impact_bullets"],
                     "ai_fix_code": f["ai_fix_code"],
-                }).eq("id", matched_issue["id"]).execute()
+                }
+                if has_confidence_col:
+                    update_payload["confidence"] = f.get("confidence")
+                    update_payload["what_changed"] = f.get("what_changed")
+                db.table("issues").update(update_payload).eq("id", matched_issue["id"]).execute()
             else:
                 # Insert as a new issue
-                new_issue_rows.append({
+                insert_row = {
                     "id": str(uuid.uuid4()),
                     "repo_id": repo["id"],
                     "scan_id": scan_id,
@@ -275,7 +287,11 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                     "ai_fix_code": f["ai_fix_code"],
                     "status": "open",
                     "created_at": now,
-                })
+                }
+                if has_confidence_col:
+                    insert_row["confidence"] = f.get("confidence")
+                    insert_row["what_changed"] = f.get("what_changed")
+                new_issue_rows.append(insert_row)
 
         # Save new issues in bulk
         if new_issue_rows:

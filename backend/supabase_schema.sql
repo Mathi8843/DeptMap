@@ -201,3 +201,10 @@ CREATE POLICY "scans_own_data" ON public.scans
 -- -- Grant admin to existing admin emails:
 -- UPDATE public.users SET is_admin = TRUE
 -- WHERE email IN ('mathi@debtmap.io', 'admin@debtmap.io');
+
+-- ═══════════════════════════════════════════════════════════════
+-- AI Confidence and What Changed Migration
+-- ═══════════════════════════════════════════════════════════════
+-- ALTER TABLE public.issues
+--   ADD COLUMN IF NOT EXISTS confidence INTEGER,
+--   ADD COLUMN IF NOT EXISTS what_changed TEXT;

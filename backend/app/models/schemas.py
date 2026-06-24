@@ -86,6 +86,8 @@ class IssueResponse(BaseModel):
     ai_fix_code: str
     status: Literal["open", "fixed", "dismissed"]
     fix_pr_url: Optional[str]
+    confidence: Optional[int] = None
+    what_changed: Optional[str] = None
     created_at: datetime
 
 

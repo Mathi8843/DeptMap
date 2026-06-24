@@ -175,6 +175,46 @@ export default function IssueDetailPage() {
 
         {/* Right Column: Interactive Merge AST Code Editor & Console */}
         <div className="space-y-6">
+          {/* AI Fix Confidence Score Card */}
+          {issue.confidence !== undefined && issue.confidence !== null && (
+            <div className="glass-card rounded-2xl p-5 space-y-3.5 border border-border-subtle shadow-md">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
+                  AI Fix Confidence
+                </span>
+                <span className={clsx(
+                  "font-mono text-[10px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded",
+                  issue.confidence >= 80 ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" :
+                  issue.confidence >= 50 ? "text-amber-400 bg-amber-500/10 border border-amber-500/20" :
+                  "text-rose-400 bg-rose-500/10 border border-rose-500/20"
+                )}>
+                  {issue.confidence}% Reliable
+                </span>
+              </div>
+              
+              {/* Confidence Bar */}
+              <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-white/5">
+                <div 
+                  className={clsx(
+                    "h-full rounded-full transition-all duration-500",
+                    issue.confidence >= 80 ? "bg-emerald-500" :
+                    issue.confidence >= 50 ? "bg-amber-500" :
+                    "bg-rose-500"
+                  )}
+                  style={{ width: `${issue.confidence}%` }}
+                />
+              </div>
+
+              {/* Developer Review Alert for low confidence (< 50) */}
+              {issue.confidence < 50 && (
+                <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+                  <ShieldAlert size={15} className="text-rose-400 flex-shrink-0" />
+                  <span>Have a developer review this before merging.</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* AST Code review workspace - scaled height */}
           <div className="glass-panel border border-border-subtle rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[420px]">
             {/* Headers tabs */}
@@ -188,6 +228,17 @@ export default function IssueDetailPage() {
 
             {/* Code Body - scaled text to text-sm */}
             <div className="flex-1 overflow-auto p-5 space-y-5 font-mono text-sm leading-relaxed bg-[#030308]">
+              {issue.what_changed && (
+                <div className="p-4 bg-slate-950/60 border border-white/5 rounded-xl space-y-1 font-sans text-xs text-text-sub">
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[1.5px] text-indigo-400 block">
+                    What this fix does
+                  </span>
+                  <p className="leading-relaxed text-text-main">
+                    {issue.what_changed}
+                  </p>
+                </div>
+              )}
+
               {isReviewing ? (
                 <div className="space-y-5 animate-fade-in">
                   <div className="text-[11px] text-slate-500 uppercase tracking-[1px] font-bold pb-2 border-b border-white/5">

@@ -216,6 +216,8 @@ def scan_dir(repo_dir: str, full_name: str, access_token: str = None) -> list[di
                         "Exposes proprietary prompts/data to external users."
                     ],
                     "ai_fix_code": "const openaiApiKey = process.env.OPENAI_API_KEY;",
+                    "confidence": 98,
+                    "what_changed": "Replaced the hardcoded OpenAI API key string with process.env.OPENAI_API_KEY.",
                     "_raw_message": "OpenAI API key detected"
                 }
             ]

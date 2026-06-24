@@ -35,6 +35,8 @@ export interface Issue {
   ai_fix_code: string;
   status: "open" | "fixed" | "dismissed";
   fix_pr_url: string | null;
+  confidence?: number;
+  what_changed?: string;
   created_at: string;
 }
 
@@ -74,6 +76,8 @@ function formatIssue(i: any): Issue {
     ai_fix_code: i.ai_fix_code || "",
     status: i.status,
     fix_pr_url: i.fix_pr_url,
+    confidence: i.confidence,
+    what_changed: i.what_changed,
     created_at: i.created_at,
   };
 }

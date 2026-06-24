@@ -221,6 +221,8 @@ def _generic_fallback(finding: dict) -> dict:
             "Recommend developer review before deploying to production",
         ],
         "ai_fix_code": finding.get("code_snippet", "# Manual review required"),
+        "confidence": 30,
+        "what_changed": "No automatic fix available. Manual developer review required."
     }
 
 
@@ -272,7 +274,9 @@ Explain this to a non-technical founder and provide a fix. Respond with this exa
     "Second consequence",
     "Third consequence"
   ],
-  "ai_fix_code": "The corrected version of the FLAGGED CODE LINES ONLY, using correct imports/functions from the full file context."
+  "ai_fix_code": "The corrected version of the FLAGGED CODE LINES ONLY, using correct imports/functions from the full file context.",
+  "confidence": 85,
+  "what_changed": "One sentence explaining what this fix changed in plain English."
 }}"""
 
 
@@ -292,6 +296,8 @@ async def explain_finding(finding: dict) -> dict:
             "plain_english_body": finding.get("plain_english_body", ""),
             "impact_bullets": finding.get("impact_bullets", []),
             "ai_fix_code": finding.get("ai_fix_code", finding.get("code_snippet", "")),
+            "confidence": finding.get("confidence", 85),
+            "what_changed": finding.get("what_changed", "Pre-analyzed security fix."),
         }
 
     api_key = get_client()
@@ -372,6 +378,8 @@ async def explain_finding(finding: dict) -> dict:
             "plain_english_body": matched["body"],
             "impact_bullets": matched["bullets"],
             "ai_fix_code": f"# AI Fix Tip: {matched['fix_hint']}\n\n" + finding.get("code_snippet", ""),
+            "confidence": 90,
+            "what_changed": f"Applied standard security recommendations: {matched['fix_hint']}"
         }
 
     # Last resort: generic
@@ -406,6 +414,8 @@ async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) 
                 "plain_english_body": result.get("plain_english_body", ""),
                 "impact_bullets": result.get("impact_bullets", []),
                 "ai_fix_code": result.get("ai_fix_code", finding.get("code_snippet", "")),
+                "confidence": result.get("confidence", 50),
+                "what_changed": result.get("what_changed", "Applied security correction."),
             })
 
         if has_groq and i + max_concurrent < len(findings):

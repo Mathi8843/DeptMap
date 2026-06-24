@@ -535,6 +535,8 @@ async def audit_packages(
                 "plain_english_body": issue_body,
                 "impact_bullets": impacts,
                 "ai_fix_code": ai_fix_code,
+                "confidence": 99,
+                "what_changed": f"Upgraded dependency '{pkg_name}' version to patch security vulnerability.",
                 "_raw_message": f"Dependency '{pkg_name}' has vulnerabilities: {vuln_summary}",
                 "_full_file_content": manifest_content,
                 "_related_files": [],

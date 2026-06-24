@@ -418,6 +418,8 @@ async def scan_repository(
                     "plain_english_body": "User input is directly concatenated into a database query string, allowing attackers to execute arbitrary SQL commands.",
                     "impact_bullets": ["Attackers can view, edit, or delete any database table content.", "Vulnerable to schema dumps and complete data leaks."],
                     "ai_fix_code": "const query = req.query.q;\nconst result = await db.query('SELECT * FROM items WHERE name = $1', [query]);",
+                    "confidence": 95,
+                    "what_changed": "Parameterized the SQL query to prevent raw user input from executing as SQL code.",
                     "_raw_message": "User input concatenated in SQL query"
                 },
                 {
@@ -431,6 +433,8 @@ async def scan_repository(
                     "plain_english_body": "A sensitive database connection string containing a plain-text password was found hardcoded in the codebase.",
                     "impact_bullets": ["Any developer or user with access to the source code can access the DB.", "Exposes data to unauthorized internet scans if public."],
                     "ai_fix_code": "const connectionString = process.env.DATABASE_URL;",
+                    "confidence": 90,
+                    "what_changed": "Replaced the hardcoded password string with process.env.DATABASE_URL to load credentials from environment variables.",
                     "_raw_message": "Hardcoded password"
                 }
             ]
@@ -447,6 +451,8 @@ async def scan_repository(
                     "plain_english_body": "A sensitive administrative function lacks an authentication decorator, allowing anyone to execute it.",
                     "impact_bullets": ["Unauthenticated users can wipe backend database tables.", "Exposes system controls to denial-of-service exploits."],
                     "ai_fix_code": "@router.post('/admin/reset-db')\n@require_admin_role\ndef reset_database(current_user: User = Depends(get_current_user)):\n    db.clear_all()",
+                    "confidence": 40,
+                    "what_changed": "Added get_current_user dependency and require_admin_role decorator to verify authentication and permission level.",
                     "_raw_message": "Endpoint lacks authentication decorator"
                 }
             ]
