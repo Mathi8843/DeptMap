@@ -208,3 +208,27 @@ CREATE POLICY "scans_own_data" ON public.scans
 -- ALTER TABLE public.issues
 --   ADD COLUMN IF NOT EXISTS confidence INTEGER,
 --   ADD COLUMN IF NOT EXISTS what_changed TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Attack Surfaces Migration
+-- ═══════════════════════════════════════════════════════════════
+-- CREATE TABLE IF NOT EXISTS public.attack_surfaces (
+--     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     repo_id             UUID NOT NULL REFERENCES public.repos(id) ON DELETE CASCADE,
+--     scan_id             UUID NOT NULL REFERENCES public.scans(id) ON DELETE CASCADE,
+--     title               TEXT NOT NULL,
+--     description         TEXT NOT NULL,
+--     component           TEXT NOT NULL,
+--     issue_ids           JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of UUIDs
+--     created_at          TIMESTAMPTZ DEFAULT now()
+-- );
+-- 
+-- ALTER TABLE public.attack_surfaces ENABLE ROW LEVEL SECURITY;
+-- 
+-- CREATE POLICY "attack_surfaces_own_data" ON public.attack_surfaces
+--     FOR ALL USING (
+--         repo_id IN (
+--             SELECT id FROM public.repos
+--             WHERE user_id = auth.uid()
+--         )
+--     );

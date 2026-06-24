@@ -12,7 +12,7 @@ const severityConfig = {
 };
 
 export default function IssuesPage() {
-  const { issues } = useData();
+  const { issues, attackSurfaces } = useData();
   const [activeSeverity, setActiveSeverity] = useState<string>("all");
   const [activeStatus, setActiveStatus] = useState<string>("open");
   const [searchQuery, setSearchQuery] = useState("");
@@ -32,6 +32,24 @@ export default function IssuesPage() {
         issue.file_path.toLowerCase().includes(q)
       );
     });
+
+  // Filter attack surfaces dynamically based on active status, severity and search queries of their linked issues
+  const activeAttackSurfaces = (attackSurfaces || []).filter((surface) => {
+    const linkedIssues = issues.filter((i) => surface.issue_ids.includes(i.id));
+    const matchingIssues = linkedIssues
+      .filter((i) => i.status === activeStatus)
+      .filter((i) => activeSeverity === "all" || i.severity === activeSeverity)
+      .filter((i) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          i.plain_english_title.toLowerCase().includes(q) ||
+          i.repo_name.toLowerCase().includes(q) ||
+          i.file_path.toLowerCase().includes(q)
+        );
+      });
+    // Show attack surface if it has 2 or more matching issues
+    return matchingIssues.length >= 2;
+  });
 
   const getIssueCount = (sev: string, stat: string) => {
     return issues.filter((i) => (sev === "all" || i.severity === sev) && i.status === stat).length;
@@ -122,6 +140,79 @@ export default function IssuesPage() {
           })}
         </div>
       </div>
+
+      {/* Attack Surfaces Section */}
+      {activeAttackSurfaces.length > 0 && (
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Shield className="text-indigo-500 dark:text-indigo-400" size={18} />
+            <h2 className="font-display font-extrabold text-base text-text-main">
+              Correlated Attack Surfaces ({activeAttackSurfaces.length})
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeAttackSurfaces.map((surface) => {
+              // Find active matching issues in this attack surface
+              const matchingIssues = issues.filter(
+                (i) => surface.issue_ids.includes(i.id) && i.status === activeStatus
+              );
+              
+              return (
+                <div 
+                  key={surface.id}
+                  className="glass-card rounded-2xl p-5 border border-indigo-500/20 hover:border-indigo-500/40 bg-indigo-500/[0.02] space-y-4 transition-all"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-550 dark:text-indigo-400">
+                        {surface.component} Component
+                      </span>
+                      <span className="font-mono text-[9px] text-text-muted">
+                        {matchingIssues.length} vulnerabilities
+                      </span>
+                    </div>
+                    <h3 className="font-display font-bold text-sm text-text-main">
+                      {surface.title}
+                    </h3>
+                    <p className="text-xs text-text-sub leading-relaxed">
+                      {surface.description}
+                    </p>
+                  </div>
+
+                  {/* Linked Issues list */}
+                  <div className="space-y-2 border-t border-border-subtle pt-3.5">
+                    <span className="font-mono text-[8px] font-bold uppercase tracking-[1px] text-text-muted block">
+                      Linked Issues:
+                    </span>
+                    <div className="space-y-1.5">
+                      {matchingIssues.map((issue) => {
+                        const cfg = severityConfig[issue.severity];
+                        return (
+                          <Link
+                            key={issue.id}
+                            href={`/issues/${issue.id}`}
+                            className="flex items-center justify-between p-2 rounded-lg bg-bg-deep/40 hover:bg-bg-deep border border-border-subtle hover:border-border-glow transition-all text-[11px] group"
+                          >
+                            <span className="text-text-sub group-hover:text-indigo-505 dark:group-hover:text-indigo-400 transition-colors truncate max-w-[70%]">
+                              {issue.plain_english_title}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-text-muted font-mono truncate">
+                                {issue.file_path.split("/").pop()}:{issue.line_start}
+                              </span>
+                              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <section aria-labelledby="issues-list-heading">
       <h2 id="issues-list-heading" className="sr-only">Vulnerability Issues List</h2>

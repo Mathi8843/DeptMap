@@ -255,6 +255,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
             if key in existing_by_key and existing_by_key[key]:
                 # Retain existing active issue, update its details
                 matched_issue = existing_by_key[key].pop(0)
+                f["id"] = matched_issue["id"] # Save ID in finding dict
                 update_payload = {
                     "scan_id": scan_id,
                     "line_start": f["line_start"],
@@ -288,6 +289,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                     "status": "open",
                     "created_at": now,
                 }
+                f["id"] = insert_row["id"] # Save ID in finding dict
                 if has_confidence_col:
                     insert_row["confidence"] = f.get("confidence")
                     insert_row["what_changed"] = f.get("what_changed")
@@ -305,6 +307,31 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
 
         if resolved_ids:
             db.table("issues").update({"status": "fixed"}).in_("id", resolved_ids).execute()
+
+        # ── Step 3.5: Run Cross-Finding Correlation (Attack Surfaces) ───
+        log("[CORRELATION] Running correlation pass to group findings into Attack Surfaces...", 78)
+        try:
+            # Delete old attack surfaces first
+            db.table("attack_surfaces").delete().eq("repo_id", repo["id"]).execute()
+            
+            # Fetch active open issues directly from database
+            open_issues_res = db.table("issues").select("*").eq("repo_id", repo["id"]).eq("status", "open").execute()
+            open_issues = open_issues_res.data or []
+            
+            if len(open_issues) >= 2:
+                from app.services.correlation import correlate_scan_findings
+                await correlate_scan_findings(
+                    repo_id=repo["id"],
+                    scan_id=scan_id,
+                    findings=open_issues,
+                    db_client=db,
+                )
+                log(f"[CORRELATION] Correlation pass complete. Attack surfaces saved.", 79)
+            else:
+                log("[CORRELATION] Not enough open issues to run correlation pass (< 2).", 79)
+        except Exception as e:
+            logger.warning(f"Correlation pass failed: {e}", exc_info=True)
+            log(f"[CORRELATION] Correlation pass failed (non-fatal): {e}", 79)
 
         # ── Step 4: Package registry save ───────────────────────────────────
         log("[DB] Saving package audit results to database...", 80)

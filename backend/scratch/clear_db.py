@@ -11,7 +11,7 @@ def clear_database():
     db = get_supabase()
     
     # Ordered dependency list to delete child tables before parent tables
-    tables = ["health_history", "packages", "issues", "scans", "repos", "users"]
+    tables = ["health_history", "packages", "attack_surfaces", "issues", "scans", "repos", "users"]
     
     print("\nStarting database cleanup...")
     for table in tables:

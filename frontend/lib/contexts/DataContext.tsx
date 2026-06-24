@@ -59,6 +59,17 @@ export interface WebhookAlert {
   type: "slack" | "email";
 }
 
+export interface AttackSurface {
+  id: string;
+  repo_id: string;
+  scan_id: string;
+  title: string;
+  description: string;
+  component: string;
+  issue_ids: string[];
+  created_at: string;
+}
+
 function formatIssue(i: any): Issue {
   return {
     id: i.id,
@@ -122,6 +133,7 @@ interface DataContextType {
   issues: Issue[];
   packages: Package[];
   webhookAlerts: WebhookAlert[];
+  attackSurfaces: AttackSurface[];
   soc2Report: any;
   trendData: any[];
   overallScore: number;
@@ -158,20 +170,23 @@ export function DataProvider({
   ]);
   const [soc2Report, setSoc2Report] = useState<any>(null);
   const [trendData, setTrendData] = useState<any[]>([]);
+  const [attackSurfaces, setAttackSurfaces] = useState<AttackSurface[]>([]);
 
   const issuesRef = useRef(issues);
   useEffect(() => { issuesRef.current = issues; }, [issues]);
 
   const fetchData = useCallback(async () => {
     try {
-      const [dbRepos, dbIssues, dbPackages] = await Promise.all([
+      const [dbRepos, dbIssues, dbPackages, dbAttackSurfaces] = await Promise.all([
         apiFetch("/repos"),
         apiFetch("/issues"),
         apiFetch("/packages"),
+        apiFetch("/issues/attack-surfaces"),
       ]);
       setRepos(dbRepos);
       setIssues(dbIssues.map(formatIssue));
       setPackages(dbPackages.map(formatPackage));
+      setAttackSurfaces(dbAttackSurfaces || []);
 
       try {
         const dbSoc2 = await apiFetch("/soc2");
@@ -372,11 +387,11 @@ export function DataProvider({
   }, [showToast]);
 
   const dataValue = useMemo(() => ({
-    repos, issues, packages, webhookAlerts, soc2Report, trendData, overallScore,
+    repos, issues, packages, webhookAlerts, attackSurfaces, soc2Report, trendData, overallScore,
     connectRepo, upgradePlan, fixIssueSimulate, dismissIssue, auditPackageAction,
     triggerWebhookAlert, fetchData, updateRepoBranch,
   }), [
-    repos, issues, packages, webhookAlerts, soc2Report, trendData, overallScore,
+    repos, issues, packages, webhookAlerts, attackSurfaces, soc2Report, trendData, overallScore,
     connectRepo, upgradePlan, fixIssueSimulate, dismissIssue, auditPackageAction,
     triggerWebhookAlert, fetchData, updateRepoBranch,
   ]);

@@ -209,6 +209,25 @@ async def list_issues(
     return issues
 
 
+@router.get("/attack-surfaces")
+async def list_attack_surfaces(
+    current_user_id: str = Depends(get_current_user_id),
+    repo_id: str | None = Query(None),
+    db=Depends(get_db),
+):
+    """List attack surfaces (correlated vulnerability groups) for the user's repos."""
+    query = (
+        db.table("attack_surfaces")
+        .select("*, repos!inner(user_id)")
+        .eq("repos.user_id", current_user_id)
+    )
+    if repo_id:
+        query = query.eq("repo_id", repo_id)
+        
+    result = query.order("created_at", desc=True).execute()
+    return result.data or []
+
+
 @router.get("/{issue_id}")
 async def get_issue(issue_id: str, current_user_id: str = Depends(get_current_user_id), db=Depends(get_db)):
     """Get a single issue by ID."""
