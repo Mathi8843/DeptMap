@@ -19,6 +19,7 @@ const STEPS = [
 const GENERATORS = ["Lovable", "Bolt", "Cursor", "Replit", "v0", "Other"];
 
 import { apiFetch, getSavedUser } from "@/lib/api";
+import GitHubPermissionsModal from "@/components/layout/GitHubPermissionsModal";
 
 export default function OnboardingPage() {
   useEffect(() => { document.title = "Onboarding — DebtMap"; }, []);
@@ -38,6 +39,7 @@ export default function OnboardingPage() {
   const [selectedGenerator, setSelectedGenerator] = useState<string>("Lovable");
   const [scanStarted, setScanStarted] = useState(false);
   const [scanDone, setScanDone] = useState(false);
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
   
   // Real repositories fetched from user's GitHub account
   const [reposList, setReposList] = useState<any[]>([]);
@@ -272,7 +274,7 @@ export default function OnboardingPage() {
               {!githubConnected ? (
                 <div className="space-y-4">
                   <button
-                    onClick={handleConnectGitHub}
+                    onClick={() => setPermissionsModalOpen(true)}
                     className="w-full max-w-sm mx-auto flex items-center justify-center gap-3 py-4 bg-indigo-500 hover:bg-indigo-600 text-white dark:bg-[#b8ff57] dark:text-black dark:hover:bg-[#d4ff8a] rounded-xl font-semibold text-sm transition-all shadow-lg cursor-pointer"
                   >
                     <GitBranch size={20} /> Authorize DebtMap on GitHub
@@ -564,6 +566,11 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
+      <GitHubPermissionsModal 
+        isOpen={permissionsModalOpen} 
+        onClose={() => setPermissionsModalOpen(false)} 
+        onConfirm={handleConnectGitHub} 
+      />
     </div>
   );
 }

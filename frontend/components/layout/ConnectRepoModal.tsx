@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { useData } from "@/lib/contexts/DataContext";
 import { X, GitBranch, Shield, Globe, Terminal, Loader2, AlertTriangle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import GitHubPermissionsModal from "./GitHubPermissionsModal";
 
 interface ConnectRepoModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
   const [generator, setGenerator] = useState("Lovable");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
   // Sync selected repository default branch and fetch available branches
   useEffect(() => {
@@ -176,7 +178,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
               </p>
             </div>
             <button
-              onClick={handleConnectGitHub}
+              onClick={() => setPermissionsModalOpen(true)}
               className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg"
             >
               Connect GitHub Account
@@ -207,7 +209,7 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
                     <div>{error}</div>
                     <button 
                       type="button" 
-                      onClick={handleConnectGitHub}
+                      onClick={() => setPermissionsModalOpen(true)}
                       className="underline font-bold mt-1 text-[10px] block"
                     >
                       Re-authorize GitHub
@@ -318,6 +320,11 @@ export default function ConnectRepoModal({ isOpen, onClose }: ConnectRepoModalPr
           </form>
         )}
       </div>
+      <GitHubPermissionsModal 
+        isOpen={permissionsModalOpen} 
+        onClose={() => setPermissionsModalOpen(false)} 
+        onConfirm={handleConnectGitHub} 
+      />
     </div>
   );
 }

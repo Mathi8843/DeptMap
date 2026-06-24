@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import GitHubPermissionsModal from "@/components/layout/GitHubPermissionsModal";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const { issues, repos, overallScore, packages, webhookAlerts, trendData } = useData();
   const { isScanning, scanProgress, scanLogs, scanStatus, triggerScan, terminalOpen, setTerminalOpen } = useScan();
   const { showToast } = useToast();
+  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
   const showTerminal = terminalOpen;
   const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -183,7 +185,7 @@ export default function DashboardPage() {
             <h4 className="text-sm font-bold text-text-main">GitHub Account Not Connected</h4>
             <p className="text-xs text-text-sub leading-relaxed">Please connect your GitHub account to import and scan your repositories.</p>
           </div>
-          <button onClick={handleConnectGitHub} className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-[1px] text-[#b8ff57] hover:underline flex-shrink-0 mt-0.5 cursor-pointer">
+          <button onClick={() => setPermissionsModalOpen(true)} className="flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-[1px] text-[#b8ff57] hover:underline flex-shrink-0 mt-0.5 cursor-pointer">
             Connect GitHub <ArrowUpRight size={14} />
           </button>
         </div>
@@ -463,6 +465,11 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      <GitHubPermissionsModal 
+        isOpen={permissionsModalOpen} 
+        onClose={() => setPermissionsModalOpen(false)} 
+        onConfirm={handleConnectGitHub} 
+      />
     </div>
   );
 }
