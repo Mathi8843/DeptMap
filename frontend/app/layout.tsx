@@ -81,6 +81,19 @@ export default function RootLayout({
           })();
         `}
       </Script>
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-KM8Q5GSPXZ"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-KM8Q5GSPXZ');
+        `}
+      </Script>
       <body className="antialiased selection:bg-lime-500/20 selection:text-lime-300">
         <a
           href="#main-content"
