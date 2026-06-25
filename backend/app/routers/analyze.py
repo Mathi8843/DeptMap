@@ -171,12 +171,24 @@ async def trigger_ai_review(
     if not repo_result.data:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    # Fetch user's GitHub access token
-    user_result = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
+    # Fetch user details
+    user_result = db.table("users").select("github_access_token, plan").eq("id", current_user_id).execute()
     if not user_result.data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    encrypted_token = user_result.data[0].get("github_access_token")
+    user_data = user_result.data[0]
+    plan = user_data.get("plan", "free")
+
+    if plan == "free":
+        repos_count_res = db.table("repos").select("id", count="exact").eq("user_id", current_user_id).execute()
+        repos_count = repos_count_res.count or 0
+        if repos_count > 1:
+            raise HTTPException(
+                status_code=403,
+                detail="Free plan is limited to 1 repository scan. Please upgrade your plan."
+            )
+
+    encrypted_token = user_data.get("github_access_token")
     if not encrypted_token:
         raise HTTPException(status_code=400, detail="GitHub access token missing — re-authenticate")
 

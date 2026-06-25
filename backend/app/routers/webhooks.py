@@ -101,6 +101,16 @@ async def handle_push_event(data: dict, db) -> dict:
 
     queued_scans = []
     for repo in repo_result.data:
+        # Check user plan: free tier does not support push-triggered scans
+        user_res = db.table("users").select("plan").eq("id", repo["user_id"]).execute()
+        plan = "free"
+        if user_res.data:
+            plan = user_res.data[0].get("plan", "free")
+            
+        if plan == "free":
+            logger.info(f"Ignoring push webhook for repo {full_name} — free plan does not support push-triggered scans.")
+            continue
+
         scan_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
 

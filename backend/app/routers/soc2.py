@@ -22,6 +22,19 @@ async def get_soc2_report(
     Maps open issues to SOC 2 Trust Services Criteria controls.
     Calculates readiness percentage based on control pass/fail/partial status.
     """
+    # Fetch user plan to verify compliance authorization
+    user_res = db.table("users").select("plan").eq("id", current_user_id).execute()
+    if not user_res.data:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    plan = user_res.data[0].get("plan", "free")
+    if plan in ("free", "pro"):
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=403,
+            detail="SOC 2 Compliance reports are available on Team and Enterprise plans. Please upgrade."
+        )
     # Get all issues for user (open and fixed — we need the full picture)
     query = (
         db.table("issues")

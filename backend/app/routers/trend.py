@@ -19,6 +19,19 @@ async def get_trend(
     Get health score history for trend charts.
     Returns data formatted for Recharts (date label + score + introduced + fixed).
     """
+    # Fetch user plan to verify trend chart authorization
+    user_res = db.table("users").select("plan").eq("id", current_user_id).execute()
+    if not user_res.data:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    plan = user_res.data[0].get("plan", "free")
+    if plan == "free":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=403,
+            detail="Technical debt trend history is available on premium plans. Please upgrade."
+        )
     query = (
         db.table("health_history")
         .select("*, repos!inner(user_id)")

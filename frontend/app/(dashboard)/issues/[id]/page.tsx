@@ -2,10 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/lib/contexts/AuthContext";
 import { useData } from "@/lib/contexts/DataContext";
 import { useToast } from "@/lib/contexts/ToastContext";
 import { ArrowLeft, GitPullRequest, Copy, X, Terminal, CheckCircle2, ShieldAlert, FileCode, Check, ArrowRight } from "lucide-react";
 import clsx from "clsx";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
 
 const severityConfig = {
   critical: { label: "Critical Risk — Fix Immediately", text: "text-rose-500 dark:text-rose-400", border: "border-rose-500/20", bg: "bg-rose-500/10", glow: "glow-rose" },
@@ -17,9 +19,11 @@ const severityConfig = {
 export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const { issues, fixIssueSimulate, dismissIssue } = useData();
   const { showToast } = useToast();
   
+  const hasOneClickPr = PLAN_LIMITS[user.plan].one_click_pr;
   const issueId = params.id as string;
   const issue = issues.find((i) => i.id === issueId);
 
@@ -315,7 +319,14 @@ export default function IssueDetailPage() {
                   {issue.status === "open" && (
                     <div className="pb-2">
                       <button
-                        onClick={() => setIsReviewing(true)}
+                        onClick={() => {
+                          if (!hasOneClickPr) {
+                            showToast("One-click fix PR is a premium feature. Please upgrade your plan.", "warning");
+                            router.push("/settings?upgrade=pro");
+                          } else {
+                            setIsReviewing(true);
+                          }
+                        }}
                         className="w-full py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-colors cursor-pointer text-center"
                       >
                         Start Code Review Merge

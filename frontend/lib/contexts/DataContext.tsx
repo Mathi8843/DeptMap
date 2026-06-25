@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { apiFetch } from "../api";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
+import { PLAN_LIMITS } from "../plan-limits";
 
 export interface Repo {
   id: string;
@@ -226,12 +227,23 @@ export function DataProvider({
 
   // Webhook trigger
   const triggerWebhookAlert = useCallback((channel: string, message: string, type: WebhookAlert["type"]) => {
+    if (!user) return;
+    const limits = PLAN_LIMITS[user.plan];
+    if (type === "slack" && !limits.slack_alerts) {
+      console.log("Slack alerts are disabled for the current plan.");
+      return;
+    }
+    if (type === "email" && !limits.email_alerts) {
+      console.log("Email alerts are disabled for the current plan.");
+      return;
+    }
+
     const id = `w_${Math.random().toString(36).substring(2, 9)}`;
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const alert: WebhookAlert = { id, timestamp: time, channel, message, type };
     setWebhookAlerts((prev) => [alert, ...prev.slice(0, 14)]);
     onNewAlert(alert);
-  }, [onNewAlert]);
+  }, [onNewAlert, user]);
 
   // Upgrade Plan
   const upgradePlan = (newPlan: typeof user.plan) => {

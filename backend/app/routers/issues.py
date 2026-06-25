@@ -295,12 +295,20 @@ async def create_fix_pr(
     if not issue.get("ai_fix_code"):
         raise HTTPException(status_code=400, detail="No AI fix available for this issue")
 
-    # Get GitHub access token
-    user_res = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
+    # Get user details
+    user_res = db.table("users").select("github_access_token, plan").eq("id", current_user_id).execute()
     if not user_res.data or not user_res.data[0].get("github_access_token"):
         raise HTTPException(status_code=400, detail="GitHub token missing")
 
-    encrypted_token = user_res.data[0]["github_access_token"]
+    user_data = user_res.data[0]
+    plan = user_data.get("plan", "free")
+    if plan == "free":
+        raise HTTPException(
+            status_code=403,
+            detail="One-click fix PR is a premium feature. Please upgrade your plan."
+        )
+
+    encrypted_token = user_data["github_access_token"]
     access_token = decrypt_token(encrypted_token)
 
     try:

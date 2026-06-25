@@ -280,13 +280,13 @@ Explain this to a non-technical founder and provide a fix. Respond with this exa
 }}"""
 
 
-async def explain_finding(finding: dict) -> dict:
+async def explain_finding(finding: dict, plan: str = "pro") -> dict:
     """
     Explain a Semgrep finding in plain English.
     
     Priority:
     0. Already explained (bypass)
-    1. Groq API (if key is configured)
+    1. Groq API (if key is configured and user is premium)
     2. Rule-based fallback (if rule matches our table)
     3. Generic fallback
     """
@@ -300,7 +300,7 @@ async def explain_finding(finding: dict) -> dict:
             "what_changed": finding.get("what_changed", "Pre-analyzed security fix."),
         }
 
-    api_key = get_client()
+    api_key = get_client() if plan != "free" else None
 
     if api_key:
         # Use Groq AI
@@ -386,7 +386,7 @@ async def explain_finding(finding: dict) -> dict:
     return _generic_fallback(finding)
 
 
-async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) -> list[dict]:
+async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3, plan: str = "pro") -> list[dict]:
     """
     Explain multiple findings. Batches Groq calls to respect rate limits.
     Falls back gracefully if Groq is unavailable.
@@ -394,13 +394,13 @@ async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3) 
     import asyncio
 
     enriched = []
-    has_groq = get_client() is not None
-    mode = "Groq AI" if has_groq else "rule-based fallback (no Groq key)"
+    has_groq = get_client() is not None and plan != "free"
+    mode = "Groq AI" if has_groq else "rule-based fallback (no Groq key or free plan)"
     logger.info(f"Explaining {len(findings)} findings using {mode}")
 
     for i in range(0, len(findings), max_concurrent):
         batch = findings[i:i + max_concurrent]
-        tasks = [explain_finding(f) for f in batch]
+        tasks = [explain_finding(f, plan=plan) for f in batch]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for finding, result in zip(batch, results):

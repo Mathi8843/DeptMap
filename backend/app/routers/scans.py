@@ -52,12 +52,24 @@ async def trigger_scan(
 
     repo = repo_result.data[0]
 
-    # Fetch user's GitHub access token
-    user_result = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
+    # Fetch user details
+    user_result = db.table("users").select("github_access_token, plan").eq("id", current_user_id).execute()
     if not user_result.data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    encrypted_token = user_result.data[0].get("github_access_token")
+    user_data = user_result.data[0]
+    plan = user_data.get("plan", "free")
+
+    if plan == "free":
+        repos_count_res = db.table("repos").select("id", count="exact").eq("user_id", current_user_id).execute()
+        repos_count = repos_count_res.count or 0
+        if repos_count > 1:
+            raise HTTPException(
+                status_code=403,
+                detail="Free plan is limited to 1 repository scan. Please upgrade your plan."
+            )
+
+    encrypted_token = user_data.get("github_access_token")
     if not encrypted_token:
         raise HTTPException(status_code=400, detail="GitHub access token missing — re-authenticate")
 
@@ -229,10 +241,19 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                 temp_dir_to_clean = os.path.dirname(repo_dir)
                 shutil.rmtree(temp_dir_to_clean, ignore_errors=True)
 
+        # Fetch user plan to enforce limits in background pipeline
+        plan = "free"
+        try:
+            user_res = db.table("users").select("plan").eq("id", repo["user_id"]).execute()
+            if user_res.data:
+                plan = user_res.data[0].get("plan", "free")
+        except Exception as e:
+            logger.warning(f"Failed to fetch user plan in background pipeline: {e}")
+
         # ── Step 2: Groq enrichment ─────────────────────────────────────────
         if findings:
             log(f"[GROQ] Sending {len(findings)} findings to Groq for plain English explanation...", 45)
-            enriched_findings = await groq_service.explain_findings_batch(findings)
+            enriched_findings = await groq_service.explain_findings_batch(findings, plan=plan)
             log("[GROQ] AI explanations complete.", 70)
         else:
             enriched_findings = []
