@@ -112,9 +112,9 @@ export default function SignupClient() {
 
       {/* Navbar */}
       <nav className="relative z-20 flex items-center justify-between px-6 py-4 flex-shrink-0">
-        <Link href="/" className="flex items-center gap-2 group" aria-label="DebtMap home">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-shadow">D</div>
-          <span className="font-bold text-base tracking-wide text-text-main">DebtMap</span>
+        <Link href="/" className="flex items-center gap-2.5 group" aria-label="Risk Guard AI home">
+          <img src="/logo.png" alt="Risk Guard AI Logo" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-base tracking-wide text-text-main">Risk Guard AI</span>
           <span className="font-mono text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full uppercase tracking-widest">Beta</span>
         </Link>
         <div className="flex items-center gap-3">

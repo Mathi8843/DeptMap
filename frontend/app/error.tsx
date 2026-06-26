@@ -8,7 +8,7 @@ export default function RootError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => { document.title = "Error — DebtMap"; }, []);
+  useEffect(() => { document.title = "Error — Risk Guard AI"; }, []);
   return (
     <div className="flex items-center justify-center min-h-screen bg-bg-deep p-8">
       <div className="max-w-md w-full glass-card rounded-2xl p-8 border border-rose-500/20 text-center space-y-5 animate-fade-in">

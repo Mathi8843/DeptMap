@@ -14,7 +14,7 @@ function AuthCallbackInner() {
   const [error, setError] = useState<string | null>(null);
   const exchangeAttempted = useRef(false);
 
-  useEffect(() => { document.title = "Authenticating — DebtMap"; }, []);
+  useEffect(() => { document.title = "Authenticating — Risk Guard AI"; }, []);
 
   useEffect(() => {
     if (exchangeAttempted.current) return;

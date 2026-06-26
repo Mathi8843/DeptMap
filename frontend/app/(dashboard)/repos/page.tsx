@@ -3,10 +3,17 @@ import React, { useState, useRef, useEffect } from "react";
 import { useData } from "@/lib/contexts/DataContext";
 import { useScan } from "@/lib/contexts/ScanContext";
 import Link from "next/link";
-import { GitBranch, Plus, RefreshCw, Lock, Globe, Clock, ShieldCheck, Terminal, X, Loader2 } from "lucide-react";
+import { Plus, RefreshCw, Lock, Globe, Clock, ShieldCheck, Terminal, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import ConnectRepoModal from "@/components/layout/ConnectRepoModal";
 import clsx from "clsx";
 import { apiFetch } from "@/lib/api";
+
+const severityConfig = {
+  critical: { label: "Critical", text: "text-rose-500 dark:text-rose-400", border: "border-rose-500/20", bg: "bg-rose-500/10", dot: "bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" },
+  high: { label: "High", text: "text-amber-500 dark:text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/10", dot: "bg-amber-500" },
+  medium: { label: "Medium", text: "text-blue-500 dark:text-blue-400", border: "border-blue-500/20", bg: "bg-blue-500/10", dot: "bg-blue-500" },
+  low: { label: "Low", text: "text-text-muted", border: "border-border-subtle", bg: "bg-bg-card", dot: "bg-slate-500" },
+};
 
 function timeAgo(dateStr: string) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -21,6 +28,7 @@ export default function ReposPage() {
   const { triggerScan, isScanning, scanLogs, scanProgress, scanStatus } = useScan();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [activeScanningRepo, setActiveScanningRepo] = useState<string | null>(null);
+  const [expandedRepoId, setExpandedRepoId] = useState<string | null>(null);
 
   // States to hold branches list for connected repositories
   const [repoBranches, setRepoBranches] = useState<Record<string, string[]>>({});
@@ -51,7 +59,7 @@ export default function ReposPage() {
   // Terminal State — static CLI for manual commands
   const [terminalInput, setTerminalInput] = useState("");
   const [terminalLogs, setTerminalLogs] = useState<string[]>([
-    "DebtMap Workspace CLI Console v1.0",
+    "Risk Guard AI Workspace CLI Console v1.0",
     'Type "help" to view list of available audit commands.',
     ""
   ]);
@@ -101,7 +109,7 @@ export default function ReposPage() {
       );
     } else if (cmd === "clear") {
       setTerminalLogs([
-        "DebtMap Workspace CLI Console v1.0",
+        "Risk Guard AI Workspace CLI Console v1.0",
         'Type "help" to view list of available audit commands.',
         ""
       ]);
@@ -134,7 +142,7 @@ export default function ReposPage() {
     } else if (cmd === "git log") {
       newLogs.push(
         "commit f22a901 (HEAD -> main, origin/main)",
-        "Author: Mathivanan G <mathi@debtmap.io>",
+        "Author: Mathivanan G <mathi@riskguardai.com>",
         "Date:   Wed Jun 10 10:50:00 2026 +0530",
         "    security-fix: resolve Stripe hardcoded secret key exposure",
         "",
@@ -153,7 +161,7 @@ export default function ReposPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-24 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
         <div className="space-y-1">
@@ -187,113 +195,176 @@ export default function ReposPage() {
             return (
               <div 
                 key={repo.id} 
-                className="glass-card rounded-2xl p-5 border border-border-subtle hover:border-border-glow transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-5 group animate-fade-in"
+                className="glass-card rounded-2xl p-5 border border-border-subtle hover:border-border-glow transition-all flex flex-col gap-4 group animate-fade-in"
               >
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  {/* SVG circular score gauge */}
-                  <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="32" cy="32" r="28" className="stroke-slate-200 dark:stroke-slate-800 fill-none" strokeWidth="3.5" />
-                      <circle 
-                        cx="32" cy="32" r="28" 
-                        className={`fill-none transition-all duration-1000 ${clr.stroke}`} 
-                        strokeWidth="3.5" 
-                        strokeDasharray="176"
-                        strokeDashoffset={176 - (176 * repo.health_score) / 100}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className={`absolute font-display font-extrabold text-xs ${clr.text}`}>
-                      {repo.health_score}
-                    </span>
-                  </div>
-
-                  {/* Metadata */}
-                  <div className="space-y-1.5 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="font-display font-bold text-base text-text-main truncate group-hover:text-indigo-500 transition-colors">
-                        {repo.full_name}
-                      </span>
-                      <span className="flex items-center gap-1 font-mono text-[9px] text-text-muted uppercase">
-                        {repo.is_private ? <Lock size={10} className="text-text-muted" /> : <Globe size={10} className="text-text-muted" />}
-                        {repo.is_private ? "Private" : "Public"}
-                      </span>
-                      <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-bg-card border border-border-subtle text-text-sub uppercase">
-                        {repo.language}
-                      </span>
-                      <span className="font-mono text-[9px] text-purple-500 dark:text-purple-400 px-2 py-0.5 bg-purple-500/10 rounded-full">
-                        {repo.generator}
+                {/* Main Card Header Row */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* SVG circular score gauge */}
+                    <div className="relative w-16 h-16 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" className="stroke-slate-200 dark:stroke-slate-800 fill-none" strokeWidth="3.5" />
+                        <circle 
+                          cx="32" cy="32" r="28" 
+                          className={`fill-none transition-all duration-1000 ${clr.stroke}`} 
+                          strokeWidth="3.5" 
+                          strokeDasharray="176"
+                          strokeDashoffset={176 - (176 * repo.health_score) / 100}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span className={`absolute font-display font-extrabold text-xs ${clr.text}`}>
+                        {repo.health_score}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-text-muted font-mono flex-wrap">
-                      <div className="flex items-center gap-1">
-                        <Clock size={12} />
-                        <span>Scanned {timeAgo(repo.last_scanned_at)}</span>
+                    {/* Metadata */}
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-display font-bold text-base text-text-main truncate group-hover:text-indigo-500 transition-colors">
+                          {repo.full_name}
+                        </span>
+                        <span className="flex items-center gap-1 font-mono text-[9px] text-text-muted uppercase">
+                          {repo.is_private ? <Lock size={10} className="text-text-muted" /> : <Globe size={10} className="text-text-muted" />}
+                          {repo.is_private ? "Private" : "Public"}
+                        </span>
+                        <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-bg-card border border-border-subtle text-text-sub uppercase">
+                          {repo.language}
+                        </span>
+                        <span className="font-mono text-[9px] text-purple-500 dark:text-purple-400 px-2 py-0.5 bg-purple-500/10 rounded-full">
+                          {repo.generator}
+                        </span>
                       </div>
-                      <span>·</span>
-                      <div className="flex items-center gap-1.5">
-                        <span>branch:</span>
-                        {loadingRepoBranches[repo.id] && !repoBranches[repo.id] ? (
-                          <div className="flex items-center gap-1">
-                            <Loader2 size={10} className="animate-spin text-indigo-500" />
-                            <span className="text-[10px] text-text-muted">loading...</span>
-                          </div>
-                        ) : (
-                          <select
-                            value={repo.default_branch}
-                            onChange={(e) => updateRepoBranch(repo.id, e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="font-mono text-[10px] bg-bg-deep/80 hover:bg-bg-deep border border-border-subtle hover:border-border-glow rounded-lg px-2 py-0.5 text-text-sub focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                          >
-                            {(repoBranches[repo.id] || [repo.default_branch]).map((b) => (
-                              <option key={b} value={b} className="bg-bg-panel text-text-main text-[10px]">
-                                {b}
-                              </option>
-                            ))}
-                          </select>
+
+                      <div className="flex items-center gap-2 text-xs text-text-muted font-mono flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <Clock size={12} />
+                          <span>Scanned {timeAgo(repo.last_scanned_at)}</span>
+                        </div>
+                        <span>·</span>
+                        <div className="flex items-center gap-1.5">
+                          <span>branch:</span>
+                          {loadingRepoBranches[repo.id] && !repoBranches[repo.id] ? (
+                            <div className="flex items-center gap-1">
+                              <Loader2 size={10} className="animate-spin text-indigo-500" />
+                              <span className="text-[10px] text-text-muted">loading...</span>
+                            </div>
+                          ) : (
+                            <select
+                              value={repo.default_branch}
+                              onChange={(e) => updateRepoBranch(repo.id, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-mono text-[10px] bg-bg-deep/80 hover:bg-bg-deep border border-border-subtle hover:border-border-glow rounded-lg px-2 py-0.5 text-text-sub focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                            >
+                              {(repoBranches[repo.id] || [repo.default_branch]).map((b) => (
+                                <option key={b} value={b} className="bg-bg-panel text-text-main text-[10px]">
+                                  {b}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Vulnerability indicators */}
+                      <div className="flex gap-2 pt-1.5 flex-wrap">
+                        {critical > 0 && (
+                          <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                            {critical} critical exposure{critical > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {high > 0 && (
+                          <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            {high} high risk{high > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {repoIssues.length === 0 && (
+                          <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                            <ShieldCheck size={12} /> Safe workspace
+                          </span>
                         )}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Vulnerability indicators */}
-                    <div className="flex gap-2 pt-1.5 flex-wrap">
-                      {critical > 0 && (
-                        <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                          {critical} critical exposure{critical > 1 ? "s" : ""}
-                        </span>
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-3 flex-shrink-0 self-end sm:self-auto">
+                    <button
+                      onClick={() => handleScanRepo(repo.id)}
+                      disabled={isRepoScanning}
+                      className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] font-bold px-[1.125rem] py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub hover:text-text-main rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw size={12} className={isRepoScanning ? "animate-spin" : ""} />
+                      {isRepoScanning ? "Scanning..." : "Scan Workspace"}
+                    </button>
+                    <button
+                      onClick={() => setExpandedRepoId(expandedRepoId === repo.id ? null : repo.id)}
+                      className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-colors text-center cursor-pointer min-w-[125px] flex items-center justify-center gap-1.5"
+                    >
+                      {expandedRepoId === repo.id ? (
+                        <>
+                          Hide Issues <ChevronUp size={12} />
+                        </>
+                      ) : (
+                        <>
+                          View Issues <ChevronDown size={12} />
+                        </>
                       )}
-                      {high > 0 && (
-                        <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                          {high} high risk{high > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {repoIssues.length === 0 && (
-                        <span className="font-mono text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-                          <ShieldCheck size={12} /> Safe workspace
-                        </span>
-                      )}
-                    </div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="flex items-center gap-3 flex-shrink-0 self-end sm:self-auto">
-                  <button
-                    onClick={() => handleScanRepo(repo.id)}
-                    disabled={isRepoScanning}
-                    className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1px] font-bold px-[1.125rem] py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep text-text-sub hover:text-text-main rounded-xl transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw size={12} className={isRepoScanning ? "animate-spin" : ""} />
-                    {isRepoScanning ? "Scanning..." : "Scan Workspace"}
-                  </button>
-                  <Link
-                    href="/issues"
-                    className="font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-[1.125rem] py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-colors text-center cursor-pointer"
-                  >
-                    View Issues
-                  </Link>
-                </div>
+                {/* Expandable Issues Drawer */}
+                {expandedRepoId === repo.id && (
+                  <div className="border-t border-border-subtle pt-4 mt-2 space-y-3 animate-fade-in">
+                    <h4 className="font-display font-extrabold text-sm text-text-main">
+                      Open Vulnerabilities ({repoIssues.length})
+                    </h4>
+                    {repoIssues.length === 0 ? (
+                      <p className="text-xs text-text-muted">No open issues found for this workspace.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {repoIssues.map((issue) => {
+                          const cfg = severityConfig[issue.severity] || severityConfig.low;
+                          return (
+                            <div
+                              key={issue.id}
+                              className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-bg-deep/45 border border-border-subtle/80 hover:border-border-glow transition-all gap-3"
+                            >
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${cfg.dot}`} />
+                                <div className="space-y-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`font-mono text-[8px] font-bold uppercase tracking-[0.5px] px-1.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+                                      {cfg.label}
+                                    </span>
+                                    {issue.source === "ai_review" && (
+                                      <span className="font-mono text-[8px] font-bold uppercase tracking-[0.5px] px-1.5 py-0.5 rounded border border-indigo-500/20 bg-indigo-500/10 text-indigo-400">
+                                        AI Review
+                                      </span>
+                                    )}
+                                    <span className="font-mono text-[9px] text-text-muted truncate">
+                                      {issue.file_path}:{issue.line_start}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs font-bold text-text-main truncate">
+                                    {issue.plain_english_title}
+                                  </p>
+                                </div>
+                              </div>
+                              <Link
+                                href={`/issues/${issue.id}`}
+                                className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-3.5 py-2 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-lg transition-all text-center self-end sm:self-auto"
+                              >
+                                Fix
+                              </Link>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

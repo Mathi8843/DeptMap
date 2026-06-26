@@ -1,6 +1,6 @@
 """
 Create Admin User helper script
-Registers admin@debtmap.io with password 123456789 in Supabase.
+Registers admin@riskguardai.com with password 123456789 in Supabase.
 """
 import sys
 import os
@@ -12,7 +12,7 @@ from app.database import get_supabase
 
 def create_admin():
     db = get_supabase()
-    email = "admin@debtmap.io"
+    email = "admin@riskguardai.com"
     password = "123456789"
     name = "Admin User"
     

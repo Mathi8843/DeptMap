@@ -30,7 +30,7 @@ async def connect_repo(
     db=Depends(get_db),
 ):
     """
-    Connect a GitHub repository to DebtMap.
+    Connect a GitHub repository to Risk Guard AI.
     Fetches repo metadata from GitHub API and stores in our DB.
     """
     # Fetch user's GitHub token

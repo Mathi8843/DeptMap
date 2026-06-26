@@ -399,7 +399,7 @@ export default function DashboardPage() {
             <div className="bg-slate-950 px-5 py-3.5 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Terminal size={15} className="text-indigo-400" />
-                <span className="text-white font-bold tracking-wide">DEBTMAP AUDIT RUNNER v1.4</span>
+                <span className="text-white font-bold tracking-wide">RISK GUARD AI AUDIT RUNNER v1.4</span>
               </div>
               <div className="flex items-center gap-3">
                 {/* Engine legend */}

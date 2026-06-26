@@ -1,6 +1,6 @@
 """
 Admin Router
-Provides administrative insights and usage metrics across the DebtMap platform.
+Provides administrative insights and usage metrics across the Risk Guard AI platform.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query

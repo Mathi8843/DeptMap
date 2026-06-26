@@ -1,5 +1,5 @@
 """
-DebtMap Background Scanning Worker
+Risk Guard AI Background Scanning Worker
 Runs as a standalone daemon process polling Supabase for queued scans.
 
 Persistence on restart:

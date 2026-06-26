@@ -59,12 +59,10 @@ export default function Sidebar() {
       {/* Brand & Theme Toggle */}
       <div className="p-6 border-b border-border-subtle flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center font-display font-extrabold text-sm text-white shadow-lg shadow-indigo-500/20">
-              D
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="Risk Guard AI Logo" className="w-7 h-7 object-contain" />
             <span className="font-display font-extrabold text-base text-text-main tracking-wide">
-              DebtMap
+              Risk Guard AI
             </span>
           </div>
           

@@ -30,7 +30,7 @@ async def run_standalone_ai_review(repo_id: str, access_token: str, db):
     repo = repo_res.data[0]
     
     # Create temp directory
-    temp_parent = settings.scan_temp_dir or "/tmp/debtmap_scans"
+    temp_parent = settings.scan_temp_dir or "/tmp/riskguard_scans"
     os.makedirs(temp_parent, exist_ok=True)
     repo_dir = tempfile.mkdtemp(dir=temp_parent, prefix="ai_review_")
     

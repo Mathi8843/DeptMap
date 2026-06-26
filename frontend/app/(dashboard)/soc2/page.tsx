@@ -42,7 +42,7 @@ export default function Soc2Page() {
   const partialCount = soc2Report?.partial_count ?? 0;
 
   const handleShare = () => {
-    navigator.clipboard.writeText("https://app.debtmap.io/shared/audit/usr_01_soc2");
+    navigator.clipboard.writeText("https://app.riskguardai.com/shared/audit/usr_01_soc2");
     showToast("Shareable audit report link copied to clipboard", "success");
   };
 
@@ -120,7 +120,7 @@ export default function Soc2Page() {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <div className="text-[10px] text-text-muted uppercase font-mono">Plan Selected</div>
-                  <div className="text-xs font-bold text-text-main">DebtMap Team Workspace Audit Plan</div>
+                  <div className="text-xs font-bold text-text-main">Risk Guard AI Team Workspace Audit Plan</div>
                   <div className="text-[11px] text-purple-500 font-mono">₹16,000 / month (billed monthly)</div>
                 </div>
 
@@ -330,7 +330,7 @@ export default function Soc2Page() {
         <div className="space-y-1.5">
           <h4 className="text-xs font-bold text-text-main font-mono uppercase tracking-[1px]">Sales Compliance Pitch Script</h4>
           <p className="text-xs text-text-sub italic leading-relaxed">
-            "We run continuous repository static analysis scanning via DebtMap, validating code commits against SOC 2 criteria Logical and physical access controls CC6.1. Our readiness level is currently at {readiness}% compliance, on schedule for external Q3 auditing."
+            "We run continuous repository static analysis scanning via Risk Guard AI, validating code commits against SOC 2 criteria Logical and physical access controls CC6.1. Our readiness level is currently at {readiness}% compliance, on schedule for external Q3 auditing."
           </p>
         </div>
       </div>

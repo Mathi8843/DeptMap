@@ -1,5 +1,5 @@
 """
-DebtMap FastAPI Application
+Risk Guard AI FastAPI Application
 Main entry point — registers all routers, configures CORS, rate limiting, and sets up middleware.
 """
 import logging
@@ -63,7 +63,7 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
     import os
-    logger.info(f"🚀 DebtMap API starting (env={settings.app_env})")
+    logger.info(f"🚀 Risk Guard AI API starting (env={settings.app_env})")
 
     # Create scan temp directory if it doesn't exist
     os.makedirs(settings.scan_temp_dir, exist_ok=True)
@@ -71,12 +71,12 @@ async def lifespan(app: FastAPI):
 
     yield  # App runs here
 
-    logger.info("🛑 DebtMap API shutting down")
+    logger.info("🛑 Risk Guard AI API shutting down")
 
 
 # ─── App ─────────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="DebtMap API",
+    title="Risk Guard AI API",
     description="AI-powered code security scanner for non-technical founders",
     version="1.0.0",
     docs_url=None if settings.is_production else "/docs",
@@ -98,10 +98,10 @@ _allowed_origins: list[str] = list({
     settings.frontend_url.rstrip("/"),          # FRONTEND_URL env var on Render
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://dept-map.vercel.app",  # production Vercel deployment
-    "https://debtmap.io",
-    "https://www.debtmap.io",
-    "https://app.debtmap.io",
+    "https://riskguardai.vercel.app",  # production Vercel deployment
+    "https://riskguardai.com",
+    "https://www.riskguardai.com",
+    "https://app.riskguardai.com",
     *_extra_origins,
 })
 
@@ -136,7 +136,7 @@ app.include_router(analyze.router)
 @app.get("/")
 async def root():
     return {
-        "app": "DebtMap API",
+        "app": "Risk Guard AI API",
         "version": "1.0.0",
         "status": "online",
         "docs": None if settings.is_production else "/docs",

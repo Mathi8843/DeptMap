@@ -127,7 +127,7 @@ function ScanTerminal() {
         <span className="w-3 h-3 rounded-full bg-rose-500/80" />
         <span className="w-3 h-3 rounded-full bg-amber-400/80" />
         <span className="w-3 h-3 rounded-full bg-lime-400/80" />
-        <span className="ml-2 font-mono text-[10px] text-white/25 uppercase tracking-widest">DebtMap · Scan Terminal</span>
+        <span className="ml-2 font-mono text-[10px] text-white/25 uppercase tracking-widest">Risk Guard AI · Scan Terminal</span>
         {visibleCount >= SCAN_LINES.length ? (
           <button
             onClick={() => setVisibleCount(0)}
@@ -203,10 +203,8 @@ export default function LandingPage() {
       {/* ─── Navbar ─────────────────────────────────────────── */}
       <nav className="border-b border-border-subtle px-4 sm:px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-indigo-500/30">
-            D
-          </div>
-          <span className="font-bold text-base tracking-wide text-text-main">DebtMap</span>
+          <img src="/logo.png" alt="Risk Guard AI Logo" className="w-7 h-7 object-contain" />
+          <span className="font-bold text-base tracking-wide text-text-main">Risk Guard AI</span>
           <span className="font-mono text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full uppercase tracking-widest">
             Beta
           </span>
@@ -339,7 +337,7 @@ export default function LandingPage() {
         {/* ─── Features ───────────────────────────────────────── */}
         <section id="features" className="py-10 sm:py-16 border-t border-border-subtle">
           <div className="mb-12">
-            <div className="font-mono text-[9px] uppercase tracking-[3px] text-text-muted mb-3">What DebtMap Does</div>
+            <div className="font-mono text-[9px] uppercase tracking-[3px] text-text-muted mb-3">What Risk Guard AI Does</div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-text-main">
               Security built for <span className="text-indigo-600 dark:text-[#b8ff57]">non-developers</span>
             </h2>
@@ -368,7 +366,7 @@ export default function LandingPage() {
         {/* ─── How It Works ───────────────────────────────────── */}
         <section id="how-it-works" className="py-10 sm:py-16 border-t border-border-subtle">
           <div className="mb-12">
-            <div className="font-mono text-[9px] uppercase tracking-[3px] text-text-muted mb-3">How DebtMap Works</div>
+            <div className="font-mono text-[9px] uppercase tracking-[3px] text-text-muted mb-3">How Risk Guard AI Works</div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-text-main">
               From repo to fix in <span className="text-indigo-600 dark:text-[#b8ff57]">2 minutes</span>
             </h2>
@@ -377,7 +375,7 @@ export default function LandingPage() {
             {[
               { step: "01", title: "Link Repository", desc: "Select any public or private GitHub repository. It takes only two clicks to link via read-only OAuth." },
               { step: "02", title: "Automated Audit", desc: "Our engine scans your code for BOLA, SSRF, broken auth, SQLi, secrets, and slopsquatted packages." },
-              { step: "03", title: "One-Click Patch", desc: "DebtMap translates vulnerabilities into plain English and generates a pull request with the fix. You just merge." },
+              { step: "03", title: "One-Click Patch", desc: "Risk Guard AI translates vulnerabilities into plain English and generates a pull request with the fix. You just merge." },
             ].map((s) => (
               <TiltCard
                 key={s.step}
@@ -420,7 +418,7 @@ export default function LandingPage() {
               <p className="text-xs text-zinc-600">Meaningless to a non-developer founder.</p>
             </div>
 
-            {/* DebtMap output */}
+            {/* Risk Guard AI output */}
             <TiltCard
               className="glass-card border border-indigo-500/20 rounded-2xl p-6 space-y-4 flex flex-col justify-between"
               maxTilt={7}
@@ -429,7 +427,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_#ef4444]" />
-                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-indigo-600 dark:text-[#b8ff57] font-bold">What DebtMap shows you</span>
+                  <span className="font-mono text-[10px] uppercase tracking-[2px] text-indigo-600 dark:text-[#b8ff57] font-bold">What Risk Guard AI shows you</span>
                 </div>
                 <div className="space-y-3">
                   <div className="text-base font-bold text-text-main">Anyone can read any user&apos;s data</div>
@@ -461,13 +459,13 @@ export default function LandingPage() {
               Built with <span className="text-indigo-600 dark:text-[#b8ff57]">trust</span> at every layer
             </h2>
             <p className="text-text-sub mt-3 max-w-xl">
-              Security is not a feature — it&apos;s the foundation. Every layer of DebtMap is designed to protect your code and your privacy.
+              Security is not a feature — it&apos;s the foundation. Every layer of Risk Guard AI is designed to protect your code and your privacy.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { icon: ShieldCheck, color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", title: "Encrypted by Default", desc: "All traffic encrypted with TLS 1.3. Data at rest encrypted with AES-256. Your secrets stay yours." },
-              { icon: Lock, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20", title: "Read-Only, Always", desc: "DebtMap requests read-only GitHub access. We never push code, never store source, and never modify your repositories." },
+              { icon: Lock, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-500/10 border-indigo-500/20", title: "Read-Only, Always", desc: "Risk Guard AI requests read-only GitHub access. We never push code, never store source, and never modify your repositories." },
               { icon: Server, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", title: "Ephemeral Scanning", desc: "Source code is scanned in real-time and discarded. Scan results persist — your code doesn't." },
               { icon: BadgeCheck, color: "text-lime-500 dark:text-lime-400", bg: "bg-lime-500/10 border-lime-500/20", title: "SOC 2 Methodology", desc: "Every vulnerability is mapped to SOC 2 Trust Services Criteria. Generate a live compliance report for enterprise reviews." },
             ].map((t) => (
@@ -557,7 +555,7 @@ export default function LandingPage() {
               Built by engineers who <span className="text-indigo-600 dark:text-[#b8ff57]">ship security</span>
             </h2>
             <p className="text-text-sub mt-3 max-w-2xl mx-auto">
-              DebtMap was created by a team of security engineers and developer-tool builders who experienced the chaos of AI-generated code first-hand.
+              Risk Guard AI was created by a team of security engineers and developer-tool builders who experienced the chaos of AI-generated code first-hand.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -613,9 +611,9 @@ export default function LandingPage() {
             </div>
             <div className="space-y-3">
               {[
-                { q: "What is DebtMap?", a: "DebtMap is an AI-powered security scanner built for apps generated with AI coding tools like Lovable, Bolt, Cursor, and Replit. It finds OWASP vulnerabilities, detects slopsquatted packages, and generates one-click GitHub PR fixes — all explained in plain English." },
-                { q: "Do I need to be a developer to use DebtMap?", a: "No. DebtMap was built specifically for non-developer founders who shipped their app with AI. Every vulnerability is explained in plain English with clear instructions on what it means and how to fix it." },
-                { q: "What tools does DebtMap work with?", a: "DebtMap works with any GitHub repository, regardless of how it was built. Whether you used Lovable, Bolt, Cursor, Replit, or wrote the code yourself, we scan and protect it." },
+                { q: "What is Risk Guard AI?", a: "Risk Guard AI is an AI-powered security scanner built for apps generated with AI coding tools like Lovable, Bolt, Cursor, and Replit. It finds OWASP vulnerabilities, detects slopsquatted packages, and generates one-click GitHub PR fixes — all explained in plain English." },
+                { q: "Do I need to be a developer to use Risk Guard AI?", a: "No. Risk Guard AI was built specifically for non-developer founders who shipped their app with AI. Every vulnerability is explained in plain English with clear instructions on what it means and how to fix it." },
+                { q: "What tools does Risk Guard AI work with?", a: "Risk Guard AI works with any GitHub repository, regardless of how it was built. Whether you used Lovable, Bolt, Cursor, Replit, or wrote the code yourself, we scan and protect it." },
                 { q: "Is my code stored on your servers?", a: "Your source code is scanned in real-time and is not permanently stored. Scan results — vulnerability data and health scores — are saved so you can track progress over time. Your actual code stays on GitHub." },
                 { q: "Can I cancel my subscription?", a: "Yes. There are no lock-in contracts. The Free plan is free forever, and paid plans can be cancelled at any time. You keep access to your dashboard until the billing period ends." },
               ].map((faq, idx) => {
@@ -664,8 +662,8 @@ export default function LandingPage() {
             {/* Column 1: Branding & Status */}
             <div className="space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-indigo-500/20">D</div>
-                <span className="font-bold text-base text-text-main tracking-wide">DebtMap</span>
+                <img src="/logo.png" alt="Risk Guard AI Logo" className="w-8 h-8 object-contain" />
+                <span className="font-bold text-base text-text-main tracking-wide">Risk Guard AI</span>
                 <span className="font-mono text-[8px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full uppercase tracking-widest">Beta</span>
               </div>
               <p className="text-xs text-text-sub leading-relaxed max-w-[220px]">
@@ -696,7 +694,7 @@ export default function LandingPage() {
                 <li><a href="#" className="hover:text-indigo-500 transition-colors">Documentation</a></li>
                 <li><a href="#" className="hover:text-indigo-500 transition-colors">AI Security Guide</a></li>
                 <li><a href="#" className="hover:text-indigo-500 transition-colors">OWASP Top 10</a></li>
-                <li><a href="mailto:support@deptmap.com" className="hover:text-indigo-500 transition-colors">Contact Support</a></li>
+                <li><a href="mailto:support@riskguardai.com" className="hover:text-indigo-500 transition-colors">Contact Support</a></li>
               </ul>
             </div>
 
@@ -714,7 +712,7 @@ export default function LandingPage() {
           {/* Bottom Bar */}
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
             <div className="font-mono text-[10px] tracking-wider">
-              &copy; {new Date().getFullYear()} DebtMap Inc. All rights reserved.
+              &copy; {new Date().getFullYear()} Risk Guard AI Inc. All rights reserved.
             </div>
             <div className="flex items-center gap-6">
               <a href="#" className="hover:text-text-main transition-colors">Privacy Policy</a>

@@ -95,9 +95,9 @@ export default function LoginClient() {
 
       {/* Navbar */}
       <nav className="relative z-20 flex items-center justify-between px-6 py-4 flex-shrink-0">
-        <Link href="/" className="flex items-center gap-2 group" aria-label="DebtMap home">
-          <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center font-bold text-white text-sm shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-shadow">D</div>
-          <span className="font-bold text-base tracking-wide text-text-main">DebtMap</span>
+        <Link href="/" className="flex items-center gap-2.5 group" aria-label="Risk Guard AI home">
+          <img src="/logo.png" alt="Risk Guard AI Logo" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-base tracking-wide text-text-main">Risk Guard AI</span>
           <span className="font-mono text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full uppercase tracking-widest">Beta</span>
         </Link>
         <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ export default function LoginClient() {
               <span className="font-mono text-[10px] uppercase tracking-[2px] text-indigo-600 dark:text-indigo-400 font-bold">Secure & Compliant</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight leading-tight text-text-main">
-              Welcome back to<span className="block text-indigo-600 dark:text-indigo-400 mt-1">DebtMap.</span>
+              Welcome back to<span className="block text-indigo-600 dark:text-indigo-400 mt-1">Risk Guard AI.</span>
             </h1>
             <p className="text-sm text-text-sub leading-relaxed max-w-xs">
               Your security posture dashboard is ready. Monitor scan history, check your repository health score, and export compliance maps.
@@ -154,7 +154,7 @@ export default function LoginClient() {
                   </div>
                   <div>
                     <h2 className="text-lg font-extrabold text-text-main tracking-tight">Welcome back</h2>
-                    <p className="text-[11px] text-text-muted mt-0.5">Sign in to your DebtMap dashboard</p>
+                    <p className="text-[11px] text-text-muted mt-0.5">Sign in to your Risk Guard AI dashboard</p>
                   </div>
                 </div>
 

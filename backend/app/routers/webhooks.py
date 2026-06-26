@@ -67,7 +67,7 @@ async def github_webhook(
     data = await request.json()
 
     if event == "ping":
-        return {"message": "pong — DebtMap webhook receiver online"}
+        return {"message": "pong — Risk Guard AI webhook receiver online"}
 
     if event == "push":
         return await handle_push_event(data, db)
@@ -97,7 +97,7 @@ async def handle_push_event(data: dict, db) -> dict:
     # Find connected repo in our DB
     repo_result = db.table("repos").select("id, user_id, full_name").eq("full_name", full_name).execute()
     if not repo_result.data:
-        return {"message": f"Repo '{full_name}' not connected to DebtMap"}
+        return {"message": f"Repo '{full_name}' not connected to Risk Guard AI"}
 
     queued_scans = []
     for repo in repo_result.data:

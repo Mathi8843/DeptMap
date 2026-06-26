@@ -1,5 +1,5 @@
 """
-DebtMap Backend Configuration
+Risk Guard AI Backend Configuration
 Loads all settings from .env file via pydantic-settings
 """
 import logging
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     razorpay_key_secret: str = ""
 
     # Scan Settings
-    scan_temp_dir: str = "/tmp/debtmap_scans"
+    scan_temp_dir: str = "/tmp/riskguard_scans"
     max_repo_size_mb: int = 500
 
     @property

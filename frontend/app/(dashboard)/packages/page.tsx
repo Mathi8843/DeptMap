@@ -69,7 +69,7 @@ export default function PackagesPage() {
         <div className="space-y-1.5 flex-1 min-w-0">
           <h3 className="text-sm font-bold text-text-main">What is AI Slopsquatting?</h3>
           <p className="text-sm text-text-sub leading-relaxed">
-            AI code assistants (Cursor, Lovable, Bolt) occasionally hallucinate library packages that do not exist in the public registries (npm/PyPI). Attackers monitor codebases and register these hallucinated names to execute dependency injection attacks. DebtMap scans your workspaces to ensure all references map to verified registry downloads.
+            AI code assistants (Cursor, Lovable, Bolt) occasionally hallucinate library packages that do not exist in the public registries (npm/PyPI). Attackers monitor codebases and register these hallucinated names to execute dependency injection attacks. Risk Guard AI scans your workspaces to ensure all references map to verified registry downloads.
           </p>
         </div>
       </div>

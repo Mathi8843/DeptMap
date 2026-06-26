@@ -526,7 +526,7 @@ def get_package_files(clone_url: str, access_token: str) -> dict[str, str]:
     if access_token == "mock_github_token":
         return read_package_files("", access_token)
 
-    temp_dir = tempfile.mkdtemp(prefix="debtmap_pkgs_")
+    temp_dir = tempfile.mkdtemp(prefix="riskguard_pkgs_")
     try:
         repo_dir = os.path.join(temp_dir, "repo")
         clone_repo(clone_url, access_token, repo_dir)

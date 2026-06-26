@@ -1,9 +1,9 @@
 const organization = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "DebtMap",
-  url: "https://dept-map.vercel.app",
-  logo: "https://dept-map.vercel.app/favicon.svg",
+  name: "Risk Guard AI",
+  url: "https://riskguardai.vercel.app",
+  logo: "https://riskguardai.vercel.app/favicon.svg",
   description: "AI-powered security and technical debt monitor for vibe-coded apps.",
   foundingDate: "2025",
   sameAs: [
@@ -15,15 +15,15 @@ const organization = {
 const website = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "DebtMap",
-  url: "https://dept-map.vercel.app",
+  name: "Risk Guard AI",
+  url: "https://riskguardai.vercel.app",
   description: "AI-powered security and technical debt monitor for vibe-coded apps.",
 };
 
 const softwareApp = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "DebtMap",
+  name: "Risk Guard AI",
   applicationCategory: "SecurityApplication",
   operatingSystem: "Web",
   description:
@@ -43,26 +43,26 @@ const faqPage = {
   mainEntity: [
     {
       "@type": "Question",
-      "name": "What is DebtMap?",
+      "name": "What is Risk Guard AI?",
       acceptedAnswer: {
         "@type": "Answer",
-        "text": "DebtMap is an AI-powered security scanner built for apps generated with AI coding tools like Lovable, Bolt, Cursor, and Replit. It finds OWASP vulnerabilities, detects slopsquatted packages, and generates one-click GitHub PR fixes — all explained in plain English.",
+        "text": "Risk Guard AI is an AI-powered security scanner built for apps generated with AI coding tools like Lovable, Bolt, Cursor, and Replit. It finds OWASP vulnerabilities, detects slopsquatted packages, and generates one-click GitHub PR fixes — all explained in plain English.",
       },
     },
     {
       "@type": "Question",
-      "name": "Do I need to be a developer to use DebtMap?",
+      "name": "Do I need to be a developer to use Risk Guard AI?",
       acceptedAnswer: {
         "@type": "Answer",
-        "text": "No. DebtMap was built specifically for non-developer founders who shipped their app with AI. Every vulnerability is explained in plain English with clear instructions on what it means and how to fix it.",
+        "text": "No. Risk Guard AI was built specifically for non-developer founders who shipped their app with AI. Every vulnerability is explained in plain English with clear instructions on what it means and how to fix it.",
       },
     },
     {
       "@type": "Question",
-      "name": "What tools does DebtMap work with?",
+      "name": "What tools does Risk Guard AI work with?",
       acceptedAnswer: {
         "@type": "Answer",
-        "text": "DebtMap works with any GitHub repository, regardless of how it was built. Whether you used Lovable, Bolt, Cursor, Replit, or wrote the code yourself, we scan and protect it.",
+        "text": "Risk Guard AI works with any GitHub repository, regardless of how it was built. Whether you used Lovable, Bolt, Cursor, Replit, or wrote the code yourself, we scan and protect it.",
       },
     },
     {

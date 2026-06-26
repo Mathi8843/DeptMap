@@ -22,7 +22,7 @@ import { apiFetch, getSavedUser } from "@/lib/api";
 import GitHubPermissionsModal from "@/components/layout/GitHubPermissionsModal";
 
 export default function OnboardingPage() {
-  useEffect(() => { document.title = "Onboarding — DebtMap"; }, []);
+  useEffect(() => { document.title = "Onboarding — Risk Guard AI"; }, []);
   const router = useRouter();
   const { user } = useAuth();
   const { repos, issues, connectRepo } = useData();
@@ -208,8 +208,8 @@ export default function OnboardingPage() {
       {/* Top bar */}
       <div className="border-b border-border-subtle px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center font-bold text-white text-sm">D</div>
-          <span className="font-bold text-base text-text-main">DebtMap</span>
+          <img src="/logo.png" alt="Risk Guard AI Logo" className="w-7 h-7 object-contain" />
+          <span className="font-bold text-base text-text-main">Risk Guard AI</span>
         </Link>
         <div className="flex items-center gap-4">
           <button

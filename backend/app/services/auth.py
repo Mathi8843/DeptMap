@@ -74,7 +74,7 @@ def get_current_user_id(
     FastAPI dependency to secure endpoints.
     Extracts the Bearer token from the request and resolves it to a user_id.
     """
-    token = credentials.credentials if credentials else request.cookies.get("debtmap_session")
+    token = credentials.credentials if credentials else request.cookies.get("riskguard_session")
 
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated: Bearer token missing")

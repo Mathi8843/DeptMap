@@ -129,7 +129,7 @@ export default function SettingsPage() {
         key: orderData.key,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: `DebtMap ${plan.name}`,
+        name: `Risk Guard AI ${plan.name}`,
         description: `Upgrade workspace to ${plan.name} tier`,
         order_id: orderData.order_id,
         handler: async function (response: any) {
@@ -514,7 +514,7 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="space-y-1">
                 <div className="text-[10px] text-text-muted uppercase font-mono">Plan Selected</div>
-                <div className="text-xs font-bold text-text-main">DebtMap {activePlanDetails.name} Plan</div>
+                <div className="text-xs font-bold text-text-main">Risk Guard AI {activePlanDetails.name} Plan</div>
                 <div className="text-[11px] text-indigo-500 font-mono">
                   {activePlanDetails.price} {activePlanDetails.per}
                 </div>

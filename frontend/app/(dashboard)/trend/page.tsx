@@ -73,7 +73,7 @@ export default function TrendPage() {
         <div className="space-y-1.5 flex-1 min-w-0">
           <h4 className="text-xs font-bold text-text-main font-mono uppercase tracking-[1px]">Debt Deficit Remediation Plan</h4>
           <p className="text-xs text-text-sub leading-relaxed">
-            Close 3+ vulnerabilities weekly to clear debt accrual before the code health index declines below 50. Use DebtMap's PR automated pipeline to fix vulnerabilities quickly.
+            Close 3+ vulnerabilities weekly to clear debt accrual before the code health index declines below 50. Use Risk Guard AI's PR automated pipeline to fix vulnerabilities quickly.
           </p>
         </div>
       </div>

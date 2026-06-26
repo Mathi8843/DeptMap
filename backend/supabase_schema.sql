@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- DebtMap — Supabase Database Schema
+-- Risk Guard AI — Supabase Database Schema
 -- Run this in Supabase → SQL Editor → New query → Run
 -- ═══════════════════════════════════════════════════════════════
 
@@ -200,7 +200,7 @@ CREATE POLICY "scans_own_data" ON public.scans
 --
 -- -- Grant admin to existing admin emails:
 -- UPDATE public.users SET is_admin = TRUE
--- WHERE email IN ('mathi@debtmap.io', 'admin@debtmap.io');
+-- WHERE email IN ('mathi@riskguardai.com', 'admin@riskguardai.com');
 
 -- ═══════════════════════════════════════════════════════════════
 -- AI Confidence and What Changed Migration

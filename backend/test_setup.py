@@ -76,7 +76,7 @@ def test_semgrep_wsl():
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("  DebtMap Backend - Setup Verification")
+    print("  Risk Guard AI Backend - Setup Verification")
     print("=" * 50)
     r1 = test_supabase()
     r2 = test_groq_fallback()
