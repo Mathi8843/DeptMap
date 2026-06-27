@@ -1,13 +1,15 @@
 "use client";
 import React from "react";
 import dynamic from "next/dynamic";
-import { TrendingUp as TrendingUpIcon, ShieldCheck } from "lucide-react";
+import { TrendingUp as TrendingUpIcon, ShieldCheck, Lock } from "lucide-react";
 import { useData } from "@/lib/contexts/DataContext";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 const TrendCharts = dynamic(() => import("./TrendCharts"), { ssr: false });
 
 export default function TrendPage() {
-  const { overallScore, issues, trendData } = useData();
+  const { user } = useAuth();
+  const { overallScore, issues, trendData, upgradePlan } = useData();
 
   const currentScore = overallScore;
   const hasHistory = trendData && trendData.length > 0;
@@ -23,6 +25,53 @@ export default function TrendPage() {
     { label: "Active Exposures", value: openIssues, color: "text-amber-500 dark:text-amber-400", delta: "Unresolved alerts" },
     { label: "Fixed via PRs", value: fixedIssues, color: "text-emerald-500 dark:text-emerald-400", delta: "Total resolved issues" },
   ];
+
+  if (user && user.plan === "free") {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in pb-20">
+        {/* Header */}
+        <div className="space-y-1">
+          <h1 className="font-display font-extrabold text-3xl text-text-main tracking-wide">
+            Code Health Trend
+          </h1>
+          <p className="text-sm text-text-sub">
+            Historical analysis of security health and technical debt accumulation
+          </p>
+        </div>
+
+        {/* Lock screen panel */}
+        <div className="glass-panel rounded-3xl p-8 border border-indigo-500/25 bg-bg-panel/20 relative overflow-hidden flex flex-col items-center justify-center min-h-[460px] text-center space-y-6">
+          {/* Blurred background teaser */}
+          <div className="absolute inset-0 opacity-[0.04] pointer-events-none select-none filter blur-sm scale-105 flex items-center justify-center">
+             <svg width="100%" height="100%" viewBox="0 0 800 300" className="stroke-white stroke-2 fill-none">
+               <path d="M 0 250 Q 150 150 300 200 T 600 80 T 800 120" />
+               <path d="M 0 300 L 0 250 Q 150 150 300 200 T 600 80 T 800 120 L 800 300 Z" fill="rgba(255,255,255,0.1)" />
+             </svg>
+          </div>
+
+          <div className="relative z-10 space-y-4 max-w-md">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 mx-auto shadow-lg shadow-indigo-500/5 glow-indigo">
+              <Lock size={28} />
+            </div>
+            
+            <h2 className="font-display font-extrabold text-xl text-text-main tracking-tight">
+              Historical Code Health Trends
+            </h2>
+            <p className="text-xs text-text-sub leading-relaxed max-w-sm mx-auto">
+              Track your security score timeline and vulnerability lifecycle over each deploy. Upgrade to a premium plan to unlock continuous monitoring and compliance health auditing.
+            </p>
+          </div>
+
+          <button
+            onClick={() => upgradePlan("pro")}
+            className="relative z-10 font-mono text-[10px] font-bold uppercase tracking-[1.5px] px-6 py-3 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-lime-400/10 hover:shadow-lime-400/25"
+          >
+            Upgrade to Pro &amp; Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasHistory) {
     return (

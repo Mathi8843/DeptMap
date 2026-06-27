@@ -27,16 +27,18 @@ const C = {
   text3: "var(--text-muted)",
   rose: "#f43f5e",
   emerald: "#10b981",
+  indigo: "#6366f1",
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-bg-panel/95 border border-border-glow rounded-xl p-3.5 shadow-2xl backdrop-blur-md font-mono text-[11px] space-y-1 text-text-sub">
+      <div className="bg-bg-panel/95 border border-border-glow rounded-xl p-3.5 shadow-2xl backdrop-blur-md font-mono text-[11px] space-y-1.5 text-text-sub">
         <div className="text-text-muted font-bold mb-1">{label}</div>
         {payload.map((p: any) => (
-          <div key={p.name} style={{ color: p.color }}>
-            {p.name}: {p.value}
+          <div key={p.name} style={{ color: p.color }} className="flex items-center justify-between gap-4">
+            <span className="text-text-sub">{p.name}:</span>
+            <span className="font-bold">{p.value}</span>
           </div>
         ))}
       </div>
@@ -47,17 +49,22 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const CustomLegend = () => {
   const items = [
-    { name: "Introduced", fill: "url(#hatchDiagonal)", color: C.rose },
-    { name: "Remediated", fill: "url(#hatchHorizontal)", color: C.emerald },
+    { name: "Introduced", fill: "rgba(244,63,94,0.12)", stroke: C.rose },
+    { name: "Remediated", fill: "rgba(16,185,129,0.12)", stroke: C.emerald },
   ];
   return (
-    <div className="flex justify-center gap-6 pt-3" style={{ fontFamily: "JetBrains Mono" }}>
+    <div className="flex justify-center gap-6 pt-4" style={{ fontFamily: "JetBrains Mono" }}>
       {items.map((item) => (
         <div key={item.name} className="flex items-center gap-2">
-          <svg width="14" height="14">
-            <rect width="14" height="14" rx={2} fill={item.fill} />
-          </svg>
-          <span style={{ color: "var(--text-sub)", fontSize: 10 }}>{item.name}</span>
+          <div 
+            className="w-3 h-3 rounded border"
+            style={{ 
+              backgroundColor: item.fill, 
+              borderColor: item.stroke,
+              borderWidth: "1.5px"
+            }}
+          />
+          <span className="text-[10px] text-text-sub uppercase tracking-[0.5px]">{item.name}</span>
         </div>
       ))}
     </div>
@@ -85,8 +92,8 @@ export default function TrendCharts({ trendData, drop }: Props) {
             <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="glowScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={C.rose} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={C.rose} stopOpacity={0} />
+                  <stop offset="5%" stopColor={C.indigo} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={C.indigo} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <Patterns />
@@ -99,6 +106,7 @@ export default function TrendCharts({ trendData, drop }: Props) {
               />
               <YAxis
                 domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
                 tick={{ fill: C.text3, fontSize: 11, fontFamily: "JetBrains Mono" }}
                 axisLine={false}
                 tickLine={false}
@@ -107,19 +115,12 @@ export default function TrendCharts({ trendData, drop }: Props) {
               <Area
                 type="monotone"
                 dataKey="score"
-                stroke={C.rose}
+                stroke={C.indigo}
                 strokeWidth={2.5}
                 fill="url(#glowScore)"
-                dot={{ fill: C.rose, r: 4, stroke: "transparent", strokeWidth: 0 }}
+                dot={{ fill: C.indigo, r: 4, stroke: "transparent", strokeWidth: 0 }}
                 activeDot={{ r: 6 }}
                 name="Health Score"
-              />
-              <Area
-                type="monotone"
-                dataKey="score"
-                stroke="none"
-                fill="url(#dotGrid)"
-                name=""
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -133,10 +134,7 @@ export default function TrendCharts({ trendData, drop }: Props) {
         <h3 className="font-display font-bold text-sm text-text-main">Vulnerability Lifecycle</h3>
         <div className="h-56 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barGap={3}>
-              <defs>
-                <Patterns />
-              </defs>
+            <BarChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
               <XAxis
                 dataKey="date"
@@ -157,14 +155,18 @@ export default function TrendCharts({ trendData, drop }: Props) {
               <Bar
                 dataKey="introduced"
                 name="Introduced"
-                fill="url(#hatchDiagonal)"
-                radius={[3, 3, 0, 0]}
+                fill="rgba(244,63,94,0.12)"
+                stroke={C.rose}
+                strokeWidth={1.5}
+                radius={[4, 4, 0, 0]}
               />
               <Bar
                 dataKey="fixed"
                 name="Remediated"
-                fill="url(#hatchHorizontal)"
-                radius={[3, 3, 0, 0]}
+                fill="rgba(16,185,129,0.12)"
+                stroke={C.emerald}
+                strokeWidth={1.5}
+                radius={[4, 4, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
