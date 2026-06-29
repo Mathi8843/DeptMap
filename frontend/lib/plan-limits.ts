@@ -2,7 +2,7 @@ export const PLAN_LIMITS = {
   free: {
     max_repos: 1,
     scan_frequency: "weekly",
-    ai_explanations: false,
+    ai_explanations: true,
     slopsquatting: false,
     one_click_pr: false,
     soc2_report: false,

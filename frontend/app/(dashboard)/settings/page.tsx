@@ -19,7 +19,7 @@ const plans = [
       { label: "1 repository limit", included: true },
       { label: "Weekly automated scan", included: true },
       { label: "Health score indexing", included: true },
-      { label: "AI fix suggestions", included: false },
+      { label: "AI fix suggestions", included: true },
       { label: "Slopsquatting detection", included: false },
       { label: "One-click GitHub PR", included: false },
       { label: "SOC 2 readiness mapping", included: false },

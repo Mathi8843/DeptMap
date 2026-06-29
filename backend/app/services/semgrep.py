@@ -181,12 +181,13 @@ def run_semgrep(target_dir: str) -> dict:
         output_path = f.name
 
     try:
-        result = subprocess.run(
-            cmd,
-            stdout=open(output_path, "w"),
-            stderr=subprocess.PIPE,
-            timeout=180,
-        )
+        with open(output_path, "w") as out_f:
+            result = subprocess.run(
+                cmd,
+                stdout=out_f,
+                stderr=subprocess.PIPE,
+                timeout=180,
+            )
         if result.returncode == 2:
             logger.warning('Semgrep hit --max-memory limit, returning partial results')
             try:

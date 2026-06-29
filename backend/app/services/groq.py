@@ -300,7 +300,7 @@ async def explain_finding(finding: dict, plan: str = "pro") -> dict:
             "what_changed": finding.get("what_changed", "Pre-analyzed security fix."),
         }
 
-    api_key = get_client() if plan != "free" else None
+    api_key = get_client()
 
     if api_key:
         # Use Groq AI
@@ -394,8 +394,8 @@ async def explain_findings_batch(findings: list[dict], max_concurrent: int = 3, 
     import asyncio
 
     enriched = []
-    has_groq = get_client() is not None and plan != "free"
-    mode = "Groq AI" if has_groq else "rule-based fallback (no Groq key or free plan)"
+    has_groq = get_client() is not None
+    mode = "Groq AI" if has_groq else "rule-based fallback (no Groq key)"
     logger.info(f"Explaining {len(findings)} findings using {mode}")
 
     for i in range(0, len(findings), max_concurrent):
