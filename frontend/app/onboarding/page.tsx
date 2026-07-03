@@ -208,7 +208,6 @@ export default function OnboardingPage() {
       {/* Top bar */}
       <div className="border-b border-border-subtle px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="Risk Guard AI Logo" className="w-7 h-7 object-contain" />
           <span className="font-bold text-base text-text-main">Risk Guard AI</span>
         </Link>
         <div className="flex items-center gap-4">

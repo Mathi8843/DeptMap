@@ -60,7 +60,6 @@ export default function Sidebar() {
       <div className="p-6 border-b border-border-subtle flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Risk Guard AI Logo" className="w-7 h-7 object-contain" />
             <span className="font-display font-extrabold text-base text-text-main tracking-wide">
               Risk Guard AI
             </span>

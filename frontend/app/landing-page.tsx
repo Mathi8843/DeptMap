@@ -203,7 +203,6 @@ export default function LandingPage() {
       {/* ─── Navbar ─────────────────────────────────────────── */}
       <nav className="border-b border-border-subtle px-4 sm:px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="Risk Guard AI Logo" className="w-7 h-7 object-contain" />
           <span className="font-bold text-base tracking-wide text-text-main">Risk Guard AI</span>
           <span className="font-mono text-[9px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full uppercase tracking-widest">
             Beta
@@ -662,7 +661,6 @@ export default function LandingPage() {
             {/* Column 1: Branding & Status */}
             <div className="space-y-4">
               <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="Risk Guard AI Logo" className="w-8 h-8 object-contain" />
                 <span className="font-bold text-base text-text-main tracking-wide">Risk Guard AI</span>
                 <span className="font-mono text-[8px] px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full uppercase tracking-widest">Beta</span>
               </div>
