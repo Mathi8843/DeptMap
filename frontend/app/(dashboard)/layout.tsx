@@ -30,30 +30,30 @@ export default function DashboardLayout({
   // Set document title and canonical per page
   useEffect(() => {
     const titles: Record<string, string> = {
-      "/dashboard": "Dashboard — Risk Guard AI",
-      "/issues": "Issues — Risk Guard AI",
-      "/repos": "Repositories — Risk Guard AI",
-      "/packages": "Package Audit — Risk Guard AI",
-      "/soc2": "SOC 2 Readiness — Risk Guard AI",
-      "/settings": "Settings — Risk Guard AI",
-      "/admin": "Admin — Risk Guard AI",
-      "/trend": "Health Trend — Risk Guard AI",
+      "/dashboard": "Dashboard — DebtMap",
+      "/issues": "Issues — DebtMap",
+      "/repos": "Repositories — DebtMap",
+      "/packages": "Package Audit — DebtMap",
+      "/soc2": "SOC 2 Readiness — DebtMap",
+      "/settings": "Settings — DebtMap",
+      "/admin": "Admin — DebtMap",
+      "/trend": "Health Trend — DebtMap",
     };
     const canonicalMap: Record<string, string> = {
-      "/dashboard": "https://riskguardai.com/dashboard",
-      "/issues": "https://riskguardai.com/issues",
-      "/repos": "https://riskguardai.com/repos",
-      "/packages": "https://riskguardai.com/packages",
-      "/soc2": "https://riskguardai.com/soc2",
-      "/settings": "https://riskguardai.com/settings",
-      "/admin": "https://riskguardai.com/admin",
-      "/trend": "https://riskguardai.com/trend",
+      "/dashboard": "https://debtmap.com/dashboard",
+      "/issues": "https://debtmap.com/issues",
+      "/repos": "https://debtmap.com/repos",
+      "/packages": "https://debtmap.com/packages",
+      "/soc2": "https://debtmap.com/soc2",
+      "/settings": "https://debtmap.com/settings",
+      "/admin": "https://debtmap.com/admin",
+      "/trend": "https://debtmap.com/trend",
     };
 
-    const title = titles[pathname] ?? (pathname.startsWith("/issues/") ? "Issue Details — Risk Guard AI" : "Risk Guard AI");
+    const title = titles[pathname] ?? (pathname.startsWith("/issues/") ? "Issue Details — DebtMap" : "DebtMap");
     document.title = title;
 
-    const canonicalUrl = canonicalMap[pathname] ?? (pathname.startsWith("/issues/") ? `https://riskguardai.com${pathname}` : "https://riskguardai.com");
+    const canonicalUrl = canonicalMap[pathname] ?? (pathname.startsWith("/issues/") ? `https://debtmap.com${pathname}` : "https://debtmap.com");
     let link = document.querySelector("link[rel='canonical']") as HTMLLinkElement | null;
     if (!link) {
       link = document.createElement("link");

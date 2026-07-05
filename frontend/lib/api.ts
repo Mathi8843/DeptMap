@@ -8,12 +8,21 @@ export interface SavedUser {
   email: string;
   avatar_url: string | null;
   plan: "free" | "pro" | "team" | "enterprise";
+  /** Held in memory only — never written to localStorage. */
   session_token?: string;
   has_github_token?: boolean;
   is_admin?: boolean;
 }
 
-export function getSavedUser(): SavedUser | null {
+/**
+ * Profile data that is safe to persist in localStorage.
+ * session_token is intentionally excluded — it stays in memory only.
+ * The backend sets an httpOnly cookie (debtmap_session) for persistence
+ * across page refreshes. Storing the JWT in localStorage exposes it to XSS.
+ */
+export type PersistedProfile = Omit<SavedUser, "session_token">;
+
+export function getSavedUser(): PersistedProfile | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("debtmap_user");
   if (!userStr) return null;
@@ -24,9 +33,12 @@ export function getSavedUser(): SavedUser | null {
   }
 }
 
+/** Persist only non-sensitive profile fields — never the session token. */
 export function saveUser(user: SavedUser) {
   if (typeof window !== "undefined") {
-    localStorage.setItem("debtmap_user", JSON.stringify(user));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { session_token: _drop, ...profile } = user;
+    localStorage.setItem("debtmap_user", JSON.stringify(profile));
   }
 }
 
@@ -42,8 +54,10 @@ export function logoutUser() {
 const API_TIMEOUT = 120_000; // 120 seconds (2 minutes) for scans, PRs, and LLM processing
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const user = getSavedUser();
-  const sessionToken = user?.session_token;
+  // session_token is no longer in localStorage — the httpOnly cookie
+  // (debtmap_session) is sent automatically via credentials:"include".
+  // For backward-compat with dev flows that pass a JWT via Authorization,
+  // callers may supply it via options.headers directly.
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
   
@@ -60,19 +74,6 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     "Accept": "application/json",
     ...(options.headers as Record<string, string>),
   };
-
-  // Only send the Authorization header when we have a real JWT.
-  // "cookie-session" means the session lives in an httpOnly cookie that is
-  // transmitted automatically via credentials:"include" — do NOT echo it as
-  // a Bearer token because the backend will reject it as an invalid JWT.
-  const isRealJwt =
-    sessionToken &&
-    sessionToken !== "cookie-session" &&
-    sessionToken !== "mock-session-token";
-
-  if (isRealJwt) {
-    headers["Authorization"] = `Bearer ${sessionToken}`;
-  }
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);

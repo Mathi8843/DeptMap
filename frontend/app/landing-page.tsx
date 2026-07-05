@@ -692,7 +692,7 @@ export default function LandingPage() {
                 <li><a href="#" className="hover:text-indigo-500 transition-colors">Documentation</a></li>
                 <li><a href="#" className="hover:text-indigo-500 transition-colors">AI Security Guide</a></li>
                 <li><a href="#" className="hover:text-indigo-500 transition-colors">OWASP Top 10</a></li>
-                <li><a href="mailto:support@riskguardai.com" className="hover:text-indigo-500 transition-colors">Contact Support</a></li>
+                <li><a href="mailto:support@debtmap.com" className="hover:text-indigo-500 transition-colors">Contact Support</a></li>
               </ul>
             </div>
 

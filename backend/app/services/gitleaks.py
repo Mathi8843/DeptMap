@@ -28,6 +28,17 @@ RULES = {
     "generic-api-key": r"\b(?:api[_-]?key|client[_-]?secret|private[_-]?key)\b\s*[:=]\s*['\"]([a-zA-Z0-9-_=]{16,})['\"]",
 }
 
+# Severity triage: rules with immediate financial or account-takeover impact stay
+# 'critical'; lower-confidence generic patterns are downgraded to 'high'.
+SEVERITY_BY_RULE: dict[str, str] = {
+    "openai-api-key":   "critical",  # Direct billing impact
+    "aws-access-key-id": "critical", # Full cloud-account access
+    "stripe-api-key":   "critical",  # Live payment credentials
+    "github-pat":       "critical",  # Full repo/org access
+    "slack-webhook-url": "high",     # Can send messages; no data exfil
+    "generic-api-key":  "high",      # Broad pattern — higher false-positive rate
+}
+
 
 def _get_gitleaks_command(target_dir: str, report_path: str) -> list[str]:
     """
@@ -274,9 +285,18 @@ def scan_dir(repo_dir: str, full_name: str, access_token: str = None) -> list[di
             except Exception as e:
                 logger.warning(f"Could not read full file context: {e}")
 
+        # Determine severity based on rule type rather than hardcoding all as 'critical'.
+        # Gitleaks native binary uses rule IDs from its config; map them via our table.
+        raw_rule_id = item.get("RuleID", "secret").lower()
+        severity = "critical"  # Safe default — override below if rule is known
+        for rule_key, sev in SEVERITY_BY_RULE.items():
+            if rule_key in raw_rule_id:
+                severity = sev
+                break
+
         findings.append({
             "semgrep_rule_id": rule_id,
-            "severity": "critical",
+            "severity": severity,
             "file_path": rel_path,
             "line_start": start_line,
             "line_end": end_line,
@@ -291,6 +311,3 @@ def scan_dir(repo_dir: str, full_name: str, access_token: str = None) -> list[di
         })
 
     return findings
-
-
-

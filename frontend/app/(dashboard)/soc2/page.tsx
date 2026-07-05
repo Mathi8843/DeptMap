@@ -42,7 +42,7 @@ export default function Soc2Page() {
   const partialCount = soc2Report?.partial_count ?? 0;
 
   const handleShare = () => {
-    navigator.clipboard.writeText("https://app.riskguardai.com/shared/audit/usr_01_soc2");
+    navigator.clipboard.writeText("https://app.debtmap.com/shared/audit/usr_01_soc2");
     showToast("Shareable audit report link copied to clipboard", "success");
   };
 

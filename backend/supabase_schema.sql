@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- Risk Guard AI — Supabase Database Schema
+-- DebtMap — Supabase Database Schema
 -- Run this in Supabase → SQL Editor → New query → Run
 -- ═══════════════════════════════════════════════════════════════
 
@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.scans (
 );
 
 CREATE INDEX IF NOT EXISTS idx_scans_repo_id ON public.scans(repo_id);
+CREATE INDEX IF NOT EXISTS idx_scans_status ON public.scans(status);
 
 -- ── Security Issues ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.issues (
@@ -105,6 +106,7 @@ CREATE TABLE IF NOT EXISTS public.packages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_packages_repo_id ON public.packages(repo_id);
+CREATE INDEX IF NOT EXISTS idx_packages_scan_id ON public.packages(scan_id);
 
 -- ── Health Score History ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.health_history (

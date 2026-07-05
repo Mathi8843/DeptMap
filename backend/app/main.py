@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.database import get_db
-from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import get_settings
@@ -63,7 +63,7 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Runs on startup and shutdown."""
     import os
-    logger.info(f"🚀 Risk Guard AI API starting (env={settings.app_env})")
+    logger.info(f"🚀 DebtMap API starting (env={settings.app_env})")
 
     # Create scan temp directory if it doesn't exist
     os.makedirs(settings.scan_temp_dir, exist_ok=True)
@@ -71,12 +71,12 @@ async def lifespan(app: FastAPI):
 
     yield  # App runs here
 
-    logger.info("🛑 Risk Guard AI API shutting down")
+    logger.info("🛑 DebtMap API shutting down")
 
 
 # ─── App ─────────────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="Risk Guard AI API",
+    title="DebtMap API",
     description="AI-powered code security scanner for non-technical founders",
     version="1.0.0",
     docs_url=None if settings.is_production else "/docs",
@@ -98,10 +98,10 @@ _allowed_origins: list[str] = list({
     settings.frontend_url.rstrip("/"),          # FRONTEND_URL env var on Render
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://riskguardai.vercel.app",  # production Vercel deployment
-    "https://riskguardai.com",
-    "https://www.riskguardai.com",
-    "https://app.riskguardai.com",
+    "https://debtmap.vercel.app",  # production Vercel deployment
+    "https://debtmap.com",
+    "https://www.debtmap.com",
+    "https://app.debtmap.com",
     *_extra_origins,
 })
 
@@ -116,7 +116,18 @@ app.add_middleware(
 
 # ─── Rate Limiting ──────────────────────────────────────────────────────────
 app.state.limiter = limiter
-app.add_exception_handler(429, _rate_limit_exceeded_handler)
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    """Stable public 429 handler — avoids importing slowapi's private symbol."""
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Rate limit exceeded: {exc.detail}"},
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # ─── Routers ──────────────────────────────────────────────────────────────────
@@ -136,7 +147,7 @@ app.include_router(analyze.router)
 @app.get("/")
 async def root():
     return {
-        "app": "Risk Guard AI API",
+        "app": "DebtMap API",
         "version": "1.0.0",
         "status": "online",
         "docs": None if settings.is_production else "/docs",

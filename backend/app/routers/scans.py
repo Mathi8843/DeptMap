@@ -61,19 +61,36 @@ async def trigger_scan(
     plan = user_data.get("plan", "free")
 
     if plan == "free":
-        repos_count_res = db.table("repos").select("id", count="exact").eq("user_id", current_user_id).execute()
-        repos_count = repos_count_res.count or 0
-        if repos_count > 1:
+        # Count completed scans on this specific repo (not total repos owned).
+        # Free plan is limited to 1 completed scan per repository.
+        completed_scans_res = (
+            db.table("scans")
+            .select("id", count="exact")
+            .eq("repo_id", repo_id)
+            .eq("status", "completed")
+            .execute()
+        )
+        completed_scans = completed_scans_res.count or 0
+        if completed_scans >= 1:
             raise HTTPException(
                 status_code=403,
-                detail="Free plan is limited to 1 repository scan. Please upgrade your plan."
+                detail=(
+                    "Free plan allows 1 scan per repository. "
+                    "Please upgrade to Pro for unlimited re-scans."
+                ),
             )
 
     encrypted_token = user_data.get("github_access_token")
     if not encrypted_token:
         raise HTTPException(status_code=400, detail="GitHub access token missing — re-authenticate")
 
-    access_token = decrypt_token(encrypted_token)
+    try:
+        access_token = decrypt_token(encrypted_token)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"GitHub authentication error: {exc}",
+        )
 
     # Fetch latest repo size from GitHub to prevent OOM on large repositories
     size_kb = 0
@@ -171,6 +188,15 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         """Inner pipeline body — wrapped with asyncio.wait_for for overall timeout."""
         db.table("scans").update({"status": "running", "progress": 5}).eq("id", scan_id).execute()
 
+        # Fetch user plan early — needed for feature gating throughout the pipeline
+        plan = "free"
+        try:
+            user_res = db.table("users").select("plan").eq("id", repo["user_id"]).execute()
+            if user_res.data:
+                plan = user_res.data[0].get("plan", "free")
+        except Exception as e:
+            logger.warning(f"Failed to fetch user plan in background pipeline: {e}")
+
         # ── Step 1: Clone + Semgrep ─────────────────────────────────────────
         log(f"[SYSTEM] Cloning repository: {repo['full_name']}...", 5)
         clone_url = f"https://github.com/{repo['full_name']}.git"
@@ -186,6 +212,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
         # We wrap the remaining directory-dependent operations in a try-finally
         # to ensure the directory is cleaned up under any circumstances.
         package_results = []
+        package_issues: list[dict] = []  # Initialised here so scope is guaranteed outside inner try
         try:
             # ── Step 1.5: Secret Detection (Gitleaks) ───────────────────────────
             log("[GITLEAKS] Running secret detection...", 40)
@@ -226,29 +253,26 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
                 log(f"[REGISTRY] Dependency audit failed (non-fatal): {e}", 48)
 
             # ── Step 1.9: Independent AI Review (Groq Logic Flaws) ─────────────
-            log("[AI REVIEW] Running independent AI vulnerability review on important files...", 48)
-            try:
-                from app.services.ai_review import run_ai_review
-                ai_findings = await run_ai_review(repo_dir=repo_dir, limit=20)
-                findings.extend(ai_findings)
-                log(f"[AI REVIEW] AI review complete. Found {len(ai_findings)} logic flaws/vulnerabilities.", 52)
-            except Exception as e:
-                logger.warning("AI review failed", exc_info=True)
-                log(f"[AI REVIEW] AI review failed (non-fatal): {e}", 52)
+            # AI Review is a Pro/Team feature — it calls Groq on up to 20 files
+            # and is rate-limited to paid plans to control API costs.
+            if plan in ("pro", "team"):
+                log("[AI REVIEW] Running independent AI vulnerability review on important files...", 48)
+                try:
+                    from app.services.ai_review import run_ai_review
+                    ai_findings = await run_ai_review(repo_dir=repo_dir, limit=20)
+                    findings.extend(ai_findings)
+                    log(f"[AI REVIEW] AI review complete. Found {len(ai_findings)} logic flaws/vulnerabilities.", 52)
+                except Exception as e:
+                    logger.warning("AI review failed", exc_info=True)
+                    log(f"[AI REVIEW] AI review failed (non-fatal): {e}", 52)
+            else:
+                log("[AI REVIEW] Skipped — upgrade to Pro to enable AI-powered logic flaw detection.", 52)
+
 
         finally:
             if repo_dir:
                 temp_dir_to_clean = os.path.dirname(repo_dir)
                 shutil.rmtree(temp_dir_to_clean, ignore_errors=True)
-
-        # Fetch user plan to enforce limits in background pipeline
-        plan = "free"
-        try:
-            user_res = db.table("users").select("plan").eq("id", repo["user_id"]).execute()
-            if user_res.data:
-                plan = user_res.data[0].get("plan", "free")
-        except Exception as e:
-            logger.warning(f"Failed to fetch user plan in background pipeline: {e}")
 
         # ── Step 2: Groq enrichment ─────────────────────────────────────────
         if findings:
@@ -419,32 +443,7 @@ async def run_scan_pipeline(scan_id: str, repo: dict, access_token: str, db):
             "last_scanned_at": now,
         }).eq("id", repo["id"]).execute()
 
-        # Record health history
-        try:
-            history_check = db.table("health_history").select("id").eq("repo_id", repo["id"]).execute()
-            if not history_check.data:
-                from datetime import timedelta
-                past_points = [
-                    {"days_ago": 12, "score": 96, "introduced": 1, "fixed": 0},
-                    {"days_ago": 8, "score": 88, "introduced": 3, "fixed": 1},
-                    {"days_ago": 5, "score": 82, "introduced": 2, "fixed": 1},
-                    {"days_ago": 2, "score": 76, "introduced": 4, "fixed": 2},
-                ]
-                dt_now = datetime.fromisoformat(now.replace("Z", "+00:00"))
-                mock_rows = []
-                for pt in past_points:
-                    pt_time = (dt_now - timedelta(days=pt["days_ago"])).isoformat()
-                    mock_rows.append({
-                        "id": str(uuid.uuid4()),
-                        "repo_id": repo["id"],
-                        "score": pt["score"],
-                        "introduced_count": pt["introduced"],
-                        "fixed_count": pt["fixed"],
-                        "recorded_at": pt_time,
-                    })
-                db.table("health_history").insert(mock_rows).execute()
-        except Exception as eh:
-            logger.warning(f"Failed to populate mock health history: {eh}")
+        # Record health history — real data only, no synthetic seed points.
 
         db.table("health_history").insert({
             "id": str(uuid.uuid4()),

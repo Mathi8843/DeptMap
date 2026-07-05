@@ -164,7 +164,7 @@ async def github_callback(
         if settings.is_production:
             response = RedirectResponse(url=f"{settings.frontend_url}/auth/callback?auth=success")
             response.set_cookie(
-                key="riskguard_session",
+                key="debtmap_session",
                 value=session_token,
                 httponly=True,
                 secure=True,
@@ -277,7 +277,7 @@ async def email_signup(request: Request, payload: EmailSignUpRequest, response: 
         
         session_token = create_session_token(user_id)
         response.set_cookie(
-            key="riskguard_session",
+            key="debtmap_session",
             value=session_token,
             httponly=True,
             secure=settings.is_production,
@@ -340,7 +340,7 @@ async def email_signin(request: Request, payload: EmailAuthRequest, response: Re
             
         session_token = create_session_token(profile["id"])
         response.set_cookie(
-            key="riskguard_session",
+            key="debtmap_session",
             value=session_token,
             httponly=True,
             secure=settings.is_production,
@@ -501,7 +501,7 @@ async def verify_razorpay_payment(
 async def logout(response: Response):
     """Log out current user by deleting the session cookie."""
     response.delete_cookie(
-        key="riskguard_session",
+        key="debtmap_session",
         secure=settings.is_production,
         samesite="none" if settings.is_production else "lax",
     )

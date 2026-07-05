@@ -33,18 +33,30 @@ async def connect_repo(
     Connect a GitHub repository to Risk Guard AI.
     Fetches repo metadata from GitHub API and stores in our DB.
     """
-    # Fetch user's GitHub token
-    user_res = db.table("users").select("github_access_token").eq("id", current_user_id).execute()
+    # Fetch user's GitHub token and subscription plan
+    user_res = db.table("users").select("github_access_token, plan").eq("id", current_user_id).execute()
     if not user_res.data or not user_res.data[0].get("github_access_token"):
         raise HTTPException(status_code=400, detail="GitHub token missing — re-authenticate")
 
-    encrypted_token = user_res.data[0]["github_access_token"]
+    user_data = user_res.data[0]
+    encrypted_token = user_data["github_access_token"]
+    plan = user_data.get("plan", "free")
     access_token = decrypt_token(encrypted_token)
 
     # Check if already connected
     existing = db.table("repos").select("id").eq("user_id", current_user_id).eq("full_name", github_repo_full_name).execute()
     if existing.data:
         raise HTTPException(status_code=409, detail="Repository already connected")
+
+    # Enforce Free plan limit (max 1 repository connection)
+    if plan == "free":
+        repos_count_res = db.table("repos").select("id", count="exact").eq("user_id", current_user_id).execute()
+        repos_count = repos_count_res.count or 0
+        if repos_count >= 1:
+            raise HTTPException(
+                status_code=403,
+                detail="Free plan is limited to 1 repository. Please delete your existing repository or upgrade to Pro."
+            )
 
     # Fetch metadata from GitHub
     try:

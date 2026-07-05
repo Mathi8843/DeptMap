@@ -7,7 +7,7 @@ Guidance for coding agents working in this repository.
 DebtMap — a full-stack security audit product for AI-generated apps.
 
 - `backend/` — FastAPI service (auth, Semgrep scans, Groq explanations, package registry checks, health scoring, SOC 2, webhooks)
-- `frontend/` — Next.js 16 App Router dashboard, stores user in `localStorage`, calls backend via `frontend/lib/api.ts`, shares state via `frontend/lib/AppContext.tsx`
+- `frontend/` — Next.js 16 App Router dashboard, stores non-sensitive profile data in `localStorage` (session token kept in memory only, transmitted via httpOnly cookie), calls backend via `frontend/lib/api.ts`, shares state via `frontend/lib/contexts/AuthContext.tsx`
 - Root `*.md` and `*.html` files are planning/research reference — do not rewrite unless explicitly asked
 
 ## Key Commands
@@ -52,14 +52,15 @@ Never commit `.env` files or real secrets.
 - `mock_github_token` → mock data in semgrep/github services (scan returns synthetic findings)
 - Frontend default user is pre-filled in `AppContext` with `mock-session-token` and auto-creates DB profile via `/api/auth/me`
 - Scan pipeline (background task): clone → Semgrep → Groq enrichment → save issues → package audit → health score + history
-- Health score: `100 - (28*critical + 14*high + 6*medium + 2*low)`, clamped to `[0, 100]`
+- Health score: diminishing-returns formula using `weight × sqrt(count)` per severity bucket. Weights: critical=40, high=25, medium=12, low=5. Score clamped to [0, 100]. See `backend/app/services/scorer.py`.
 - No Next.js API Route Handlers — all API calls go to the FastAPI backend
 
 ## Sharp Edges
 
-- `slowapi` and `anthropic` in `backend/requirements.txt` are **unused** — do not import them
-- Backend README mentions `claude.py` and `pr_creator.py` — those files **do not exist**; actual implementation uses `groq.py` and `github.py`
-- `backend/app/services/crypto.py` uses Fernet encryption for GitHub tokens; decryption falls back to raw string if token isn't Fernet-encoded
+- `slowapi` in `backend/requirements.txt` is **actively used** for rate limiting — `limiter` in `app/rate_limit.py` and `SlowAPIMiddleware` in `app/main.py` both depend on it. Do **not** remove it.
+- `anthropic` is **not** in `requirements.txt` and was never used — actual AI explanations use `groq.py` via the Groq API
+- Backend README mentions `claude.py` and `pr_creator.py` — those files **do not exist**; actual AI explanations use `groq.py` and PR creation uses `github.py`
+- `backend/app/services/crypto.py` uses Fernet encryption for GitHub tokens; `decrypt_token` now raises `ValueError` on key-rotation failures (catches `InvalidToken` specifically) — callers must handle this as an HTTP 401 and prompt re-authentication
 - Tailwind v4 uses `@theme` in `frontend/app/globals.css` — the v3-style `tailwind.config.ts` is mostly vestigial
 - `eslint.config.mjs` has `@typescript-eslint/no-explicit-any: "off"` — `any` is permitted
 - Route-group paths like `frontend/app/(dashboard)/...` need quoting in PowerShell
@@ -73,6 +74,7 @@ Never commit `.env` files or real secrets.
 
 Frontend-only: `cd frontend; npm run lint; npm run build`
 Backend-only: `cd backend; python check_config.py; python test_setup.py`
-Full-stack: both of the above.
+Smoke tests (no external services needed): `cd backend; pytest tests/test_smoke.py -v`
+Full-stack: both frontend and backend commands above.
 
 If a command cannot run due to missing credentials/network/WSL/Supabase, state the exact blocker.

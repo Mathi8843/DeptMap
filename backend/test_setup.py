@@ -1,4 +1,4 @@
-"""
+r"""
 Test script - verifies Supabase tables and services are working.
 Run: venv\Scripts\python test_setup.py
 """
@@ -76,7 +76,7 @@ def test_semgrep_wsl():
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("  Risk Guard AI Backend - Setup Verification")
+    print("  DebtMap Backend - Setup Verification")
     print("=" * 50)
     r1 = test_supabase()
     r2 = test_groq_fallback()

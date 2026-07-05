@@ -3,38 +3,57 @@ Health score calculator.
 Computes a 0–100 score per repository based on open issue severity.
 Higher score = healthier codebase.
 
-Formula:
-  score = 100 - (28 × critical) - (14 × high) - (6 × medium) - (2 × low)
-  Clamped to [0, 100]
-
-This matches the scoring visible in the frontend mock data.
+Formula (diminishing-returns per severity bucket):
+  For each severity level, deduction = base_weight × √count  (rounded).
+  Weights: critical=40, high=25, medium=12, low=5
+  This means the 1st critical costs ~40pts, the 4th costs only ~20pts extra,
+  avoiding the 0/100 cliff that discourages founders from fixing issues.
+  Final score clamped to [0, 100].
 """
+import math
 from typing import Literal
 
 
+# Base deduction weights per severity bucket (applied via sqrt-decay)
 WEIGHTS: dict[str, int] = {
-    "critical": 28,
-    "high": 14,
-    "medium": 6,
-    "low": 2,
+    "critical": 40,
+    "high":     25,
+    "medium":   12,
+    "low":       5,
 }
+
+
+def _severity_deduction(count: int, weight: int) -> float:
+    """
+    Diminishing-returns deduction: weight × sqrt(count).
+    First issue hurts a lot; subsequent issues of the same severity hurt less.
+    """
+    if count <= 0:
+        return 0.0
+    return weight * math.sqrt(count)
 
 
 def calculate_health_score(issues: list[dict]) -> int:
     """
     Calculate health score from a list of open issues.
     Each issue dict must have a 'severity' key.
-    
+
     Returns integer 0-100.
     """
     open_issues = [i for i in issues if i.get("status") == "open"]
 
-    deduction = sum(
-        WEIGHTS.get(issue.get("severity", "low"), 2)
-        for issue in open_issues
+    counts: dict[str, int] = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for issue in open_issues:
+        sev = issue.get("severity", "low")
+        if sev in counts:
+            counts[sev] += 1
+
+    total_deduction = sum(
+        _severity_deduction(counts[sev], weight)
+        for sev, weight in WEIGHTS.items()
     )
 
-    score = max(0, min(100, 100 - deduction))
+    score = max(0, min(100, round(100 - total_deduction)))
     return score
 
 

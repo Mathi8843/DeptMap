@@ -35,7 +35,7 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "Risk Guard AI — AI Code Health & Security Platform",
+  title: "DebtMap — AI Code Health & Security Platform",
   description: "The AI-powered security and technical debt monitor for vibe-coded apps. Catch OWASP vulnerabilities, slopsquatted packages, and code issues before they ship.",
   keywords: "code security, vibe coding, AI code review, technical debt, OWASP, slopsquatting",
   robots: { index: true, follow: true },
@@ -45,21 +45,21 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "Risk Guard AI — AI Code Health & Security Platform",
+    title: "DebtMap — AI Code Health & Security Platform",
     description: "Security scanning built for non-developer founders. Catch OWASP vulnerabilities and slopsquatted packages in apps built with Lovable, Bolt, or Cursor.",
-    url: "https://riskguardai.com",
-    siteName: "Risk Guard AI",
+    url: "https://debtmap.com",
+    siteName: "DebtMap",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Risk Guard AI — AI Code Health & Security Platform",
+    title: "DebtMap — AI Code Health & Security Platform",
     description: "Security scanning built for non-developer founders. Catch OWASP vulnerabilities and slopsquatted packages in apps built with Lovable, Bolt, or Cursor.",
-    images: ["https://riskguardai.com/opengraph-image.png"],
+    images: ["https://debtmap.com/opengraph-image.png"],
   },
-  metadataBase: new URL("https://riskguardai.com"),
-  alternates: { canonical: "https://riskguardai.com" },
+  metadataBase: new URL("https://debtmap.com"),
+  alternates: { canonical: "https://debtmap.com" },
 };
 
 export default function RootLayout({
