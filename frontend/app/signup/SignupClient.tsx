@@ -62,20 +62,26 @@ export default function SignupClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
+        credentials: "include", // capture the debtmap_session cookie set by /signup
       });
       if (!signupRes.ok) {
         const errJson = await signupRes.json().catch(() => ({}));
         throw new Error(errJson.detail || "Registration failed");
       }
-      showToast("Account created! Signing you in…", "success");
-      const signinRes = await fetch(`${apiUrl}/api/auth/signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      // /signup returns the session_token and sets the httpOnly cookie in one shot —
+      // no need for a second /signin round-trip.
+      const data = await signupRes.json();
+      login({
+        id: data.user_id,
+        name: data.name,
+        email: data.email,
+        avatar_url: null,
+        plan: data.plan,
+        session_token: data.session_token,
+        has_github_token: false,
+        is_admin: data.is_admin,
       });
-      if (!signinRes.ok) throw new Error("Registered successfully, but auto sign-in failed. Please sign in manually.");
-      const data = await signinRes.json();
-      login({ id: data.user_id, name: data.name, email: data.email, avatar_url: null, plan: data.plan, session_token: data.session_token, has_github_token: false, is_admin: data.is_admin });
+      showToast("Account created! Welcome to Risk Guard AI.", "success");
       router.push(data.is_admin ? "/admin" : "/onboarding");
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong. Please try again.");

@@ -230,6 +230,9 @@ async def get_current_user(
         "created_at": user["created_at"],
         "has_github_token": bool(user.get("github_access_token")),
         "is_admin": user.get("is_admin", False),
+        # Return a fresh token so the frontend in-memory store can be re-hydrated
+        # after a page refresh without relying solely on the httpOnly cookie.
+        "session_token": create_session_token(user["id"]),
     }
 
 

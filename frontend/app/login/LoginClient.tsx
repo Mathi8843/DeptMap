@@ -31,6 +31,7 @@ export default function LoginClient() {
       if (!response.ok) throw new Error("Failed to retrieve GitHub connection link.");
       const data = await response.json();
       if (data?.auth_url) {
+        // Returning users should land on /dashboard, not /onboarding
         sessionStorage.setItem("auth_redirect", "/dashboard");
         window.location.href = data.auth_url;
       }
