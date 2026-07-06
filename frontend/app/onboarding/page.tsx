@@ -18,7 +18,7 @@ const STEPS = [
 
 const GENERATORS = ["Lovable", "Bolt", "Cursor", "Replit", "v0", "Other"];
 
-import { apiFetch, getSavedUser } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import GitHubPermissionsModal from "@/components/layout/GitHubPermissionsModal";
 
 export default function OnboardingPage() {
@@ -74,17 +74,18 @@ export default function OnboardingPage() {
 
   // Auto-detect if user already authorized GitHub on mount
   useEffect(() => {
-    const saved = getSavedUser();
-    const isMockToken = saved?.session_token === "mock-session-token";
+    // session_token is held in memory via useAuth() — not in localStorage (XSS mitigation)
+    const isMockToken = user.session_token === "mock-session-token";
     const isProduction = process.env.NODE_ENV === "production";
-    
+
     // Only auto-skip if github is connected and it's not a mock token in production
-    if (saved && saved.has_github_token && !(isMockToken && isProduction)) {
+    if (user.has_github_token && !(isMockToken && isProduction)) {
       setTimeout(() => {
         setGithubConnected(true);
         setStep(2);
       }, 0);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Synchronize scanStarted if the application is already scanning

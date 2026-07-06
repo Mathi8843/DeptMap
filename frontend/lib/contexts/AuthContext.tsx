@@ -35,7 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const saved = getSavedUser();
       if (saved) {
-        setUser(saved);
+        // Hydrate from localStorage: saved is PersistedProfile (no session_token).
+        // session_token starts as undefined; it will be set by /auth/me response below.
+        setUser({ ...saved, session_token: undefined });
       } else {
         setUser(EMPTY_USER);
       }
@@ -48,7 +50,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: profile.email,
           avatar_url: profile.avatar_url,
           plan: profile.plan,
-          session_token: saved?.session_token || "cookie-session",
+          // session_token is never stored in localStorage (XSS mitigation).
+          // The backend sets an httpOnly cookie; mark in-memory state as "cookie-session"
+          // so layout guards know auth is active without exposing the JWT to JS.
+          session_token: profile.session_token || "cookie-session",
           has_github_token: profile.has_github_token,
           is_admin: profile.is_admin,
         };
