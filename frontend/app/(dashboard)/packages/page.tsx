@@ -1,26 +1,50 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useData } from "@/lib/contexts/DataContext";
 import { useToast } from "@/lib/contexts/ToastContext";
-import { RefreshCw, ShieldAlert, CheckCircle, ShieldAlert as AlertTriangle, AlertCircle, HelpCircle, Check, Trash } from "lucide-react";
+import { RefreshCw, CheckCircle, HelpCircle, Trash, ChevronLeft, ChevronRight } from "lucide-react";
+
+const ITEMS_PER_PAGE = 10;
 
 const statusConfig = {
-  safe: { label: "Verified Safe", text: "text-emerald-500 dark:text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/10", dot: "bg-emerald-500" },
-  suspect: { label: "Suspect Download", text: "text-amber-500 dark:text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/10", dot: "bg-amber-500" },
-  dangerous: { label: "Dangerous Hallucination", text: "text-rose-500 dark:text-rose-400", border: "border-rose-500/20", bg: "bg-rose-500/10", dot: "bg-rose-500 animate-pulse" },
-  unknown: { label: "Unknown Registry", text: "text-text-muted", border: "border-border-subtle", bg: "bg-bg-card", dot: "bg-slate-600" },
+  safe:      { label: "Verified Safe",            text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/10", dot: "bg-emerald-500" },
+  suspect:   { label: "Suspect Download",          text: "text-amber-600 dark:text-amber-400",    border: "border-amber-500/20",   bg: "bg-amber-500/10",   dot: "bg-amber-500"   },
+  dangerous: { label: "Dangerous Hallucination",   text: "text-rose-600 dark:text-rose-400",      border: "border-rose-500/20",    bg: "bg-rose-500/10",    dot: "bg-rose-500 animate-pulse" },
+  unknown:   { label: "Unknown Registry",          text: "text-text-muted",                       border: "border-border-subtle",  bg: "bg-bg-card",        dot: "bg-slate-500"   },
 };
 
 export default function PackagesPage() {
   const { packages, auditPackageAction } = useData();
   const { showToast } = useToast();
   const [isAuditing, setIsAuditing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filter, setFilter] = useState<"all" | "dangerous" | "suspect" | "safe">("all");
 
-  const dangerous = packages.filter((p) => p.status === "dangerous");
-  const suspect = packages.filter((p) => p.status === "suspect");
-  const safe = packages.filter((p) => p.status === "safe");
+  // Counts for stats grid (always from full packages list)
+  const dangerousCount = packages.filter((p) => p.status === "dangerous").length;
+  const suspectCount   = packages.filter((p) => p.status === "suspect").length;
+  const safeCount      = packages.filter((p) => p.status === "safe").length;
 
-  const sortedPackages = [...dangerous, ...suspect, ...safe];
+  // Priority-sorted + filtered list
+  const sortedPackages = useMemo(() => {
+    const dangerous = packages.filter((p) => p.status === "dangerous");
+    const suspect   = packages.filter((p) => p.status === "suspect");
+    const safe      = packages.filter((p) => p.status === "safe");
+    const all = [...dangerous, ...suspect, ...safe];
+    if (filter === "all") return all;
+    return all.filter((p) => p.status === filter);
+  }, [packages, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedPackages.length / ITEMS_PER_PAGE));
+  const safePage   = Math.min(currentPage, totalPages);
+  const pageStart  = (safePage - 1) * ITEMS_PER_PAGE;
+  const paginated  = sortedPackages.slice(pageStart, pageStart + ITEMS_PER_PAGE);
+
+  // Reset to page 1 whenever filter changes
+  const handleFilter = (f: typeof filter) => {
+    setFilter(f);
+    setCurrentPage(1);
+  };
 
   const handleRescan = () => {
     setIsAuditing(true);
@@ -34,9 +58,16 @@ export default function PackagesPage() {
   const formatDownloads = (n: number | null | undefined) => {
     if (n === null || n === undefined) return "—";
     if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
+    if (n >= 1000)    return `${(n / 1000).toFixed(0)}K`;
     return n.toString();
   };
+
+  const FILTER_TABS: { key: typeof filter; label: string; count: number }[] = [
+    { key: "all",       label: "All",       count: packages.length  },
+    { key: "dangerous", label: "Dangerous", count: dangerousCount   },
+    { key: "suspect",   label: "Suspect",   count: suspectCount     },
+    { key: "safe",      label: "Safe",      count: safeCount        },
+  ];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in">
@@ -62,144 +93,234 @@ export default function PackagesPage() {
       </div>
 
       <section aria-labelledby="explainer-heading" className="space-y-6">
-      <h2 id="explainer-heading" className="sr-only">About Slopsquatting</h2>
-      {/* Explainer card */}
-      <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-6 flex gap-[1.125rem] items-start">
-        <HelpCircle size={22} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-        <div className="space-y-1.5 flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-text-main">What is AI Slopsquatting?</h3>
-          <p className="text-sm text-text-sub leading-relaxed">
-            AI code assistants (Cursor, Lovable, Bolt) occasionally hallucinate library packages that do not exist in the public registries (npm/PyPI). Attackers monitor codebases and register these hallucinated names to execute dependency injection attacks. Risk Guard AI scans your workspaces to ensure all references map to verified registry downloads.
-          </p>
+        <h2 id="explainer-heading" className="sr-only">About Slopsquatting</h2>
+        {/* Explainer card */}
+        <div className="glass-panel border-l-4 border-l-amber-500 rounded-2xl p-6 flex gap-[1.125rem] items-start">
+          <HelpCircle size={22} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-text-main">What is AI Slopsquatting?</h3>
+            <p className="text-sm text-text-sub leading-relaxed">
+              AI code assistants (Cursor, Lovable, Bolt) occasionally hallucinate library packages that do not exist in the public registries (npm/PyPI). Attackers monitor codebases and register these hallucinated names to execute dependency injection attacks. Risk Guard AI scans your workspaces to ensure all references map to verified registry downloads.
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Package Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="glass-card rounded-2xl p-5 border-l-4 border-l-rose-500 space-y-1.5">
-          <div className="font-display font-extrabold text-3xl text-rose-500 dark:text-rose-400 text-glow-rose leading-none">
-            {dangerous.length}
+        {/* Package Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="glass-card rounded-2xl p-5 border-l-4 border-l-rose-500 space-y-1.5">
+            <div className="font-display font-extrabold text-3xl text-rose-600 dark:text-rose-400 text-glow-rose leading-none">
+              {dangerousCount}
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
+              Hallucinated Alert
+            </div>
           </div>
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
-            Hallucinated Alert
+          <div className="glass-card rounded-2xl p-5 border-l-4 border-l-amber-500 space-y-1.5">
+            <div className="font-display font-extrabold text-3xl text-amber-600 dark:text-amber-400 leading-none">
+              {suspectCount}
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
+              Suspect Download Counts
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-1.5">
+            <div className="font-display font-extrabold text-3xl text-emerald-600 dark:text-emerald-400 leading-none">
+              {safeCount}
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
+              Verified Safe Packages
+            </div>
           </div>
         </div>
-        <div className="glass-card rounded-2xl p-5 border-l-4 border-l-amber-500 space-y-1.5">
-          <div className="font-display font-extrabold text-3xl text-amber-500 dark:text-amber-400 leading-none">
-            {suspect.length}
-          </div>
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
-            Suspect Download Counts
-          </div>
-        </div>
-        <div className="glass-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-1.5">
-          <div className="font-display font-extrabold text-3xl text-emerald-500 dark:text-emerald-400 leading-none">
-            {safe.length}
-          </div>
-          <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-text-muted font-bold">
-            Verified Safe Packages
-          </div>
-        </div>
-      </div>
-
       </section>
 
       <section aria-labelledby="audit-list-heading">
-      <h2 id="audit-list-heading" className="sr-only">Dependency Audit Results</h2>
-      {/* Dependencies List */}
-      <div className="space-y-4">
-        <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">
-          Dependency Registry Audit ({sortedPackages.length} checked)
-        </h3>
+        <h2 id="audit-list-heading" className="sr-only">Dependency Audit Results</h2>
 
-        {sortedPackages.length === 0 ? (
-          <div className="glass-card rounded-2xl py-20 text-center flex flex-col items-center justify-center">
-            <CheckCircle className="text-emerald-500 mb-3.5" size={40} />
-            <h4 className="text-sm font-bold text-text-main">No Packages Listed</h4>
-            <p className="text-xs text-text-muted mt-1">Your package lists are empty.</p>
+        {/* Filter Tabs + heading row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h3 className="font-mono text-[10px] uppercase tracking-[2px] text-text-muted font-bold">
+            Dependency Registry Audit ({sortedPackages.length} checked)
+          </h3>
+
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-bg-card border border-border-subtle">
+            {FILTER_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => handleFilter(tab.key)}
+                className={`font-mono text-[9px] uppercase tracking-[1px] font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  filter === tab.key
+                    ? "bg-indigo-500 text-white shadow-sm"
+                    : "text-text-muted hover:text-text-main"
+                }`}
+              >
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className={`ml-1.5 ${filter === tab.key ? "opacity-80" : "opacity-60"}`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-3.5">
-            {sortedPackages.map((pkg) => {
-              const cfg = statusConfig[pkg.status];
-              return (
-                <div
-                  key={pkg.id}
-                  className={`glass-card rounded-2xl p-5 border transition-all flex flex-col md:flex-row md:items-center justify-between gap-5 border-border-subtle hover:border-border-glow ${
-                    pkg.status === "dangerous" ? "border-rose-500/20 bg-rose-500/[0.01]" : ""
-                  }`}
-                >
-                  {/* Package Metadata */}
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${cfg.dot}`} />
-                    
-                    <div className="min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="font-display font-bold text-sm text-text-main truncate">
-                          {pkg.package_name}
-                        </span>
-                        <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-bg-card text-text-sub uppercase">
-                          {pkg.package_manager}
-                        </span>
-                        <span className="font-mono text-[10px] text-text-muted">
-                          · {formatDownloads(pkg.weekly_downloads)} downloads/wk
-                        </span>
+        </div>
+
+        {/* Dependencies List */}
+        <div className="space-y-4">
+          {sortedPackages.length === 0 ? (
+            <div className="glass-card rounded-2xl py-20 text-center flex flex-col items-center justify-center">
+              <CheckCircle className="text-emerald-500 mb-3.5" size={40} />
+              <h4 className="text-sm font-bold text-text-main">No Packages Found</h4>
+              <p className="text-xs text-text-muted mt-1">
+                {filter === "all" ? "Your package lists are empty." : `No ${filter} packages found.`}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3.5">
+                {paginated.map((pkg) => {
+                  const cfg = statusConfig[pkg.status as keyof typeof statusConfig] ?? statusConfig.unknown;
+                  return (
+                    <div
+                      key={pkg.id}
+                      className={`glass-card rounded-2xl p-5 border transition-all flex flex-col md:flex-row md:items-center justify-between gap-5 border-border-subtle hover:border-border-glow ${
+                        pkg.status === "dangerous" ? "border-rose-500/20 bg-rose-500/[0.01]" : ""
+                      }`}
+                    >
+                      {/* Package Metadata */}
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
+                        <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${cfg.dot}`} />
+                        
+                        <div className="min-w-0 space-y-1.5">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="font-display font-bold text-sm text-text-main truncate">
+                              {pkg.package_name}
+                            </span>
+                            <span className="font-mono text-[9px] px-2 py-0.5 rounded bg-bg-card text-text-sub uppercase">
+                              {pkg.package_manager}
+                            </span>
+                            <span className="font-mono text-[10px] text-text-muted">
+                              · {formatDownloads(pkg.weekly_downloads)} downloads/wk
+                            </span>
+                          </div>
+                          <p className="text-xs text-text-sub">
+                            {pkg.reason}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-text-sub">
-                        {pkg.reason}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Actions Column */}
-                  <div className="flex items-center gap-3 flex-shrink-0 self-end md:self-auto">
-                    {/* Status Badge */}
-                    <div className={`font-mono text-[9px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.text} mr-2`}>
-                      {cfg.label}
-                    </div>
+                      {/* Actions Column */}
+                      <div className="flex items-center gap-3 flex-shrink-0 self-end md:self-auto">
+                        {/* Status Badge */}
+                        <div className={`font-mono text-[9px] font-bold uppercase tracking-[1px] px-2.5 py-0.5 rounded border ${cfg.bg} ${cfg.border} ${cfg.text} mr-2`}>
+                          {cfg.label}
+                        </div>
 
-                    {/* Fixes */}
-                    {pkg.status === "dangerous" && (
-                      <>
-                        {pkg.alternative_name && (
+                        {/* Fixes */}
+                        {pkg.status === "dangerous" && (
+                          <>
+                            {pkg.alternative_name && (
+                              <button
+                                onClick={() => auditPackageAction(pkg.id, "replace")}
+                                className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-4 py-2.5 bg-lime-500 hover:bg-lime-600 text-white rounded-xl transition-all cursor-pointer shadow-md"
+                              >
+                                Replace with {pkg.alternative_name}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => auditPackageAction(pkg.id, "verify")}
+                              className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-4 py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep/40 text-text-sub hover:text-text-main rounded-xl transition-colors cursor-pointer"
+                            >
+                              Mark Safe
+                            </button>
+                            <button
+                              onClick={() => auditPackageAction(pkg.id, "ignore")}
+                              className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 border border-border-subtle hover:border-rose-500/20 bg-bg-deep/40 hover:bg-rose-500/5 text-text-muted hover:text-rose-600 dark:hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
+                              aria-label="Ignore alert"
+                            >
+                              <Trash size={14} />
+                            </button>
+                          </>
+                        )}
+
+                        {pkg.status === "suspect" && (
                           <button
-                            onClick={() => auditPackageAction(pkg.id, "replace")}
-                            className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-4 py-2.5 bg-lime-400 hover:bg-lime-500 text-slate-950 rounded-xl transition-all cursor-pointer shadow-md"
+                            onClick={() => auditPackageAction(pkg.id, "verify")}
+                            className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-4 py-2.5 border border-border-subtle hover:border-emerald-500/20 bg-bg-deep/40 hover:bg-emerald-500/5 text-text-muted hover:text-emerald-600 dark:hover:text-emerald-500 rounded-xl transition-colors cursor-pointer"
                           >
-                            Replace with {pkg.alternative_name}
+                            Verify Safe
                           </button>
                         )}
-                        <button
-                          onClick={() => auditPackageAction(pkg.id, "verify")}
-                          className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-4 py-2.5 border border-border-subtle hover:border-border-glow bg-bg-deep/40 text-text-sub hover:text-text-main rounded-xl transition-colors cursor-pointer"
-                        >
-                          Mark Safe
-                        </button>
-                        <button
-                          onClick={() => auditPackageAction(pkg.id, "ignore")}
-                          className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 border border-border-subtle hover:border-rose-500/20 bg-bg-deep/40 hover:bg-rose-500/5 text-text-muted hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
-                          aria-label="Ignore alert"
-                        >
-                          <Trash size={14} />
-                        </button>
-                      </>
-                    )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-                    {pkg.status === "suspect" && (
-                      <button
-                        onClick={() => auditPackageAction(pkg.id, "verify")}
-                        className="font-mono text-[9px] font-bold uppercase tracking-[1px] px-4 py-2.5 border border-border-subtle hover:border-emerald-500/20 bg-bg-deep/40 hover:bg-emerald-500/5 text-text-muted hover:text-emerald-500 rounded-xl transition-colors cursor-pointer"
-                      >
-                        Verify Safe
-                      </button>
-                    )}
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                  {/* Page info */}
+                  <span className="font-mono text-[10px] text-text-muted uppercase tracking-wider">
+                    Page {safePage} of {totalPages} &nbsp;·&nbsp; {sortedPackages.length} packages
+                  </span>
+
+                  {/* Controls */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={safePage === 1}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-border-subtle hover:border-border-glow bg-bg-card text-text-muted hover:text-text-main transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+
+                    {/* Page number pills */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                      .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, idx) =>
+                        p === "…" ? (
+                          <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center font-mono text-[10px] text-text-muted">
+                            …
+                          </span>
+                        ) : (
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p as number)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg font-mono text-[10px] font-bold transition-all cursor-pointer ${
+                              safePage === p
+                                ? "bg-indigo-500 text-white shadow-sm shadow-indigo-500/25"
+                                : "border border-border-subtle hover:border-border-glow bg-bg-card text-text-muted hover:text-text-main"
+                            }`}
+                            aria-label={`Go to page ${p}`}
+                            aria-current={safePage === p ? "page" : undefined}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={safePage === totalPages}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border border-border-subtle hover:border-border-glow bg-bg-card text-text-muted hover:text-text-main transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      aria-label="Next page"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              )}
+            </>
+          )}
+        </div>
       </section>
     </div>
   );

@@ -21,11 +21,16 @@
   --color-text-sub:  var(--text-sub);
   --color-text-muted: var(--text-muted);
   
-  --color-lime-glow:   #b8ff57;
-  --color-teal-glow:   #33ddbb;
-  --color-rose-glow:   #ff5757;
-  --color-amber-glow:  #ffaa33;
-  --color-purple-glow: #aa77ff;
+  /*
+   * Accent glow colors are theme-aware CSS variables.
+   * Light mode uses dark accessible tones; dark mode uses neon glows.
+   * Defined as --glow-* in :root and html.dark to avoid circular refs.
+   */
+  --color-lime-glow:   var(--glow-lime);
+  --color-teal-glow:   var(--glow-teal);
+  --color-rose-glow:   var(--glow-rose);
+  --color-amber-glow:  var(--glow-amber);
+  --color-purple-glow: var(--glow-purple);
 
   --animate-fade-in: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -69,11 +74,22 @@
   --bg-glass:  rgba(255, 255, 255, 0.92); /* more opaque for better card visibility */
   
   --border-subtle: rgba(15, 23, 42, 0.08); /* slightly more visible borders */
-  --border-glow:   rgba(15, 23, 42, 0.14);
+  --border-glow:   rgba(15, 23, 42, 0.18); /* stronger in light to compensate */
   
   --text-main: #0f172a; /* slate-900 */
   --text-sub:  #334155; /* slate-700 */
   --text-muted: #475569; /* slate-600 — improved contrast to satisfy WCAG AA 4.5:1 */
+
+  /*
+   * Accent glow colors in LIGHT mode must be dark enough to read on white.
+   * The neon palette (#b8ff57, #33ddbb, #ff5757) fails WCAG on white.
+   * Map to their dark-enough equivalents here; dark mode overrides below.
+   */
+  --glow-lime:   #4d7c0f; /* lime-800 — readable on white */
+  --glow-teal:   #0d9488; /* teal-600 */
+  --glow-rose:   #be123c; /* rose-700 */
+  --glow-amber:  #b45309; /* amber-700 */
+  --glow-purple: #7c3aed; /* violet-600 */
 }
 
 html.dark {
@@ -89,6 +105,13 @@ html.dark {
   --text-main: #f8fafc; /* slate-50 */
   --text-sub:  #cbd5e1; /* slate-300 */
   --text-muted: #94a3b8; /* slate-400 — WCAG AA 8.3:1 on #06060c */
+
+  /* Restore neon accent glows for dark mode */
+  --glow-lime:   #b8ff57;
+  --glow-teal:   #33ddbb;
+  --glow-rose:   #ff5757;
+  --glow-amber:  #ffaa33;
+  --glow-purple: #aa77ff;
 }
 
 /* Base overrides with scaled typography */

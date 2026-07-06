@@ -388,27 +388,27 @@ export default function ReposPage() {
             <Terminal size={14} className="text-indigo-500" /> CLI Terminal Console
           </h3>
           
-          <div className="bg-[#030308] border border-zinc-800/80 rounded-2xl overflow-hidden font-mono text-xs flex flex-col h-[280px] shadow-2xl">
+          <div className="dark:bg-[#030308] bg-bg-panel border border-border-subtle dark:border-zinc-800/80 rounded-2xl overflow-hidden font-mono text-xs flex flex-col h-[280px] shadow-2xl">
             {/* Header */}
-            <div className="bg-black/40 px-4 py-3 border-b border-zinc-800/50 flex items-center justify-between">
-              <span className="text-slate-400 font-bold tracking-wide text-[9px] truncate">
+            <div className="dark:bg-black/40 bg-bg-card px-4 py-3 border-b border-border-subtle dark:border-zinc-800/50 flex items-center justify-between">
+              <span className="text-text-muted font-bold tracking-wide text-[9px] truncate">
                 {isScanning ? "LIVE SCAN" : "INTERACTIVE CLI"}
               </span>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {isScanning && (
                   <div className="flex items-center gap-1.5">
-                    <div className="w-12 h-1 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="w-12 h-1 bg-bg-card dark:bg-slate-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                         style={{ width: `${scanProgress}%` }}
                       />
                     </div>
-                    <span className="text-[9px] text-emerald-400 font-mono">{scanProgress}%</span>
+                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono">{scanProgress}%</span>
                   </div>
                 )}
                 <div className="flex gap-1 items-center">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isScanning ? "bg-emerald-500 animate-pulse" : "bg-slate-600"}`} />
-                  <span className="text-[9px] text-slate-600 uppercase">{isScanning ? "Active" : "Online"}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isScanning ? "bg-emerald-500 animate-pulse" : "bg-border-glow"}`} />
+                  <span className="text-[9px] text-text-muted uppercase">{isScanning ? "Active" : "Online"}</span>
                 </div>
               </div>
             </div>
@@ -439,15 +439,15 @@ export default function ReposPage() {
             </div>
 
             {/* Input field */}
-            <form onSubmit={handleTerminalSubmit} className="bg-black/50 px-4 py-3 border-t border-zinc-800/50 flex items-center gap-2">
-              <span className="text-slate-100 font-bold">$</span>
+            <form onSubmit={handleTerminalSubmit} className="dark:bg-black/50 bg-bg-card px-4 py-3 border-t border-border-subtle dark:border-zinc-800/50 flex items-center gap-2">
+              <span className="text-text-main font-bold">$</span>
               <input
                 type="text"
                 placeholder={isScanning ? "Scan in progress..." : 'Type e.g. "help", "semgrep"...'}
                 value={terminalInput}
                 onChange={(e) => setTerminalInput(e.target.value)}
                 disabled={isScanning}
-                className="flex-1 bg-transparent border-none focus-visible:outline-none focus-visible:ring-0 text-white text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 bg-transparent border-none focus-visible:outline-none focus-visible:ring-0 text-text-main text-xs disabled:opacity-40 disabled:cursor-not-allowed"
               />
             </form>
           </div>

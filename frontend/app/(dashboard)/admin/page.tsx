@@ -130,8 +130,8 @@ export default function AdminPage() {
             You do not have administrative permissions to view this dashboard. Access is restricted to authorized credentials.
           </p>
         </div>
-        <div className="text-xs text-text-muted bg-white/5 border border-white/5 px-4 py-2.5 rounded-xl">
-          Logged in as: <span className="font-mono text-slate-300 font-bold">{user?.email || "No Email"}</span>
+        <div className="text-xs text-text-muted bg-bg-card border border-border-subtle px-4 py-2.5 rounded-xl">
+          Logged in as: <span className="font-mono text-text-main font-bold">{user?.email || "No Email"}</span>
         </div>
       </div>
     );

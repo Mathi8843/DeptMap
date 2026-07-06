@@ -253,17 +253,17 @@ export default function IssueDetailPage() {
       {/* ── DIFF PANEL — full-width ──────────────────────────────────────── */}
       <div className="glass-panel border border-border-subtle rounded-2xl overflow-hidden shadow-2xl">
         {/* Panel header */}
-        <div className="bg-slate-950 px-5 py-3.5 border-b border-white/8 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 text-slate-400">
+        <div className="dark:bg-slate-950 bg-bg-card px-5 py-3.5 border-b border-border-subtle flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-text-muted">
             <FileCode size={15} />
             <span className="font-mono text-[11px] uppercase tracking-[1px]">
               {issue.file_path.split("/").pop()}
             </span>
-            <span className="font-mono text-[9px] text-slate-600">
+            <span className="font-mono text-[9px] opacity-60">
               Lines {issue.line_start}–{issue.line_end}
             </span>
           </div>
-          <span className="font-mono text-[9px] font-bold text-indigo-400 uppercase tracking-[1px]">
+          <span className="font-mono text-[9px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-[1px]">
             Code Diff · AI Resolution
           </span>
         </div>
@@ -276,7 +276,7 @@ export default function IssueDetailPage() {
               <span className="font-mono text-[9px] font-bold uppercase tracking-[1.5px] text-indigo-400 block mb-0.5">
                 What this fix does
               </span>
-              <p className="text-xs text-slate-300 leading-relaxed">{issue.what_changed}</p>
+              <p className="text-xs text-text-sub leading-relaxed">{issue.what_changed}</p>
             </div>
           </div>
         )}
@@ -293,7 +293,7 @@ export default function IssueDetailPage() {
         ) : (
           /* ── Review mode — show diff + approve chunk ── */
           <div className="p-4 space-y-4 animate-fade-in">
-            <div className="text-[11px] text-slate-500 uppercase tracking-[1px] font-bold font-mono pb-2 border-b border-white/5">
+            <div className="text-[11px] text-text-muted uppercase tracking-[1px] font-bold font-mono pb-2 border-b border-border-subtle">
               Review Code Modification Chunk #1
             </div>
             <CodeDiffViewer
@@ -301,8 +301,8 @@ export default function IssueDetailPage() {
               newCode={issue.ai_fix_code || ""}
               filename={issue.file_path}
             />
-            <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl flex items-center justify-between gap-4">
-              <div className="text-xs text-slate-400 font-sans">
+            <div className="p-4 dark:bg-slate-950/60 bg-bg-card border border-border-subtle rounded-2xl flex items-center justify-between gap-4">
+              <div className="text-xs text-text-sub font-sans">
                 Validate AST patch structure compatibility before committing.
               </div>
               <button
@@ -324,7 +324,7 @@ export default function IssueDetailPage() {
         )}
 
         {/* Panel footer — action bar */}
-        <div className="bg-slate-950/60 border-t border-white/8 px-5 py-4">
+        <div className="dark:bg-slate-950/60 bg-bg-card border-t border-border-subtle px-5 py-4">
           {issue.status !== "open" ? (
             /* Fixed state */
             <div className="flex items-center gap-4">
@@ -354,7 +354,7 @@ export default function IssueDetailPage() {
                   "flex-1 flex items-center justify-center gap-2 py-3.5 font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer shadow-lg",
                   chunkApproved
                     ? "bg-lime-400 hover:bg-lime-500 text-slate-950 shadow-lime-400/10"
-                    : "bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5"
+                    : "bg-bg-panel text-text-muted cursor-not-allowed border border-border-subtle"
                 )}
               >
                 <GitPullRequest size={14} />
@@ -384,7 +384,7 @@ export default function IssueDetailPage() {
                   "flex-1 flex items-center justify-center gap-2 py-3.5 font-mono text-[10px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer",
                   hasOneClickPr
                     ? "bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/10"
-                    : "bg-slate-800/80 border border-white/8 text-slate-400 hover:border-indigo-500/30 hover:text-indigo-400"
+                    : "bg-bg-card border border-border-glow text-text-muted hover:border-indigo-500/30 hover:text-indigo-500 dark:hover:text-indigo-400"
                 )}
               >
                 <GitPullRequest size={14} />
@@ -417,20 +417,19 @@ export default function IssueDetailPage() {
 
       {/* ── PR Runner console ───────────────────────────────────────────── */}
       {isFixing && (
-        <div className="bg-black border border-white/10 rounded-2xl overflow-hidden font-mono text-[11px] text-slate-400 flex flex-col shadow-xl animate-slide-up">
-          <div className="bg-slate-950 px-4 py-3 border-b border-white/10 flex items-center justify-between">
+        <div className="dark:bg-black bg-bg-panel border border-border-subtle rounded-2xl overflow-hidden font-mono text-[11px] text-text-muted flex flex-col shadow-xl animate-slide-up">
+          <div className="dark:bg-slate-950 bg-bg-card px-4 py-3 border-b border-border-subtle flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Terminal size={14} className="text-lime-400" />
-              <span className="text-slate-300 font-bold">AUTOMATED PULL REQUEST RUNNER</span>
+              <Terminal size={14} className="text-lime-500 dark:text-lime-400" />
+              <span className="text-text-sub font-bold">AUTOMATED PULL REQUEST RUNNER</span>
             </div>
-            <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-ping" />
+            <span className="w-1.5 h-1.5 rounded-full bg-lime-500 dark:bg-lime-400 animate-ping" />
           </div>
           <div className="p-4 overflow-y-auto space-y-1.5 leading-relaxed" style={{ maxHeight: "200px" }}>
             {fixLogs.map((log, index) => (
               <div
                 key={index}
                 className={
-                  log.includes("[GIT]") ? "text-indigo-400" :
                   log.includes("[GITHUB]") ? "text-amber-400" :
                   log.includes("[AST]") ? "text-violet-400" :
                   log.includes("[TESTER]") ? "text-cyan-400" :
