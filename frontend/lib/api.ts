@@ -22,6 +22,22 @@ export interface SavedUser {
  */
 export type PersistedProfile = Omit<SavedUser, "session_token">;
 
+// ─── In-memory session token store ───────────────────────────────────────────
+// The JWT lives here in JS heap memory — NOT in localStorage.
+// This is intentional: localStorage is readable by any injected XSS script,
+// whereas a plain JS variable is not accessible cross-origin.
+// AuthContext calls setInMemoryToken() whenever auth state changes.
+let _inMemoryToken: string | undefined;
+
+export function setInMemoryToken(token: string | undefined) {
+  _inMemoryToken = token;
+}
+
+export function getInMemoryToken(): string | undefined {
+  return _inMemoryToken;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function getSavedUser(): PersistedProfile | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("debtmap_user");
@@ -45,35 +61,49 @@ export function saveUser(user: SavedUser) {
 export function logoutUser() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("debtmap_user");
+    _inMemoryToken = undefined;
   }
 }
 
 /**
- * Fetch wrapper that automatically adds the session JWT to the Authorization header.
+ * Fetch wrapper that automatically authenticates requests.
+ *
+ * Auth strategy (in priority order):
+ *  1. If there is an in-memory JWT (email login), send it as Authorization: Bearer.
+ *  2. Otherwise, rely on the httpOnly debtmap_session cookie (GitHub OAuth login)
+ *     which is sent automatically via credentials:"include".
+ *  3. Fall back to mock-session-token for local development if neither is present.
  */
-const API_TIMEOUT = 120_000; // 120 seconds (2 minutes) for scans, PRs, and LLM processing
+const API_TIMEOUT = 120_000; // 120 seconds — covers scans, PRs, LLM processing
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  // session_token is no longer in localStorage — the httpOnly cookie
-  // (debtmap_session) is sent automatically via credentials:"include".
-  // For backward-compat with dev flows that pass a JWT via Authorization,
-  // callers may supply it via options.headers directly.
-
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  
+
   // Format the path: ensure it starts with /api
   let apiPath = path;
   if (!apiPath.startsWith("/api") && !apiPath.startsWith("api")) {
     apiPath = apiPath.startsWith("/") ? `/api${apiPath}` : `/api/${apiPath}`;
   }
 
-  // Construct URL
   const url = new URL(apiPath, apiUrl);
 
   const headers: Record<string, string> = {
     "Accept": "application/json",
     ...(options.headers as Record<string, string>),
   };
+
+  // Send the JWT as a Bearer token when available (email/password login).
+  // GitHub OAuth login uses the httpOnly cookie instead (sent via credentials:"include").
+  // "cookie-session" and "mock-session-token" are sentinel values — not real JWTs.
+  const token = _inMemoryToken;
+  const isRealJwt =
+    token &&
+    token !== "cookie-session" &&
+    token !== "mock-session-token";
+
+  if (isRealJwt) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);

@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { apiFetch, getSavedUser, saveUser, logoutUser, type SavedUser } from "../api";
+import { apiFetch, getSavedUser, saveUser, logoutUser, setInMemoryToken, type SavedUser } from "../api";
 import { useToast } from "./ToastContext";
 
 const EMPTY_USER: SavedUser = {
@@ -59,6 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(updatedUser);
         saveUser(updatedUser);
+        // Sync the in-memory token store so apiFetch sends Authorization: Bearer
+        setInMemoryToken(updatedUser.session_token);
       } catch (err: any) {
         console.error("Session verification failed on mount:", err);
         setUser(EMPTY_USER);
@@ -74,6 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback((userData: SavedUser) => {
     saveUser(userData);
     setUser(userData);
+    // Sync in-memory token immediately so the very next apiFetch call is authenticated
+    setInMemoryToken(userData.session_token);
     showToast(`Welcome back, ${userData.name}!`, "success");
   }, [showToast]);
 
@@ -83,7 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error("Failed to call logout endpoint:", err);
     }
-    logoutUser();
+    logoutUser();          // clears localStorage + in-memory token
+    setInMemoryToken(undefined);
     setUser(EMPTY_USER);
     showToast("Logged out successfully.", "info");
   }, [showToast]);
