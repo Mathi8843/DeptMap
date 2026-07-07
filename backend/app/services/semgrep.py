@@ -142,6 +142,11 @@ def _get_semgrep_command(target_dir: str) -> list[str]:
         "--no-git-ignore",
         "--timeout", "60",
         "--max-memory", "300",
+        # Suppress the rich interactive progress table — it pollutes stderr
+        # and gets mistakenly captured as an error message in CI/server mode.
+        "--quiet",
+        # Keep original rule IDs intact in JSON output.
+        "--no-rewrite-rule-ids",
     ]
 
     if platform.system() != "Windows":
@@ -188,14 +193,34 @@ def run_semgrep(target_dir: str) -> dict:
                 stderr=subprocess.PIPE,
                 timeout=180,
             )
-        if result.returncode == 2:
-            logger.warning('Semgrep hit --max-memory limit, returning partial results')
+
+        # Exit code meanings:
+        #   0 — success, findings may be empty
+        #   1 — success, findings found
+        #   2 — max-memory limit hit, partial results written
+        #   3 — some rules had parse/config errors, rest of scan completed
+        # Anything else is a real failure (e.g. 126 = permission denied, 127 = not found)
+        if result.returncode in (2, 3):
+            logger.warning(
+                "Semgrep returned code %d (partial results) — continuing with what was found",
+                result.returncode,
+            )
             try:
-                with open(output_path) as f: return json.load(f)
-            except: return {'results': [], 'errors': [], '_partial': True}
+                with open(output_path) as f:
+                    return json.load(f)
+            except Exception:
+                return {"results": [], "errors": [], "_partial": True}
 
         if result.returncode not in (0, 1):
-            raise RuntimeError(f"Semgrep failed: {result.stderr.decode()[:500]}")
+            # Strip ANSI/rich terminal control characters from stderr before logging
+            import re as _re
+            raw_stderr = result.stderr.decode(errors="replace")
+            clean_stderr = _re.sub(r"\x1b\[[0-9;]*[mGKHFABCDSTu]|\x1b\].*?\x07", "", raw_stderr)
+            # Also strip the rich table borders and progress lines
+            clean_stderr = _re.sub(r"[─│╒╕╘╛╞╡╔╗╚╝╠╣╦╩╬┼┬┴├┤]+", "", clean_stderr)
+            clean_stderr = clean_stderr[:600].strip()
+            raise RuntimeError(f"Semgrep exited with code {result.returncode}: {clean_stderr}")
+
         with open(output_path, "r") as f:
             return json.load(f)
     finally:
