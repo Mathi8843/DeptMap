@@ -409,9 +409,58 @@ async def apply_coupon(
     current_user_id: str = Depends(get_current_user_id),
     db=Depends(get_db)
 ):
-    """Apply a subscription coupon code. 'ONE_WEEK' rewards 1 week of Pro."""
+    """Apply a subscription coupon code. Validates against database or fallback 'ONE_WEEK'."""
     from datetime import datetime, timedelta, timezone
     code = payload.code.strip()
+
+    # 1. Try to find the coupon in the dynamic coupons table
+    try:
+        coupon_res = db.table("coupons").select("*").eq("code", code).execute()
+        if coupon_res.data:
+            coupon = coupon_res.data[0]
+            # Check if already used
+            if coupon.get("is_used"):
+                raise HTTPException(status_code=400, detail="This coupon code has already been redeemed.")
+            
+            # Check if expired (should be valid for 24hr after creation)
+            expires_at_str = coupon.get("expires_at")
+            expires_at = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
+            if datetime.now(timezone.utc) > expires_at:
+                raise HTTPException(status_code=400, detail="This coupon code has expired (valid only for 24 hours from creation).")
+                
+            # Redeem the coupon: calculate the Pro subscription end date
+            days = coupon.get("days", 1)
+            sub_expires_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+            
+            # Update user's plan to pro
+            user_res = db.table("users").update({
+                "plan": "pro",
+                "plan_expires_at": sub_expires_at
+            }).eq("id", current_user_id).execute()
+            
+            if not user_res.data:
+                raise HTTPException(status_code=404, detail="User not found")
+                
+            # Mark the coupon as used
+            db.table("coupons").update({
+                "is_used": True,
+                "used_by": current_user_id,
+                "used_at": datetime.now(timezone.utc).isoformat()
+            }).eq("code", code).execute()
+            
+            return {
+                "success": True,
+                "plan": "pro",
+                "plan_expires_at": sub_expires_at,
+                "message": f"Coupon applied! You have {days} day(s) of Pro subscription."
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error checking coupons table: {e}")
+        # Proceed to fallback hardcoded coupon check
+
+    # 2. Fallback to hardcoded coupon check
     if code != "ONE_WEEK":
         raise HTTPException(status_code=400, detail="Invalid coupon code")
         
@@ -431,6 +480,7 @@ async def apply_coupon(
         "plan_expires_at": expires_at,
         "message": "Coupon applied! You have 1 week of Pro subscription."
     }
+
 
 
 @router.post("/razorpay/order")

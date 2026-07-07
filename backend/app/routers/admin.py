@@ -189,3 +189,68 @@ async def get_admin_insights(
     except Exception as e:
         logger.exception("Failed to query admin insights")
         raise HTTPException(status_code=500, detail=f"Failed to load administrative insights: {str(e)}")
+
+
+from pydantic import BaseModel, Field
+import secrets
+import string
+from datetime import datetime, timedelta, timezone
+
+class GenerateCouponRequest(BaseModel):
+    days: int = Field(..., gt=0, le=3650, description="Number of days of Pro subscription this coupon grants")
+
+
+@router.post("/generate-coupon")
+async def generate_coupon(
+    payload: GenerateCouponRequest,
+    admin_user_id: str = Depends(check_admin_user),
+    db=Depends(get_db)
+):
+    """
+    Generate a single-use coupon valid for 24 hours.
+    Grants the specified number of days of Pro subscription.
+    """
+    try:
+        alphabet = string.ascii_uppercase + string.digits
+        random_part1 = ''.join(secrets.choice(alphabet) for _ in range(4))
+        random_part2 = ''.join(secrets.choice(alphabet) for _ in range(4))
+        code = f"RGAI-{random_part1}-{random_part2}"
+
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+
+        coupon_data = {
+            "code": code,
+            "days": payload.days,
+            "expires_at": expires_at,
+            "is_used": False,
+            "used_by": None,
+            "used_at": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+
+        db.table("coupons").insert(coupon_data).execute()
+
+        return {
+            "success": True,
+            "code": code,
+            "days": payload.days,
+            "expires_at": expires_at
+        }
+    except Exception as e:
+        logger.exception("Failed to generate coupon code")
+        raise HTTPException(status_code=500, detail=f"Failed to generate coupon: {str(e)}")
+
+
+@router.get("/coupons")
+async def list_coupons(
+    admin_user_id: str = Depends(check_admin_user),
+    db=Depends(get_db)
+):
+    """List all coupons generated, sorted by creation date."""
+    try:
+        res = db.table("coupons").select("code, days, expires_at, is_used, used_by, used_at, created_at").order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception as e:
+        logger.exception("Failed to query coupons list")
+        raise HTTPException(status_code=500, detail=f"Failed to load coupons list: {str(e)}")
+

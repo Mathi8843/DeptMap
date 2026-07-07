@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 import { 
   Users, GitBranch, Terminal, ShieldAlert, 
   RefreshCw, Lock, AlertTriangle, Package, Sparkles, 
-  AlertOctagon, Calendar, Shield, UserPlus
+  AlertOctagon, Calendar, Shield, UserPlus, Ticket, Copy, Check
 } from "lucide-react";
 
 interface AdminInsights {
@@ -96,7 +96,15 @@ export default function AdminPage() {
   const [insights, setInsights] = useState<AdminInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "security" | "users">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "security" | "users" | "coupons">("overview");
+
+  // Coupon state
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [daysInput, setDaysInput] = useState<number>(30);
+  const [generatedCoupon, setGeneratedCoupon] = useState<any | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const fetchInsights = async () => {
     setLoading(true);
@@ -112,9 +120,57 @@ export default function AdminPage() {
     }
   };
 
+  const fetchCoupons = async () => {
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const data = await apiFetch("/admin/coupons");
+      setCoupons(data || []);
+    } catch (err: any) {
+      console.error(err);
+      setCouponError(err.message || "Failed to load coupons.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleGenerateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (daysInput <= 0) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    setGeneratedCoupon(null);
+    try {
+      const data = await apiFetch("/admin/generate-coupon", {
+        method: "POST",
+        body: JSON.stringify({ days: daysInput }),
+      });
+      setGeneratedCoupon(data);
+      fetchCoupons();
+    } catch (err: any) {
+      console.error(err);
+      setCouponError(err.message || "Failed to generate coupon.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
   useEffect(() => {
     fetchInsights();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "coupons") {
+      fetchCoupons();
+    }
+  }, [activeTab]);
+
 
   const isAdmin = user?.is_admin;
 
@@ -264,10 +320,10 @@ export default function AdminPage() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex border-b border-white/10 pb-px gap-6">
+          <div className="flex border-b border-white/10 pb-px gap-6 overflow-x-auto">
             <button
               onClick={() => setActiveTab("overview")}
-              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider ${
+              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider whitespace-nowrap ${
                 activeTab === "overview"
                   ? "border-indigo-500 text-text-main"
                   : "border-transparent text-text-muted hover:text-text-sub"
@@ -277,7 +333,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={() => setActiveTab("security")}
-              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider ${
+              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider whitespace-nowrap ${
                 activeTab === "security"
                   ? "border-indigo-500 text-text-main"
                   : "border-transparent text-text-muted hover:text-text-sub"
@@ -287,7 +343,7 @@ export default function AdminPage() {
             </button>
             <button
               onClick={() => setActiveTab("users")}
-              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider ${
+              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider whitespace-nowrap ${
                 activeTab === "users"
                   ? "border-indigo-500 text-text-main"
                   : "border-transparent text-text-muted hover:text-text-sub"
@@ -295,7 +351,18 @@ export default function AdminPage() {
             >
               User Accounts & Logs
             </button>
+            <button
+              onClick={() => setActiveTab("coupons")}
+              className={`pb-3 font-medium text-sm transition-all border-b-2 font-mono uppercase tracking-wider whitespace-nowrap ${
+                activeTab === "coupons"
+                  ? "border-indigo-500 text-text-main"
+                  : "border-transparent text-text-muted hover:text-text-sub"
+              }`}
+            >
+              Coupon Codes
+            </button>
           </div>
+
 
           {/* Tab Content */}
           {activeTab === "overview" && (
@@ -779,9 +846,170 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
+          {activeTab === "coupons" && (
+            <div className="space-y-6">
+              {/* Generate Coupon card */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="glass-card p-6 rounded-2xl space-y-4 bg-white/5 border border-white/5 lg:col-span-1">
+                  <h3 className="font-display font-bold text-base text-text-main flex items-center gap-2">
+                    <Ticket size={16} className="text-indigo-400" />
+                    Generate Coupon
+                  </h3>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    Generate a coupon code that grants Pro subscription. It is valid for **one user (single-use)** and expires **24 hours** after generation.
+                  </p>
+                  
+                  <form onSubmit={handleGenerateCoupon} className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <label htmlFor="coupon-days" className="block text-xs font-semibold text-text-sub">
+                        Subscription Duration (Days)
+                      </label>
+                      <input
+                        id="coupon-days"
+                        type="number"
+                        min="1"
+                        max="3650"
+                        value={daysInput}
+                        onChange={(e) => setDaysInput(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-bg-deep border border-border-subtle rounded-xl px-4 py-2 text-sm text-text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+                      />
+                    </div>
+                    
+                    <button
+                      type="submit"
+                      disabled={couponLoading}
+                      className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-mono text-[11px] uppercase tracking-[1.5px] font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-indigo-500/20"
+                    >
+                      {couponLoading ? "Generating..." : "Generate Coupon"}
+                    </button>
+                  </form>
+
+                  {/* Display generated code */}
+                  {generatedCoupon && (
+                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2 mt-4 animate-fade-in">
+                      <p className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-bold">Generated Successfully!</p>
+                      <div className="flex items-center justify-between gap-2 bg-black/20 p-2.5 rounded-lg border border-white/5">
+                        <span className="font-mono text-sm font-bold text-text-main">{generatedCoupon.code}</span>
+                        <button
+                          onClick={() => handleCopyCode(generatedCoupon.code)}
+                          className="p-1.5 text-text-sub hover:text-text-main transition-colors cursor-pointer"
+                        >
+                          {copiedCode === generatedCoupon.code ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-emerald-400/80 font-mono">
+                        Grants {generatedCoupon.days} day(s) of Pro. Valid until: {new Date(generatedCoupon.expires_at).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+
+                  {couponError && (
+                    <div className="p-3 bg-rose-500/5 border border-rose-500/15 rounded-xl text-center text-xs text-rose-500 font-medium mt-4">
+                      {couponError}
+                    </div>
+                  )}
+                </div>
+
+                {/* Coupons History Table */}
+                <div className="glass-card p-6 rounded-2xl space-y-4 bg-white/5 border border-white/5 lg:col-span-2">
+                  <h3 className="font-display font-bold text-base text-text-main flex items-center gap-2">
+                    <Calendar size={16} className="text-indigo-400" />
+                    Coupon Registry
+                  </h3>
+
+                  <div className="overflow-x-auto pt-2">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/5 text-text-muted font-mono text-[9px] uppercase tracking-wider">
+                          <th className="pb-3 pr-4 font-bold">Code</th>
+                          <th className="pb-3 px-4 font-bold text-center">Days</th>
+                          <th className="pb-3 px-4 font-bold">Expiration / Status</th>
+                          <th className="pb-3 pl-4 font-bold text-right">Redemption</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5 text-xs text-text-sub font-medium">
+                        {couponLoading && coupons.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-4 text-center text-text-muted font-mono">
+                              Loading coupons...
+                            </td>
+                          </tr>
+                        ) : coupons.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="py-4 text-center text-text-muted font-mono">
+                              No coupons generated yet
+                            </td>
+                          </tr>
+                        ) : (
+                          coupons.map((c) => {
+                            const isExpired = new Date() > new Date(c.expires_at);
+                            return (
+                              <tr key={c.code} className="hover:bg-white/5 transition-all">
+                                <td className="py-3 pr-4 font-mono font-bold text-text-main flex items-center gap-1.5">
+                                  <span>{c.code}</span>
+                                  <button
+                                    onClick={() => handleCopyCode(c.code)}
+                                    className="text-text-muted hover:text-text-main p-1 transition-colors cursor-pointer"
+                                    title="Copy Code"
+                                  >
+                                    {copiedCode === c.code ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                                  </button>
+                                </td>
+                                <td className="py-3 px-4 text-center font-mono font-bold text-indigo-400">
+                                  {c.days}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="space-y-0.5">
+                                    <div className="text-[10px] text-text-muted font-mono">
+                                      Expires: {new Date(c.expires_at).toLocaleString()}
+                                    </div>
+                                    <div>
+                                      {c.is_used ? (
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                                          Redeemed
+                                        </span>
+                                      ) : isExpired ? (
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                          Expired
+                                        </span>
+                                      ) : (
+                                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                          Active
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 pl-4 text-right">
+                                  {c.is_used ? (
+                                    <div className="space-y-0.5">
+                                      <div className="text-[9px] text-text-muted font-mono truncate max-w-[150px]" title={c.used_by}>
+                                        User: {c.used_by}
+                                      </div>
+                                      <div className="text-[9px] text-text-muted">
+                                        On: {new Date(c.used_at).toLocaleDateString()}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-text-muted font-mono">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : null}
     </div>
   );
 }
+
 
