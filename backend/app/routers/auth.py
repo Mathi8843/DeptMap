@@ -161,8 +161,26 @@ async def github_callback(
 
         # If direct browser redirect, keep the session out of the URL in production.
         # Note: raw github_access_token is NEVER passed back to the client.
+        # Production: pass session_token in URL so it works on Safari/iOS
+        # where cross-origin cookies are blocked by default.
+        # The token is short-lived (30 days) and goes into memory only via AuthContext —
+        # never written to localStorage on the frontend.
         if settings.is_production:
-            response = RedirectResponse(url=f"{settings.frontend_url}/auth/callback?auth=success")
+            import urllib.parse
+            query_params = urllib.parse.urlencode({
+                "user_id": user_id,
+                "email": email,
+                "name": name or "",
+                "avatar_url": avatar_url or "",
+                "plan": existing_user["plan"] if existing_user else "free",
+                "session_token": session_token,
+                "has_github_token": "true",
+                "is_admin": "true" if (existing_user and existing_user.get("is_admin")) else "false",
+            })
+            response = RedirectResponse(
+                url=f"{settings.frontend_url}/auth/callback?{query_params}"
+            )
+            # Still set the cookie as a fallback for browsers that support it
             response.set_cookie(
                 key="debtmap_session",
                 value=session_token,
