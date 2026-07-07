@@ -89,6 +89,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   const headers: Record<string, string> = {
     "Accept": "application/json",
+    ...(options.body && typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
     ...(options.headers as Record<string, string>),
   };
 
@@ -121,7 +122,20 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
       let errorDetail = "API call failed";
       try {
         const errorJson = JSON.parse(errorText);
-        errorDetail = errorJson.detail || errorDetail;
+        if (errorJson && errorJson.detail) {
+          if (typeof errorJson.detail === "string") {
+            errorDetail = errorJson.detail;
+          } else if (Array.isArray(errorJson.detail)) {
+            // Format FastAPI Pydantic validation error lists:
+            errorDetail = errorJson.detail
+              .map((e: any) => `${e.loc ? e.loc.join(".") : "field"}: ${e.msg || "invalid value"}`)
+              .join(", ");
+          } else if (typeof errorJson.detail === "object") {
+            errorDetail = JSON.stringify(errorJson.detail);
+          } else {
+            errorDetail = String(errorJson.detail);
+          }
+        }
       } catch {
         errorDetail = errorText || errorDetail;
       }
@@ -138,3 +152,4 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     clearTimeout(timeoutId);
   }
 }
+
